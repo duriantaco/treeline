@@ -1,7 +1,9 @@
 README.md
 setup.py
 treeline/__init__.py
+treeline/__main__.py
 treeline/core.py
+treeline/default_ignore
 treeline.egg-info/PKG-INFO
 treeline.egg-info/SOURCES.txt
 treeline.egg-info/dependency_links.txt
