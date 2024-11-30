@@ -36,6 +36,9 @@ my_project
 3. `treeline -m # Create markdown file (tree.md)`
 4. `treeline -i ".pyc,.git" # Ignore patterns`
 5. `treeline -h # Show help message`
+6. `treeline --hide-structure # Hide all code structure`
+7. `treeline --no-params # Hide function parameters`
+8. `treeline --no-relationships # Hide code relationships`
 
 ## Note
 
