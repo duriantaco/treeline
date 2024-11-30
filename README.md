@@ -36,6 +36,9 @@ my_project
 3. `treeline -m # Create markdown file (tree.md)`
 4. `treeline -i ".pyc,.git" # Ignore patterns`
 5. `treeline -h # Show help message`
+6. `treeline --hide-structure # Hide all code structure`
+7. `treeline --no-params # Hide function parameters`
+8. `treeline --no-relationships # Hide code relationships`
 
 ## Note
 
@@ -51,6 +54,12 @@ For example, if you were to put the treeline-ignore inside the src folder, only 
 3. Commit your changes (git commit -m 'cool stuff')
 4. Push to the branch (git push origin branch)
 5. Open a Pull Request
+
+## Sources for best practices
+
+1. https://peps.python.org/
+2. https://peps.python.org/pep-0008/
+3. https://google.github.io/styleguide/pyguide.html
 
 ## Author
 Oha

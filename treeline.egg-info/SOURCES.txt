@@ -2,6 +2,7 @@ README.md
 setup.py
 treeline/__init__.py
 treeline/__main__.py
+treeline/analyzer.py
 treeline/core.py
 treeline/default_ignore
 treeline.egg-info/PKG-INFO
