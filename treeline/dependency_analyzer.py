@@ -121,22 +121,22 @@ class ModuleDependencyAnalyzer:
         """Generate detailed Mermaid graph showing module, function, and class relationships."""
         mermaid_lines = ['graph TD']
         mermaid_lines.append('    %% Styling')
-        mermaid_lines.append('    classDef module fill:#b7e2d8,stroke:#333,stroke-width:2px')
-        mermaid_lines.append('    classDef function fill:#e4d1d1,stroke:#333')
-        mermaid_lines.append('    classDef class fill:#d1e0e4,stroke:#333')
+        mermaid_lines.append('    classDef moduleNode fill:#b7e2d8,stroke:#333,stroke-width:2px')
+        mermaid_lines.append('    classDef functionNode fill:#e4d1d1,stroke:#333')
+        mermaid_lines.append('    classDef classNode fill:#d1e0e4,stroke:#333')
         
         added_nodes = set()
         for module in self.module_imports:
             clean_module = module.replace('.', '_')
             if clean_module not in added_nodes:
-                mermaid_lines.append(f'    {clean_module}["{module}"]:::module')
+                mermaid_lines.append(f'    {clean_module}["{module}"]:::moduleNode')
                 added_nodes.add(clean_module)
             
             for func_name, location in self.function_locations.items():
                 if location['module'] == module:
                     clean_func = f"{clean_module}_{func_name}"
                     if clean_func not in added_nodes:
-                        mermaid_lines.append(f'    {clean_func}["⚡ {func_name}()"]:::function')
+                        mermaid_lines.append(f'    {clean_func}["⚡ {func_name}()"]:::functionNode')
                         mermaid_lines.append(f'    {clean_module} --> {clean_func}')
                         added_nodes.add(clean_func)
             
@@ -144,14 +144,14 @@ class ModuleDependencyAnalyzer:
                 for class_name, info in self.class_info[module].items():
                     clean_class = f"{clean_module}_{class_name}"
                     if clean_class not in added_nodes:
-                        mermaid_lines.append(f'    {clean_class}["📦 {class_name}"]:::class')
+                        mermaid_lines.append(f'    {clean_class}["📦 {class_name}"]:::classNode')
                         mermaid_lines.append(f'    {clean_module} --> {clean_class}')
                         added_nodes.add(clean_class)
                     
                     for method_name in info['methods']:
                         clean_method = f"{clean_class}_{method_name}"
                         if clean_method not in added_nodes:
-                            mermaid_lines.append(f'    {clean_method}["⚡ {method_name}()"]:::function')
+                            mermaid_lines.append(f'    {clean_method}["⚡ {method_name}()"]:::functionNode')
                             mermaid_lines.append(f'    {clean_class} --> {clean_method}')
                             added_nodes.add(clean_method)
         
