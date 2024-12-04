@@ -121,7 +121,7 @@ def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependency
 
         f.write("# Project Analysis Report\n\n")
         
-        f.write(f"[Click here to open Interactive Code Visualization](./{viz_path})\n\n")
+        f.write("To view the interactive visualization, open `code_visualization.html` in your web browser.\n\n")
         
         f.write("## Directory Structure\n\n")
         f.write("```\n")

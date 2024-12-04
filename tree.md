@@ -1,6 +1,6 @@
 # Project Analysis Report
 
-[Click here to open Interactive Code Visualization](./code_visualization.html)
+To view the interactive visualization, open `code_visualization.html` in your web browser.
 
 ## Directory Structure
 
@@ -121,11 +121,11 @@
 │ │   **Class**: ◆ ModuleDependencyAnalyzer
 │ │   └─ # Analyzes module-level dependencies and generates summary reports.
 │ │   └─ ! High complexity (89)
-│ │   └─ ! Too long (549 lines)
+│ │   └─ ! Too long (722 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! High class complexity
 │ │   **Function**: → __init__
-│ │   └─ ! Too long (206 lines)
+│ │   └─ ! Too long (379 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   **Function**: → analyze_directory
 │ │   └─ # Analyze all Python files in directory.

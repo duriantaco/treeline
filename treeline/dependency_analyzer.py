@@ -20,41 +20,143 @@ class ModuleDependencyAnalyzer:
             <title>Code Structure Visualization</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
             <style>
-                body { margin: 0; font-family: Arial, sans-serif; }
-                .node { cursor: pointer; }
-                .node circle { fill: #fff; stroke: steelblue; stroke-width: 1.5px; }
-                .node text { font: 12px sans-serif; }
-                .link { fill: none; stroke: #ccc; stroke-width: 1.5px; }
+                body { 
+                    margin: 0; 
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background: #f8f9fa;
+                }
+                .node { 
+                    cursor: pointer; 
+                }
+                .node circle { 
+                    fill: #fff; 
+                    stroke-width: 2px; 
+                    transition: all 0.3s;
+                }
+                .node:hover circle {
+                    filter: brightness(0.95);
+                }
+                .node text { 
+                    font: 12px 'Segoe UI', sans-serif;
+                    font-weight: 500;
+                }
+                .link { 
+                    stroke-width: 1.5px;
+                    stroke-dasharray: 4;
+                    opacity: 0.7;
+                }
+                .link-imports {
+                    stroke: #7c3aed; /* purple */
+                }
+                .link-contains {
+                    stroke: #059669; /* green */
+                }
+                .link-calls {
+                    stroke: #ea580c; /* orange */
+                }
                 .tooltip { 
                     position: absolute; 
-                    padding: 8px;
+                    padding: 12px;
                     background: white;
-                    border: 1px solid #ddd;
-                    border-radius: 4px;
+                    border: none;
+                    border-radius: 8px;
                     pointer-events: none;
-                    font-size: 12px;
+                    font-size: 14px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    max-width: 300px;
                 }
                 #controls {
                     position: fixed;
                     top: 20px;
                     left: 20px;
                     background: white;
-                    padding: 10px;
-                    border-radius: 4px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    padding: 16px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    z-index: 1000;
                 }
                 #search {
-                    width: 200px;
-                    padding: 5px;
-                    margin-bottom: 10px;
+                    width: 250px;
+                    padding: 8px 12px;
+                    margin-bottom: 12px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                    font-size: 14px;
                 }
+                button {
+                    background: #1d4ed8;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    margin-right: 8px;
+                    transition: background 0.3s;
+                }
+                button:hover {
+                    background: #1e40af;
+                }
+                .legend {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 20px;
+                    background: white;
+                    padding: 16px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+                .legend-item {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    font-size: 14px;
+                }
+                .legend-color {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 4px;
+                    margin-right: 8px;
+                }
+                .node-module circle { stroke: #0284c7; }
+                .node-class circle { stroke: #0891b2; }
+                .node-function circle { stroke: #0d9488; }
             </style>
         </head>
         <body>
             <div id="controls">
                 <input type="text" id="search" placeholder="Search nodes...">
-                <button onclick="resetZoom()">Reset Zoom</button>
+                <button onclick="resetZoom()">Reset View</button>
                 <button onclick="toggleLayout()">Toggle Layout</button>
+            </div>
+            <div class="legend">
+                <h3 style="margin-top: 0; margin-bottom: 12px;">Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0284c7;"></div>
+                    <span>Module</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0891b2;"></div>
+                    <span>Class</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0d9488;"></div>
+                    <span>Function</span>
+                </div>
+                <div style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+                    <div class="legend-item">
+                        <div style="width: 40px; height: 2px; background: #7c3aed; margin-right: 8px;"></div>
+                        <span>Imports</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 40px; height: 2px; background: #059669; margin-right: 8px;"></div>
+                        <span>Contains</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 40px; height: 2px; background: #ea580c; margin-right: 8px;"></div>
+                        <span>Calls</span>
+                    </div>
+                </div>
             </div>
             <svg id="visualization"></svg>
             <script>
@@ -66,6 +168,21 @@ class ModuleDependencyAnalyzer:
                 const svg = d3.select("#visualization")
                     .attr("width", width)
                     .attr("height", height);
+
+                // Define arrow markers for different link types
+                svg.append("defs").selectAll("marker")
+                    .data(["imports", "contains", "calls"])
+                    .join("marker")
+                    .attr("id", d => `arrow-${d}`)
+                    .attr("viewBox", "0 -5 10 10")
+                    .attr("refX", 15)
+                    .attr("refY", 0)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto")
+                    .append("path")
+                    .attr("fill", d => d === "imports" ? "#7c3aed" : d === "contains" ? "#059669" : "#ea580c")
+                    .attr("d", "M0,-5L10,0L0,5");
 
                 const g = svg.append("g");
 
@@ -86,9 +203,11 @@ class ModuleDependencyAnalyzer:
 
                 let isRadial = false;
                 const simulation = d3.forceSimulation()
-                    .force("link", d3.forceLink().id(d => d.id).distance(100))
+                    .force("link", d3.forceLink().id(d => d.id).distance(150))
                     .force("charge", d3.forceManyBody().strength(-1000))
-                    .force("center", d3.forceCenter(width / 2, height / 2));
+                    .force("x", d3.forceX(width / 2).strength(0.1))
+                    .force("y", d3.forceY(height / 2).strength(0.1))
+                    .force("collision", d3.forceCollide().radius(50));
 
                 const tooltip = d3.select("body").append("div")
                     .attr("class", "tooltip")
@@ -98,25 +217,68 @@ class ModuleDependencyAnalyzer:
                     .selectAll("path")
                     .data(data.links)
                     .join("path")
-                    .attr("class", "link")
-                    .attr("marker-end", "url(#arrowhead)");
+                    .attr("class", d => `link link-${d.type}`)
+                    .attr("marker-end", d => `url(#arrow-${d.type})`);
 
                 const node = g.append("g")
                     .selectAll(".node")
                     .data(data.nodes)
                     .join("g")
-                    .attr("class", "node")
+                    .attr("class", d => `node node-${d.type}`)
                     .call(drag(simulation));
 
                 node.append("circle")
                     .attr("r", d => getNodeSize(d))
-                    .style("fill", d => getNodeColor(d.type));
+                    .style("fill", "#fff");
 
                 node.append("text")
                     .attr("dy", ".35em")
                     .attr("x", d => getNodeSize(d) + 5)
                     .text(d => d.name)
                     .style("fill", "#333");
+
+                // Add hover effects
+                node.on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    
+                    let connections = data.links.filter(l => 
+                        l.source.id === d.id || l.target.id === d.id
+                    );
+                    
+                    let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br><br>`;
+                    if (connections.length > 0) {
+                        tooltipContent += "Connections:<br>";
+                        connections.forEach(c => {
+                            if (c.source.id === d.id) {
+                                tooltipContent += `→ ${c.target.name} (${c.type})<br>`;
+                            } else {
+                                tooltipContent += `← ${c.source.name} (${c.type})<br>`;
+                            }
+                        });
+                    }
+                    
+                    tooltip.html(tooltipContent)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 10) + "px");
+                        
+                    // Highlight connected nodes
+                    node.style("opacity", n => 
+                        n.id === d.id || 
+                        connections.some(c => c.source.id === n.id || c.target.id === n.id) ? 1 : 0.1
+                    );
+                    link.style("opacity", l => 
+                        l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
+                    );
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    node.style("opacity", 1);
+                    link.style("opacity", 0.7);
+                });
 
                 simulation
                     .nodes(data.nodes)
@@ -136,17 +298,9 @@ class ModuleDependencyAnalyzer:
 
                 function getNodeSize(node) {
                     switch(node.type) {
-                        case 'module': return 8;
-                        case 'class': return 6;
-                        default: return 4;
-                    }
-                }
-
-                function getNodeColor(type) {
-                    switch(type) {
-                        case 'module': return "#b7e2d8";
-                        case 'class': return "#d1e0e4";
-                        default: return "#e4d1d1";
+                        case 'module': return 12;
+                        case 'class': return 10;
+                        default: return 8;
                     }
                 }
 
@@ -178,25 +332,44 @@ class ModuleDependencyAnalyzer:
                     isRadial = !isRadial;
                     if (isRadial) {
                         simulation
+                            .force("x", null)
+                            .force("y", null)
                             .force("r", d3.forceRadial(250, width / 2, height / 2))
-                            .force("charge", d3.forceManyBody().strength(-50));
+                            .force("charge", d3.forceManyBody().strength(-100));
                     } else {
                         simulation
                             .force("r", null)
+                            .force("x", d3.forceX(width / 2).strength(0.1))
+                            .force("y", d3.forceY(height / 2).strength(0.1))
                             .force("charge", d3.forceManyBody().strength(-1000));
                     }
                     simulation.alpha(1).restart();
                 }
 
-                // Search functionality
+                // Search functionality with highlighting
                 d3.select("#search").on("input", function() {
                     const term = this.value.toLowerCase();
-                    node.style("opacity", d => 
-                        d.name.toLowerCase().includes(term) ? 1 : 0.1
-                    );
+                    if (term === "") {
+                        node.style("opacity", 1);
+                        link.style("opacity", 0.7);
+                        return;
+                    }
+                    
+                    const matchedNodes = new Set();
+                    node.each(function(d) {
+                        if (d.name.toLowerCase().includes(term)) {
+                            matchedNodes.add(d.id);
+                            // Also add connected nodes
+                            data.links.forEach(l => {
+                                if (l.source.id === d.id) matchedNodes.add(l.target.id);
+                                if (l.target.id === d.id) matchedNodes.add(l.source.id);
+                            });
+                        }
+                    });
+                    
+                    node.style("opacity", d => matchedNodes.has(d.id) ? 1 : 0.1);
                     link.style("opacity", d =>
-                        d.source.name.toLowerCase().includes(term) ||
-                        d.target.name.toLowerCase().includes(term) ? 1 : 0.1
+                        matchedNodes.has(d.source.id) && matchedNodes.has(d.target.id) ? 0.7 : 0.1
                     );
                 });
 
