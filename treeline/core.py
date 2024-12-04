@@ -112,16 +112,19 @@ def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]
 
 def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependencyAnalyzer) -> None:
     """Generate a markdown report with tree structure and analysis results."""
-    with open("tree.md", 'w', encoding='utf-8') as f:
-        html_content = dep_analyzer.generate_html_visualization()
-        viz_path = 'code_visualization.html'
-        
-        with open(viz_path, 'w', encoding='utf-8') as viz_file:
-            viz_file.write(html_content)
-
+    docs_dir = Path('docs')
+    docs_dir.mkdir(exist_ok=True)
+    
+    tree_path = docs_dir / 'tree.md'
+    
+    with open(tree_path, 'w', encoding='utf-8') as f:
         f.write("# Project Analysis Report\n\n")
         
-        f.write("To view the interactive visualization, open `code_visualization.html` in your web browser.\n\n")
+        f.write("## Code Structure Visualization\n\n")
+        f.write("The following diagrams show the project structure from different perspectives:\n\n")
+        f.write("### Module Dependencies\n")
+        f.write("Overview of how modules are connected:\n\n")
+        f.write(dep_analyzer.generate_mermaid_graphs())
         
         f.write("## Directory Structure\n\n")
         f.write("```\n")
@@ -145,6 +148,8 @@ def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependency
                     f.write(f"- **Complexity**: {complexity}\n\n")
             else:
                 f.write("*No complex functions found.*\n\n")
+    
+    print(f"\nReport generated: {tree_path}")
 
 def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=False):
     """Generate tree structure with code quality and security analysis."""

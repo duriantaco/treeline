@@ -489,73 +489,162 @@ class ModuleDependencyAnalyzer:
                 complexity += len(child.values) - 1
         return complexity
     
-    def generate_mermaid_graph(self) -> str:
-        """Generate detailed Mermaid graph showing module, function, and class relationships."""
-        mermaid_lines = ['graph TD']
+    def generate_module_overview_diagram(self) -> str:
+        """Generate a Mermaid diagram showing modules and their relationships."""
+        mermaid_lines = ['graph TD\n']  
         mermaid_lines.append('    %% Styling')
-        mermaid_lines.append('    classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px')
-        mermaid_lines.append('    classDef fnNode fill:#e4d1d1,stroke:#333')
-        mermaid_lines.append('    classDef clsNode fill:#d1e0e4,stroke:#333')
+        mermaid_lines.append('    classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px\n')  
         
         added_nodes = set()
-        node_id = 0  
-        node_map = {}  
-        
-        def get_node_id(name: str) -> str:
-            nonlocal node_id
-            if name not in node_map:
-                node_map[name] = f"n{node_id}"
-                node_id += 1
-            return node_map[name]
-        
         for module in self.module_imports:
-            clean_module = get_node_id(module)
+            clean_module = module.replace('.', '_')
             if clean_module not in added_nodes:
                 mermaid_lines.append(f'    {clean_module}["{module}"]:::modNode')
                 added_nodes.add(clean_module)
-            
-            for func_name, location in self.function_locations.items():
-                if location['module'] == module:
-                    clean_func = get_node_id(f"{module}_{func_name}")
-                    if clean_func not in added_nodes:
-                        mermaid_lines.append(f'    {clean_func}["⚡ {func_name}"]:::fnNode')
-                        mermaid_lines.append(f'    {clean_module} --> {clean_func}')
-                        added_nodes.add(clean_func)
-            
-            if module in self.class_info:
-                for class_name, info in self.class_info[module].items():
-                    clean_class = get_node_id(f"{module}_{class_name}")
-                    if clean_class not in added_nodes:
-                        mermaid_lines.append(f'    {clean_class}["📦 {class_name}"]:::clsNode')
-                        mermaid_lines.append(f'    {clean_module} --> {clean_class}')
-                        added_nodes.add(clean_class)
-                    
-                    for method_name in info['methods']:
-                        clean_method = get_node_id(f"{module}_{class_name}_{method_name}")
-                        if clean_method not in added_nodes:
-                            mermaid_lines.append(f'    {clean_method}["⚡ {method_name}"]:::fnNode')
-                            mermaid_lines.append(f'    {clean_class} --> {clean_method}')
-                            added_nodes.add(clean_method)
         
-        for func_name, calls in self.function_calls.items():
-            for call in calls:
-                if func_name in self.function_locations:
-                    from_module = call['from_module']
-                    to_module = self.function_locations[func_name]['module']
-                    from_func = get_node_id(f"{from_module}_{call['from_function']}")
-                    to_func = get_node_id(f"{to_module}_{func_name}")
-                    
-                    if from_func in node_map.values() and to_func in node_map.values():
-                        mermaid_lines.append(f'    {from_func} -.->|calls| {to_func}')
+        mermaid_lines.append('')
         
         for module, imports in self.module_imports.items():
-            clean_module = get_node_id(module)
+            clean_module = module.replace('.', '_')
             for imp in imports:
-                clean_imp = get_node_id(imp)
-                if clean_module in node_map.values() and clean_imp in node_map.values():
-                    mermaid_lines.append(f'    {clean_module} -->|imports| {clean_imp}')
+                if imp in self.module_imports:
+                    clean_imp = imp.replace('.', '_')
+                    mermaid_lines.append(f'    {clean_module} --> {clean_imp}')
         
         return '\n'.join(mermaid_lines)
+
+    def generate_module_detail_diagram(self, module: str) -> str:
+        """Generate a Mermaid diagram showing functions and classes in a module."""
+        mermaid_lines = ['graph TD\n']  # Added newline
+        mermaid_lines.append('    %% Styling')
+        mermaid_lines.append('    classDef fnNode fill:#e4d1d1,stroke:#333')
+        mermaid_lines.append('    classDef clsNode fill:#d1e0e4,stroke:#333\n')  # Added newline
+        
+        clean_module = module.replace('.', '_')
+        
+        mermaid_lines.append(f'    subgraph {clean_module}["{module}"]')
+        mermaid_lines.append('        direction TB')  
+        added_nodes = set()
+        
+        if module in self.class_info:
+            for class_name, info in self.class_info[module].items():
+                clean_class = f"{clean_module}_{class_name}"
+                if clean_class not in added_nodes:
+                    mermaid_lines.append(f'        {clean_class}["📦 {class_name}"]:::clsNode')
+                    added_nodes.add(clean_class)
+                
+                for method_name in info['methods']:
+                    clean_method = f"{clean_class}_{method_name}"
+                    if clean_method not in added_nodes:
+                        mermaid_lines.append(f'        {clean_method}["⚡ {method_name}"]:::fnNode')
+                        mermaid_lines.append(f'        {clean_class} --> {clean_method}')
+                        added_nodes.add(clean_method)
+        
+        for func_name, location in self.function_locations.items():
+            if location['module'] == module and 'in_class' not in location:
+                clean_func = f"{clean_module}_{func_name}"
+                if clean_func not in added_nodes:
+                    mermaid_lines.append(f'        {clean_func}["⚡ {func_name}"]:::fnNode')
+                    added_nodes.add(clean_func)
+        
+        mermaid_lines.append('    end\n')  
+        
+        for func_name, calls in self.function_calls.items():
+            if func_name in self.function_locations and self.function_locations[func_name]['module'] == module:
+                to_func = f"{clean_module}_{func_name}"
+                for call in calls:
+                    if call['from_module'] == module:
+                        from_func = f"{clean_module}_{call['from_function']}"
+                        if from_func in added_nodes and to_func in added_nodes:
+                            mermaid_lines.append(f'    {from_func} -.->|calls| {to_func}')
+        
+        return '\n'.join(mermaid_lines)
+
+    def generate_mermaid_graphs(self) -> str:
+        """Generate a markdown report with multiple focused Mermaid graphs."""
+        sections = []
+        
+        sections.append("```mermaid")
+        sections.append(self.generate_module_overview_diagram())
+        sections.append("```\n")
+        
+        for module in sorted(self.module_imports.keys()):
+            if module.startswith('treeline.'):  
+                sections.append(f"### {module}\n")
+                sections.append("```mermaid")
+                sections.append(self.generate_module_detail_diagram(module))
+                sections.append("```\n")
+        
+        return '\n'.join(sections)
+
+    
+    # def generate_mermaid_graph(self) -> str:
+    #     """Generate detailed Mermaid graph showing module, function, and class relationships."""
+    #     mermaid_lines = ['graph TD']
+    #     mermaid_lines.append('    %% Styling')
+    #     mermaid_lines.append('    classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px')
+    #     mermaid_lines.append('    classDef fnNode fill:#e4d1d1,stroke:#333')
+    #     mermaid_lines.append('    classDef clsNode fill:#d1e0e4,stroke:#333')
+        
+    #     added_nodes = set()
+    #     node_id = 0  
+    #     node_map = {}  
+        
+    #     def get_node_id(name: str) -> str:
+    #         nonlocal node_id
+    #         if name not in node_map:
+    #             node_map[name] = f"n{node_id}"
+    #             node_id += 1
+    #         return node_map[name]
+        
+    #     for module in self.module_imports:
+    #         clean_module = get_node_id(module)
+    #         if clean_module not in added_nodes:
+    #             mermaid_lines.append(f'    {clean_module}["{module}"]:::modNode')
+    #             added_nodes.add(clean_module)
+            
+    #         for func_name, location in self.function_locations.items():
+    #             if location['module'] == module:
+    #                 clean_func = get_node_id(f"{module}_{func_name}")
+    #                 if clean_func not in added_nodes:
+    #                     mermaid_lines.append(f'    {clean_func}["⚡ {func_name}"]:::fnNode')
+    #                     mermaid_lines.append(f'    {clean_module} --> {clean_func}')
+    #                     added_nodes.add(clean_func)
+            
+    #         if module in self.class_info:
+    #             for class_name, info in self.class_info[module].items():
+    #                 clean_class = get_node_id(f"{module}_{class_name}")
+    #                 if clean_class not in added_nodes:
+    #                     mermaid_lines.append(f'    {clean_class}["📦 {class_name}"]:::clsNode')
+    #                     mermaid_lines.append(f'    {clean_module} --> {clean_class}')
+    #                     added_nodes.add(clean_class)
+                    
+    #                 for method_name in info['methods']:
+    #                     clean_method = get_node_id(f"{module}_{class_name}_{method_name}")
+    #                     if clean_method not in added_nodes:
+    #                         mermaid_lines.append(f'    {clean_method}["⚡ {method_name}"]:::fnNode')
+    #                         mermaid_lines.append(f'    {clean_class} --> {clean_method}')
+    #                         added_nodes.add(clean_method)
+        
+    #     for func_name, calls in self.function_calls.items():
+    #         for call in calls:
+    #             if func_name in self.function_locations:
+    #                 from_module = call['from_module']
+    #                 to_module = self.function_locations[func_name]['module']
+    #                 from_func = get_node_id(f"{from_module}_{call['from_function']}")
+    #                 to_func = get_node_id(f"{to_module}_{func_name}")
+                    
+    #                 if from_func in node_map.values() and to_func in node_map.values():
+    #                     mermaid_lines.append(f'    {from_func} -.->|calls| {to_func}')
+        
+    #     for module, imports in self.module_imports.items():
+    #         clean_module = get_node_id(module)
+    #         for imp in imports:
+    #             clean_imp = get_node_id(imp)
+    #             if clean_module in node_map.values() and clean_imp in node_map.values():
+    #                 mermaid_lines.append(f'    {clean_module} -->|imports| {clean_imp}')
+        
+    #     return '\n'.join(mermaid_lines)
     
     def generate_html_visualization(self) -> str:
         """Generate an interactive HTML visualization using D3.js"""
