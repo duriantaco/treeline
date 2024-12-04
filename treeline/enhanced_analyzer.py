@@ -1,124 +1,246 @@
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Set
 import ast
 from pathlib import Path
 from collections import defaultdict
-from .analyzer import CodeAnalyzer
 
-class EnhancedCodeAnalyzer(CodeAnalyzer):
-    """Enhanced analyzer focused on code quality metrics."""
+class EnhancedCodeAnalyzer:
+    """
+    Enhanced analyzer for code quality and maintainability metrics.
     
-    COMPLEXITY_THRESHOLD = 10
-    MAX_PARAMS = 5
-    MAX_LINES = 30
+    This analyzer implements industry-standard code quality checks and metrics
+    following Clean Code principles, SOLID principles, and PEP 8 standards.
+    """
     
-    def __init__(self, show_params=True, show_relationships=True):
-        super().__init__(show_params, show_relationships)
-        self.COLORS.update({
-            'RED': '\033[91m',       # Warnings
-            'GRAY': '\033[90m',      # Stats
-        })
+    QUALITY_METRICS = {
+        'MAX_FUNCTION_LINES': 20,       
+        'MAX_PARAMS': 3,                 
+        'MAX_RETURNS': 3,             
+        'MAX_COGNITIVE_COMPLEXITY': 15,   
+        'MAX_CYCLOMATIC_COMPLEXITY': 10,  
+        'MAX_NESTED_DEPTH': 3,           
+        'MAX_CLASS_LINES': 200,         
+        'MAX_METHODS_PER_CLASS': 10,     
+        'MAX_CLASS_COMPLEXITY': 50,      
+        'MAX_FILE_LINES': 400,          
+        'MAX_LINE_LENGTH': 79,           
+        'MIN_DOCSTRING_COVERAGE': 0.8,   
+        'MIN_COMMENT_RATIO': 0.15,       
+    }
     
-    def analyze_file(self, file_path: Path) -> List[Tuple[str, str, str, Optional[str], Optional[str], Dict]]:
-        """Analyzes Python files with additional code quality metrics."""
+    def __init__(self, show_params: bool = True):
+        """
+        Initialize the code analyzer.
+
+        Args:
+            show_params: Whether to show function parameters in analysis
+        """
+        self.show_params = show_params
+        self.quality_issues = defaultdict(list)
+        self.metrics_summary = defaultdict(dict)
+
+    def analyze_file(self, file_path: Path) -> List[Dict]:
+        """
+        Analyze a Python file for code quality metrics.
+
+        Args:
+            file_path: Path to the Python file to analyze
+
+        Returns:
+            List of analysis results for each code element
+        """
+        content = self._read_file(file_path)
+        if not content:
+            return []
+            
+        tree = self._parse_content(content)
+        if not tree:
+            return []
+
+        self._analyze_file_metrics(content, file_path)
+        return self._analyze_code_elements(tree, content)
+    
+    def _analyze_file_metrics(self, content: str, file_path: Path) -> None:
+        """
+        Analyze file-level metrics for code quality issues.
+        
+        Args:
+            content: The file content as a string
+            file_path: Path to the file being analyzed
+        """
+        lines = content.split('\n')
+        total_lines = len(lines)
+        file_path_str = str(file_path)
+        
+        if total_lines > self.QUALITY_METRICS['MAX_FILE_LINES']:
+            self._add_issue('file', f"File exceeds maximum length ({total_lines} lines)", file_path_str)
+        
+        for i, line in enumerate(lines, 1):
+            if len(line.rstrip()) > self.QUALITY_METRICS['MAX_LINE_LENGTH']:
+                self._add_issue('file', f"Line {i} exceeds maximum length ({len(line)} characters)", file_path_str, i)
+
+        comment_lines = sum(1 for line in lines if line.strip().startswith('#'))
+        comment_ratio = comment_lines / total_lines if total_lines > 0 else 0
+        
+        if comment_ratio < self.QUALITY_METRICS['MIN_COMMENT_RATIO']:
+            self._add_issue('documentation', f"Low comment ratio ({comment_ratio:.2%})", file_path_str)
+        
+        self.metrics_summary['file'][file_path_str] = {
+            'total_lines': total_lines,
+            'comment_lines': comment_lines,
+            'comment_ratio': comment_ratio
+        }
+
+    def _read_file(self, file_path: Path) -> Optional[str]:
+        """Read and return file content safely."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-                tree = ast.parse(content)
-            
-            structure = []
-            
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    name = node.name
-                    doc = ast.get_docstring(node) or ''
-                    params = self._get_function_params(node) if self.show_params else ''
-                    metrics = self._analyze_function_metrics(node, content)
-                    
-                    structure.append(('function', name, doc, params, '', metrics))
-                
-                elif isinstance(node, ast.ClassDef):
-                    name = node.name
-                    doc = ast.get_docstring(node) or ''
-                    metrics = self._analyze_class_metrics(node, content)
-                    
-                    structure.append(('class', name, doc, '', '', metrics))
-            
-            return structure
-            
+                return f.read()
         except Exception as e:
-            return [('error', f"Could not parse file: {str(e)}", '', '', '', {})]
+            self._add_issue('file', f"Could not read file: {str(e)}")
+            return None
 
-    def format_structure(self, structure: List[Tuple[str, str, str, str, str, Dict]], indent: str = "") -> List[str]:
-        """Formats the code structure with metrics on separate lines."""
+    def _parse_content(self, content: str) -> Optional[ast.AST]:
+        """Parse Python content into AST safely."""
+        try:
+            return ast.parse(content)
+        except Exception as e:
+            self._add_issue('parsing', f"Could not parse content: {str(e)}")
+            return None
+
+    def _analyze_code_elements(self, tree: ast.AST, content: str) -> List[Dict]:
+        """Analyze individual code elements in the AST."""
+        results = []
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                results.append(self._analyze_function(node, content))
+            elif isinstance(node, ast.ClassDef):
+                results.append(self._analyze_class(node, content))
+                
+        return results
+    
+    def _analyze_class(self, node: ast.ClassDef, content: str) -> Dict:
+        """Analyze a class's quality metrics."""
+        metrics = {
+            'type': 'class',
+            'name': node.name,
+            'docstring': ast.get_docstring(node) or '',
+            'metrics': self._calculate_class_metrics(node, content),
+            'code_smells': []
+        }
+        
+        self._check_class_metrics(metrics)
+        return metrics
+
+    def _calculate_class_metrics(self, node: ast.ClassDef, content: str) -> Dict:
+        """Calculate comprehensive metrics for a class."""
+        methods = [n for n in ast.walk(node) if isinstance(n, ast.FunctionDef)]
+        return {
+            'lines': node.end_lineno - node.lineno + 1,
+            'method_count': len(methods),
+            'complexity': sum(self._calculate_complexity(m) for m in methods),
+            'has_docstring': bool(ast.get_docstring(node)),
+            'public_methods': len([m for m in methods if not m.name.startswith('_')]),
+            'private_methods': len([m for m in methods if m.name.startswith('_')])
+        }
+
+    def _check_class_metrics(self, class_data: Dict) -> None:
+        """Check class metrics against quality thresholds."""
+        metrics = class_data['metrics']
+        smells = class_data['code_smells']
+        
+        if metrics['lines'] > self.QUALITY_METRICS['MAX_CLASS_LINES']:
+            smells.append('Class too long')
+            
+        if metrics['method_count'] > self.QUALITY_METRICS['MAX_METHODS_PER_CLASS']:
+            smells.append('Too many methods')
+            
+        if metrics['complexity'] > self.QUALITY_METRICS['MAX_CLASS_COMPLEXITY']:
+            smells.append('High class complexity')
+            
+        if not metrics['has_docstring']:
+            smells.append('Missing class docstring')
+
+    def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]:
+        """Format analysis results into a readable tree structure."""
         lines = []
         
-        for item_type, name, doc, params, relationship, metrics in structure:
+        for item in structure:
             if lines:
-                vertical_line = "│" if "│" in indent else " "
-                lines.append(f"{indent}")
+                lines.append(indent)
             
-            symbol = self.get_symbol(item_type)
+            item_type = item.get('type', '')
+            name = item.get('name', '')
+            docstring = item.get('docstring', '')
+            metrics = item.get('metrics', {})
+            code_smells = item.get('code_smells', [])
             
             if item_type == 'class':
-                prefix = f"{self.COLORS['PURPLE']}{self.COLORS['BOLD']}[CLASS]{self.COLORS['END']}"
-                name_colored = f"{self.COLORS['PURPLE']}{name}{self.COLORS['END']}"
+                lines.append(f"{indent}[CLASS] 🏛️ {name}")
+                if metrics.get('method_count'):
+                    lines.append(f"{indent}  └─ Methods: {metrics['method_count']}")
+            elif item_type == 'function':
+                lines.append(f"{indent}[FUNC] ⚡ {name}")
             else:
-                prefix = f"{self.COLORS['BLUE']}{self.COLORS['BOLD']}[FUNC]{self.COLORS['END']}"
-                name_colored = f"{self.COLORS['BLUE']}{name}{self.COLORS['END']}"
+                lines.append(f"{indent}⚠️ {name}")
+                continue
             
-            if params:
-                params_colored = f"{self.COLORS['YELLOW']}{params}{self.COLORS['END']}"
-                lines.append(f"{indent}{prefix} {symbol} {name_colored}{params_colored}")
-            else:
-                lines.append(f"{indent}{prefix} {symbol} {name_colored}")
+            if docstring:
+                lines.append(f"{indent}  └─ # {docstring}")
             
-            if doc:
-                doc_clean = ' '.join(line.strip() for line in doc.split('\n') if line.strip())
-                lines.append(f"{indent}  └─ {self.COLORS['GREEN']}# {doc_clean}{self.COLORS['END']}")
+            if 'lines' in metrics:
+                lines.append(f"{indent}  └─ 📏 Lines: {metrics['lines']}")
             
-            if metrics:
-                if 'complexity' in metrics and metrics['complexity'] > self.COMPLEXITY_THRESHOLD:
-                    lines.append(f"{indent}  └─ {self.COLORS['RED']}⚠️ High complexity ({metrics['complexity']}){self.COLORS['END']}")
-                
-                if 'code_smells' in metrics and metrics['code_smells']:
-                    for smell in metrics['code_smells']:
-                        lines.append(f"{indent}  └─ {self.COLORS['RED']}{smell}{self.COLORS['END']}")
-                
-                if 'lines' in metrics:
-                    lines.append(f"{indent}  └─ {self.COLORS['GRAY']}📏 Lines: {metrics['lines']}{self.COLORS['END']}")
-                
-                if 'method_count' in metrics and metrics['method_count'] > 10:
-                    lines.append(f"{indent}  └─ {self.COLORS['RED']}⚠️ Large class ({metrics['method_count']} methods){self.COLORS['END']}")
-            
+            for smell in code_smells:
+                lines.append(f"{indent}  └─ ⚠️ {smell}")
+        
         return lines
 
-    def _analyze_function_metrics(self, node: ast.FunctionDef, content: str) -> Dict:
-        """Calculate function metrics."""
-        complexity = self._calculate_complexity(node)
-        code_smells = []
+    def _format_metrics_section(self) -> str:
+        """Format the metrics section of the report."""
+        if not self.metrics_summary:
+            return "No metrics collected."
+            
+        lines = ["## Metrics Summary"]
         
-        if len(node.args.args) > self.MAX_PARAMS:
-            code_smells.append(f"⚠️ Too many parameters ({len(node.args.args)})")
+        for category, items in self.metrics_summary.items():
+            lines.append(f"\n### {category.title()}")
+            for item, metrics in items.items():
+                lines.append(f"\n#### {item}")
+                for metric, value in metrics.items():
+                    if isinstance(value, float):
+                        lines.append(f"- {metric}: {value:.2%}")
+                    else:
+                        lines.append(f"- {metric}: {value}")
         
-        lines = len(content.splitlines()[node.lineno-1:node.end_lineno])
-        if lines > self.MAX_LINES:
-            code_smells.append(f"⚠️ Long function ({lines} lines)")
-        
-        return {
-            'complexity': complexity,
-            'code_smells': code_smells,
-            'lines': lines
+        return "\n".join(lines)
+
+    def _analyze_function(self, node: ast.FunctionDef, content: str) -> Dict:
+        """Analyze a function's quality metrics."""
+        metrics = {
+            'type': 'function',
+            'name': node.name,
+            'docstring': ast.get_docstring(node) or '',
+            'metrics': self._calculate_function_metrics(node, content),
+            'code_smells': []
         }
-    
-    def _analyze_class_metrics(self, node: ast.ClassDef, content: str) -> Dict:
-        """Calculate class metrics."""
+        
+        self._check_function_metrics(metrics)
+        return metrics
+
+    def _calculate_function_metrics(self, node: ast.FunctionDef, content: str) -> Dict:
+        """Calculate comprehensive metrics for a function."""
         return {
-            'method_count': len([n for n in ast.walk(node) if isinstance(n, ast.FunctionDef)]),
-            'lines': len(content.splitlines()[node.lineno-1:node.end_lineno])
+            'lines': node.end_lineno - node.lineno + 1,
+            'params': len(node.args.args),
+            'returns': len([n for n in ast.walk(node) if isinstance(n, ast.Return)]),
+            'complexity': self._calculate_complexity(node),
+            'nested_depth': self._calculate_nested_depth(node),
+            'has_docstring': bool(ast.get_docstring(node))
         }
-    
+
     def _calculate_complexity(self, node: ast.AST) -> int:
-        """Calculate cyclomatic complexity."""
+        """Calculate cyclomatic complexity of code."""
         complexity = 1
         for child in ast.walk(node):
             if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
@@ -126,3 +248,81 @@ class EnhancedCodeAnalyzer(CodeAnalyzer):
             elif isinstance(child, ast.BoolOp):
                 complexity += len(child.values) - 1
         return complexity
+
+    def _calculate_nested_depth(self, node: ast.AST) -> int:
+        """Calculate maximum nesting depth in code."""
+        def get_depth(node: ast.AST, current: int = 0) -> int:
+            max_depth = current
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.If, ast.For, ast.While, ast.Try)):
+                    child_depth = get_depth(child, current + 1)
+                    max_depth = max(max_depth, child_depth)
+                else:
+                    max_depth = max(max_depth, get_depth(child, current))
+            return max_depth
+        return get_depth(node)
+
+    def _check_function_metrics(self, func_data: Dict) -> None:
+        """Check function metrics against quality thresholds."""
+        metrics = func_data['metrics']
+        smells = func_data['code_smells']
+        
+        if metrics['lines'] > self.QUALITY_METRICS['MAX_FUNCTION_LINES']:
+            smells.append('Function too long')
+            
+        if metrics['params'] > self.QUALITY_METRICS['MAX_PARAMS']:
+            smells.append('Too many parameters')
+            
+        if metrics['complexity'] > self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']:
+            smells.append('High complexity')
+            
+        if not metrics['has_docstring']:
+            smells.append('Missing docstring')
+
+    def _add_issue(self, category: str, description: str, file_path: str = None, line: int = None) -> None:
+        """
+        Add a quality issue to the collection.
+        
+        Args:
+            category: The category of the issue
+            description: Description of the issue
+            file_path: Optional path to the file where the issue was found
+            line: Optional line number where the issue was found
+        """
+        issue = {
+            'description': description,
+            'file_path': file_path,
+            'line': line
+        }
+        self.quality_issues[category].append(issue)
+        
+    def generate_report(self) -> str:
+        """Generate a formatted quality report."""
+        return self._format_report_sections([
+            self._format_overview_section(),
+            self._format_issues_section(),
+            self._format_metrics_section()
+        ])
+
+    def _format_report_sections(self, sections: List[str]) -> str:
+        """Format and combine report sections."""
+        return "\n\n".join(section for section in sections if section)
+
+    def _format_overview_section(self) -> str:
+        """Format the report overview section."""
+        return "# Code Quality Analysis Report\n\n" + \
+               "Analysis completed with the following results:"
+
+    def _format_issues_section(self) -> str:
+        """Format the quality issues section."""
+        if not self.quality_issues:
+            return "No quality issues found."
+            
+        lines = ["## Quality Issues"]
+        for category, issues in self.quality_issues.items():
+            lines.append(f"\n### {category.title()}")
+            for issue in issues:
+                lines.append(f"- {issue['description']}")
+                if issue.get('line'):
+                    lines.append(f"  Line: {issue['line']}")
+        return "\n".join(lines)

@@ -5,6 +5,8 @@ import argparse
 from .enhanced_analyzer import EnhancedCodeAnalyzer 
 from .dependency_analyzer import ModuleDependencyAnalyzer
 import re
+from .security_analyzer import SecurityAnalyzer
+from typing import List, Dict
 
 def create_default_ignore():
     """Create default .treeline-ignore if it doesn't exist"""
@@ -66,21 +68,70 @@ def format_mermaid_section(dep_analyzer):
         "## Module Dependencies",
         "",
         "```mermaid",
-        "%%{init: {'theme': 'neutral', 'flowchart': {'curve': 'basis'} }}%%",  # Add styling
+        "%%{init: {'theme': 'neutral', 'flowchart': {'curve': 'basis'} }}%%",  
         mermaid_content,
         "```",
         ""
     ]
 
-def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=True):
-    """Generate tree structure with configurable display options."""
+def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]:
+    """
+    Format the analysis results into a readable tree structure.
+    
+    Args:
+        structure: List of analysis results
+        indent: String to use for indentation
+        
+    Returns:
+        List of formatted strings representing the code structure
+    """
+    lines = []
+    
+    for item in structure:
+        if not isinstance(item, dict):  
+            continue
+            
+        item_type = item.get('type', '')
+        name = item.get('name', '')
+        docstring = item.get('docstring', '')
+        metrics = item.get('metrics', {})
+        code_smells = item.get('code_smells', [])
+        
+        if item_type == 'class':
+            lines.append(f"{indent}[CLASS] 🏛️ {name}")
+        elif item_type == 'function':
+            lines.append(f"{indent}[FUNC] ⚡ {name}")
+        elif item_type == 'error':
+            lines.append(f"{indent}⚠️ {name}")
+            continue
+            
+        if docstring:
+            lines.append(f"{indent}  └─ # {docstring}")
+        
+        if metrics:
+            if metrics.get('complexity', 0) > self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']:
+                lines.append(f"{indent}  └─ ⚠️ High complexity ({metrics['complexity']})")
+                
+            if metrics.get('lines', 0) > self.QUALITY_METRICS['MAX_FUNCTION_LINES']:
+                lines.append(f"{indent}  └─ ⚠️ Too long ({metrics['lines']} lines)")
+                
+            if metrics.get('nested_depth', 0) > self.QUALITY_METRICS['MAX_NESTED_DEPTH']:
+                lines.append(f"{indent}  └─ ⚠️ Deep nesting (depth {metrics['nested_depth']})")
+        
+        # Add code smells
+        for smell in code_smells:
+            lines.append(f"{indent}  └─ ⚠️ {smell}")
+    
+    return lines
+
+def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=False):
+    """Generate tree structure with code quality and security analysis."""
     tree_str = []
     directory = Path(directory)
     ignore_patterns = read_ignore_patterns()
     
     code_analyzer = None if hide_structure else EnhancedCodeAnalyzer(
-        show_params=show_params,
-        show_relationships=show_relationships
+        show_params=show_params
     )
     
     dep_analyzer = ModuleDependencyAnalyzer() if create_md else None
@@ -101,16 +152,17 @@ def generate_tree(directory, create_md=False, hide_structure=False, show_params=
                 add_directory(entry, prefix + extension)
             elif not hide_structure and entry.suffix == '.py':
                 extension = "    " if is_last else "│   "
-                structure = code_analyzer.analyze_file(entry)
-                structure_lines = code_analyzer.format_structure(structure, prefix + extension + "  ")
-                tree_str.extend(structure_lines)
+                if code_analyzer:
+                    structure = code_analyzer.analyze_file(entry)
+                    structure_lines = code_analyzer.format_structure(structure, prefix + extension + "  ")
+                    tree_str.extend(structure_lines)
 
     tree_str.append(str(directory.name))
     add_directory(directory)
     
     if create_md:
         with open("tree.md", 'w', encoding='utf-8') as f:
-            f.write("# Project Structure Analysis\n\n")
+            f.write("# Project Analysis Report\n\n")
             
             f.write("## Directory Structure\n\n")
             f.write("```\n")
@@ -122,7 +174,7 @@ def generate_tree(directory, create_md=False, hide_structure=False, show_params=
                 mermaid_section = format_mermaid_section(dep_analyzer)
                 f.write("\n".join(mermaid_section))
                 
-                f.write("## Module Metrics\n\n")
+                f.write("## Code Quality Metrics\n\n")
                 for module, metrics in sorted(dep_analyzer.module_metrics.items()):
                     f.write(f"### {module}\n")
                     f.write(f"- Functions: **{metrics['functions']}**\n")
@@ -136,25 +188,24 @@ def generate_tree(directory, create_md=False, hide_structure=False, show_params=
                         f.write(f"- **Module**: {module}\n")
                         f.write(f"- **Complexity**: {complexity}\n\n")
                 else:
-                    f.write("*No complex functions found.*\n")
+                    f.write("*No complex functions found.*\n\n")
     
     return "\n".join(tree_str)
 
 def main():
     create_default_ignore()
     parser = argparse.ArgumentParser(
-        description='Generate ASCII tree structure of directories',
+        description='Generate code analysis with quality checks',
         formatter_class=argparse.RawTextHelpFormatter,
         epilog=
         '''
             Examples:
-            treeline                      # Show full tree with all features
-            treeline /path/to/dir         # Show specific directory tree
-            treeline -m                   # Create markdown file
+            treeline                      # Show full analysis
+            treeline /path/to/dir         # Analyze specific directory
+            treeline -m                   # Create markdown report
             treeline -i "*.pyc,*.git"     # Ignore patterns
-            treeline --hide-structure     # Hide all code structure
+            treeline --hide-structure     # Hide code structure
             treeline --no-params          # Hide function parameters
-            treeline --no-relationships   # Hide code relationships
             treeline -h                   # Show this help message
         '''
     )
@@ -162,15 +213,13 @@ def main():
     parser.add_argument('directory', nargs='?', default='.',
                        help='Directory path (default: current directory)')
     parser.add_argument('-m', '--markdown', action='store_true',
-                       help='Create markdown file (tree.md)')
+                       help='Create markdown report (tree.md)')
     parser.add_argument('-i', '--ignore',
                        help='Comma-separated patterns to ignore (e.g., "*.pyc,*.git")')
     parser.add_argument('--hide-structure', action='store_true',
-                       help='Hide all code structure')
+                       help='Hide code structure')
     parser.add_argument('--no-params', action='store_true',
                        help='Hide function parameters')
-    parser.add_argument('--no-relationships', action='store_true',
-                       help='Hide code relationships')
 
     args = parser.parse_args()
     
@@ -180,9 +229,5 @@ def main():
         args.directory,
         create_md=args.markdown,
         hide_structure=args.hide_structure,
-        show_params=not args.no_params,
-        show_relationships=not args.no_relationships
+        show_params=not args.no_params
     ))
-
-if __name__ == "__main__":
-    main()

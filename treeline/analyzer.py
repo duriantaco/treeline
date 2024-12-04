@@ -106,9 +106,7 @@ class CodeAnalyzer:
         lines = []
         
         for item_type, name, doc, params, relationship in structure:
-            # Add spacing between items while maintaining tree structure
             if lines:
-                # Keep the vertical line if it exists in the indent
                 vertical_line = "│" if "│" in indent else " "
                 lines.append(f"{indent}")
             
