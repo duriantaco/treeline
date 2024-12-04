@@ -26,6 +26,22 @@
 │ ├─ test_nested_dir.py
 │ │   **Function**: → test_nested_directories
 │ │   └─ # Test handling of nested directories
+│ ├─ test_security_detection.py
+│ │   **Class**: ◆ TestTreelineSecurity
+│ │   └─ ! High complexity (11)
+│ │   └─ ! Too long (72 lines)
+│ │   └─ ! Missing class docstring
+│ │   **Function**: → setUp
+│ │   **Function**: → create_test_file
+│ │   └─ # Helper method to create a temporary test file.
+│ │   **Function**: → debug_ast
+│ │   └─ # Helper to print AST for debugging
+│ │   **Function**: → test_sql_injection_detection
+│ │   **Function**: → test_command_injection_detection
+│ │   **Function**: → test_unsafe_deserialization_detection
+│ │   **Function**: → test_hardcoded_secret_detection
+│ │   **Function**: → test_file_operation_detection
+│ │   **Function**: → tearDown
 │ ├─ test_special_char.py
 │ │   **Function**: → test_special_characters
 │ │   └─ # Test handling of special characters in names
@@ -49,7 +65,7 @@
 │ │   **Function**: → analyze_file
 │ │   └─ # Extracts functions and classes with optional params and relationships.
 │ │   └─ ! Deep nesting (depth 5)
-│ │   └─ ! Excessive nesting depth (> 4, Pylint)
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _get_function_params
 │ │   └─ # Extract function parameters with type hints.
@@ -67,7 +83,7 @@
 │ │   └─ # Read patterns from .treeline-ignore file
 │ │   **Function**: → should_ignore
 │ │   └─ # Check if path should be ignored based on patterns
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
+│ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → clean_for_markdown
 │ │   └─ # Remove ANSI colors and simplify symbols for markdown.
@@ -81,8 +97,8 @@
 │ │    Returns:
 │ │    List of formatted strings representing the code structure
 │ │   └─ ! High complexity (12)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → generate_markdown_report
 │ │   └─ # Generate a markdown report with tree structure and analysis results.
@@ -90,22 +106,22 @@
 │ │   └─ # Generate tree structure with code quality and security analysis.
 │ │   └─ ! High complexity (13)
 │ │   └─ ! Deep nesting (depth 7)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
-│ │   └─ ! Excessive nesting depth (> 4, Pylint)
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → main
 │ │   **Function**: → add_directory
 │ │   └─ ! Deep nesting (depth 7)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
-│ │   └─ ! Excessive nesting depth (> 4, Pylint)
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ ├─ default_ignore
 │ ├─ dependency_analyzer.py
 │ │   **Class**: ◆ ModuleDependencyAnalyzer
 │ │   └─ # Analyzes module-level dependencies and generates summary reports.
-│ │   └─ ! High complexity (62)
-│ │   └─ ! Too long (221 lines)
+│ │   └─ ! High complexity (68)
+│ │   └─ ! Too long (226 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! High class complexity
 │ │   **Function**: → __init__
@@ -115,9 +131,9 @@
 │ │   └─ # Analyze a single module's contents and relationships.
 │ │   └─ ! High complexity (15)
 │ │   └─ ! Deep nesting (depth 7)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
-│ │   └─ ! Excessive nesting depth (> 4, Pylint)
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _analyze_imports
 │ │   └─ # Collect import information from AST.
@@ -128,21 +144,23 @@
 │ │   └─ # Calculate cyclomatic complexity.
 │ │   **Function**: → generate_mermaid_graph
 │ │   └─ # Generate detailed Mermaid graph showing module, function, and class relationships.
-│ │   └─ ! High complexity (14)
-│ │   └─ ! Too long (51 lines)
-│ │   └─ ! Function exceeds 50 lines (Pylint)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
+│ │   └─ ! High complexity (20)
+│ │   └─ ! Too long (56 lines)
+│ │   └─ ! Deep nesting (depth 5)
+│ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → generate_summary_report
 │ │   └─ # Generate a readable markdown report without tables.
 │ │   └─ ! High complexity (14)
 │ │   └─ ! Too long (55 lines)
 │ │   └─ ! Deep nesting (depth 6)
-│ │   └─ ! Function exceeds 50 lines (Pylint)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
-│ │   └─ ! Excessive nesting depth (> 4, Pylint)
+│ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ ├─ enhanced_analyzer.py
 │ │   **Class**: ◆ EnhancedCodeAnalyzer
@@ -150,7 +168,7 @@
 │ │    This analyzer implements industry-standard code quality checks and metrics
 │ │    following Clean Code principles, SOLID principles, and PEP 8 standards.
 │ │   └─ ! High complexity (123)
-│ │   └─ ! Too long (529 lines)
+│ │   └─ ! Too long (530 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
@@ -189,9 +207,9 @@
 │ │    file_path: Path to the file being analyzed
 │ │   └─ ! High complexity (13)
 │ │   └─ ! Too long (63 lines)
-│ │   └─ ! Function exceeds 50 lines (Pylint)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
+│ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _read_file
 │ │   └─ # Read and return file content safely.
@@ -207,8 +225,8 @@
 │ │   **Function**: → format_structure
 │ │   └─ # Format the analysis results into a tree structure.
 │ │   └─ ! High complexity (15)
-│ │   └─ ! High cyclomatic complexity (> 10, McCabe)
-│ │   └─ ! High cognitive complexity (> 15, SonarQube)
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _format_metrics_section
 │ │   └─ # Format the metrics section of the report.
@@ -247,33 +265,30 @@
 │ │   **Function**: → get_depth
 │ │   **Function**: → get_inheritance_depth
 │ └─ security_analyzer.py
-│     **Class**: ◆ SecurityAnalyzer
-│     └─ # Security analyzer for Python code to detect potential vulnerabilities and risks.
-│      Follows OWASP guidelines and common security best practices.
-│     └─ ! High complexity (27)
-│     └─ ! Too long (224 lines)
-│     └─ ! Class too long
+│     **Class**: ◆ TreelineSecurity
+│     └─ ! High complexity (46)
+│     └─ ! Too long (168 lines)
+│     └─ ! Missing class docstring
 │     **Function**: → __init__
-│     └─ # Initialize the security analyzer.
 │     **Function**: → analyze_file
-│     └─ # Analyze a Python file for security vulnerabilities.
-│      Args:
-│      file_path: Path to the Python file to analyze
-│      Returns:
-│      Dictionary containing security analysis results
-│     **Function**: → _scan_patterns
-│     └─ # Scan code for vulnerable patterns using regex.
-│     **Function**: → _analyze_ast_security
-│     └─ # Analyze AST for security issues.
-│     **Function**: → _check_dangerous_attributes
-│     └─ # Check for access to dangerous attributes.
-│     **Function**: → _check_dangerous_imports
-│     └─ # Check for potentially dangerous imports.
-│     **Function**: → _add_security_issue
-│     └─ # Add a security issue to the collection.
-│     └─ ! Too many parameters (> 5, Pylint)
-│     **Function**: → generate_security_report
-│     └─ # Generate a comprehensive security analysis report.
+│     **Function**: → _collect_imports
+│     └─ ! High cognitive complexity (> 15)
+│     **Function**: → _scan_security_issues
+│     └─ ! High cognitive load (> 7 items)
+│     **Function**: → _check_all_dangerous_calls
+│     └─ # Check for dangerous function calls that may lead to security vulnerabilities.
+│     └─ ! High complexity (14)
+│     └─ ! Too long (56 lines)
+│     └─ ! Deep nesting (depth 6)
+│     └─ ! Function exceeds 50 lines
+│     └─ ! High cyclomatic complexity (> 10)
+│     └─ ! High cognitive complexity (> 15)
+│     └─ ! Excessive nesting depth (> 4)
+│     └─ ! High cognitive load (> 7 items)
+│     **Function**: → _check_string_concat
+│     └─ # Check for string concatenation with SQL-like commands.
+│     **Function**: → _check_hardcoded_secrets
+│     **Function**: → _add_issue
 ├─ treeline.egg-info
 │ ├─ dependency_links.txt
 │ ├─ entry_points.txt
@@ -293,205 +308,198 @@
 %%{init: {'theme': 'neutral', 'flowchart': {'curve': 'basis'} }}%%
 graph TD
     %% Styling
-    classDef module fill:#b7e2d8,stroke:#333,stroke-width:2px;
-    classDef function fill:#e4d1d1,stroke:#333;
-    classDef class fill:#d1e0e4,stroke:#333;
-    subgraph setup["setup"]
-        setup_node["setup"]:::module
-    end
-    subgraph tests_test_special_char["tests.test_special_char"]
-        tests_test_special_char_node["tests.test_special_char"]:::module
-        tests_test_special_char_test_special_characters["⚡ test_special_characters()"]:::function
-        tests_test_special_char_node --> tests_test_special_char_test_special_characters
-    end
-    subgraph tests_test_missing_dir["tests.test_missing_dir"]
-        tests_test_missing_dir_node["tests.test_missing_dir"]:::module
-        tests_test_missing_dir_test_non_existent_directory["⚡ test_non_existent_directory()"]:::function
-        tests_test_missing_dir_node --> tests_test_missing_dir_test_non_existent_directory
-    end
-    subgraph tests_test_empty_dir["tests.test_empty_dir"]
-        tests_test_empty_dir_node["tests.test_empty_dir"]:::module
-        tests_test_empty_dir_test_empty_directory["⚡ test_empty_directory()"]:::function
-        tests_test_empty_dir_node --> tests_test_empty_dir_test_empty_directory
-    end
-    subgraph tests_test_core["tests.test_core"]
-        tests_test_core_node["tests.test_core"]:::module
-        tests_test_core_TestTreeGenerator["📦 TestTreeGenerator"]:::class
-        tests_test_core_node --> tests_test_core_TestTreeGenerator
-        tests_test_core_TestTreeGenerator_setUp["⚡ setUp()"]:::function
-        tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_setUp
-        tests_test_core_TestTreeGenerator_tearDown["⚡ tearDown()"]:::function
-        tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_tearDown
-        tests_test_core_TestTreeGenerator_test_tree_structure["⚡ test_tree_structure()"]:::function
-        tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_test_tree_structure
-        tests_test_core_TestTreeGenerator_test_markdown_creation["⚡ test_markdown_creation()"]:::function
-        tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_test_markdown_creation
-    end
-    subgraph tests_test_treeline["tests.test_treeline"]
-        tests_test_treeline_node["tests.test_treeline"]:::module
-        tests_test_treeline_TestTreeLine["📦 TestTreeLine"]:::class
-        tests_test_treeline_node --> tests_test_treeline_TestTreeLine
-        tests_test_treeline_TestTreeLine_setUp["⚡ setUp()"]:::function
-        tests_test_treeline_TestTreeLine --> tests_test_treeline_TestTreeLine_setUp
-        tests_test_treeline_TestTreeLine_tearDown["⚡ tearDown()"]:::function
-        tests_test_treeline_TestTreeLine --> tests_test_treeline_TestTreeLine_tearDown
-        tests_test_treeline_TestTreeLine_test_basic_tree["⚡ test_basic_tree()"]:::function
-        tests_test_treeline_TestTreeLine --> tests_test_treeline_TestTreeLine_test_basic_tree
-    end
-    subgraph tests_test_nested_dir["tests.test_nested_dir"]
-        tests_test_nested_dir_node["tests.test_nested_dir"]:::module
-        tests_test_nested_dir_test_nested_directories["⚡ test_nested_directories()"]:::function
-        tests_test_nested_dir_node --> tests_test_nested_dir_test_nested_directories
-    end
-    subgraph treeline_dependency_analyzer["treeline.dependency_analyzer"]
-        treeline_dependency_analyzer_node["treeline.dependency_analyzer"]:::module
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer["📦 ModuleDependencyAnalyzer"]:::class
-        treeline_dependency_analyzer_node --> treeline_dependency_analyzer_ModuleDependencyAnalyzer
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer___init__["⚡ __init__()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer___init__
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer_analyze_directory["⚡ analyze_directory()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_analyze_directory
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_module["⚡ _analyze_module()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_module
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_imports["⚡ _analyze_imports()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_imports
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer__collect_metrics["⚡ _collect_metrics()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__collect_metrics
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer__calculate_complexity["⚡ _calculate_complexity()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__calculate_complexity
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_mermaid_graph["⚡ generate_mermaid_graph()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_mermaid_graph
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report["⚡ generate_summary_report()"]:::function
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report
-    end
-    subgraph treeline_analyzer["treeline.analyzer"]
-        treeline_analyzer_node["treeline.analyzer"]:::module
-        treeline_analyzer_CodeAnalyzer["📦 CodeAnalyzer"]:::class
-        treeline_analyzer_node --> treeline_analyzer_CodeAnalyzer
-        treeline_analyzer_CodeAnalyzer___init__["⚡ __init__()"]:::function
-        treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer___init__
-        treeline_analyzer_CodeAnalyzer_analyze_file["⚡ analyze_file()"]:::function
-        treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_analyze_file
-        treeline_analyzer_CodeAnalyzer__get_function_params["⚡ _get_function_params()"]:::function
-        treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer__get_function_params
-        treeline_analyzer_CodeAnalyzer__find_function_calls["⚡ _find_function_calls()"]:::function
-        treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer__find_function_calls
-        treeline_analyzer_CodeAnalyzer_get_symbol["⚡ get_symbol()"]:::function
-        treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_get_symbol
-        treeline_analyzer_CodeAnalyzer_format_structure["⚡ format_structure()"]:::function
-        treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_format_structure
-    end
-    subgraph treeline___init__["treeline.__init__"]
-        treeline___init___node["treeline.__init__"]:::module
-        treeline___init_____call__["⚡ __call__()"]:::function
-        treeline___init___node --> treeline___init_____call__
-    end
-    subgraph treeline_enhanced_analyzer["treeline.enhanced_analyzer"]
-        treeline_enhanced_analyzer_node["treeline.enhanced_analyzer"]:::module
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer["📦 EnhancedCodeAnalyzer"]:::class
-        treeline_enhanced_analyzer_node --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer___init__["⚡ __init__()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer___init__
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer_analyze_file["⚡ analyze_file()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer_analyze_file
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_maintainability_index["⚡ _calculate_maintainability_index()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_maintainability_index
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_load["⚡ _calculate_cognitive_load()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_load
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_function_metrics["⚡ _check_function_metrics()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_function_metrics
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cyclomatic_complexity["⚡ _calculate_cyclomatic_complexity()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cyclomatic_complexity
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_complexity["⚡ _calculate_cognitive_complexity()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_complexity
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_file_metrics["⚡ _analyze_file_metrics()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_file_metrics
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__read_file["⚡ _read_file()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__read_file
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__parse_content["⚡ _parse_content()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__parse_content
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_elements["⚡ _analyze_code_elements()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_elements
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_class["⚡ _analyze_class()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_class
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_class_metrics["⚡ _check_class_metrics()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_class_metrics
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer_format_structure["⚡ format_structure()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer_format_structure
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_metrics_section["⚡ _format_metrics_section()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_metrics_section
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_function["⚡ _analyze_function()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_class_metrics["⚡ _calculate_class_metrics()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_class_metrics
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_function_metrics["⚡ _calculate_function_metrics()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_function_metrics
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_complexity["⚡ _calculate_complexity()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_complexity
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_nested_depth["⚡ _calculate_nested_depth()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_nested_depth
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_duplication["⚡ _analyze_code_duplication()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_duplication
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_imports["⚡ _analyze_imports()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_imports
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_inheritance["⚡ _analyze_inheritance()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_inheritance
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__add_issue["⚡ _add_issue()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__add_issue
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer_generate_report["⚡ generate_report()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer_generate_report
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_report_sections["⚡ _format_report_sections()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_report_sections
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_overview_section["⚡ _format_overview_section()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_overview_section
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_issues_section["⚡ _format_issues_section()"]:::function
-        treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_issues_section
-    end
-    subgraph treeline_core["treeline.core"]
-        treeline_core_node["treeline.core"]:::module
-        treeline_core_create_default_ignore["⚡ create_default_ignore()"]:::function
-        treeline_core_node --> treeline_core_create_default_ignore
-        treeline_core_read_ignore_patterns["⚡ read_ignore_patterns()"]:::function
-        treeline_core_node --> treeline_core_read_ignore_patterns
-        treeline_core_should_ignore["⚡ should_ignore()"]:::function
-        treeline_core_node --> treeline_core_should_ignore
-        treeline_core_clean_for_markdown["⚡ clean_for_markdown()"]:::function
-        treeline_core_node --> treeline_core_clean_for_markdown
-        treeline_core_format_mermaid_section["⚡ format_mermaid_section()"]:::function
-        treeline_core_node --> treeline_core_format_mermaid_section
-        treeline_core_format_structure["⚡ format_structure()"]:::function
-        treeline_core_node --> treeline_core_format_structure
-        treeline_core_generate_markdown_report["⚡ generate_markdown_report()"]:::function
-        treeline_core_node --> treeline_core_generate_markdown_report
-        treeline_core_generate_tree["⚡ generate_tree()"]:::function
-        treeline_core_node --> treeline_core_generate_tree
-        treeline_core_main["⚡ main()"]:::function
-        treeline_core_node --> treeline_core_main
-    end
-    subgraph treeline_security_analyzer["treeline.security_analyzer"]
-        treeline_security_analyzer_node["treeline.security_analyzer"]:::module
-        treeline_security_analyzer_SecurityAnalyzer["📦 SecurityAnalyzer"]:::class
-        treeline_security_analyzer_node --> treeline_security_analyzer_SecurityAnalyzer
-        treeline_security_analyzer_SecurityAnalyzer___init__["⚡ __init__()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer___init__
-        treeline_security_analyzer_SecurityAnalyzer_analyze_file["⚡ analyze_file()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer_analyze_file
-        treeline_security_analyzer_SecurityAnalyzer__scan_patterns["⚡ _scan_patterns()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer__scan_patterns
-        treeline_security_analyzer_SecurityAnalyzer__analyze_ast_security["⚡ _analyze_ast_security()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer__analyze_ast_security
-        treeline_security_analyzer_SecurityAnalyzer__check_dangerous_attributes["⚡ _check_dangerous_attributes()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer__check_dangerous_attributes
-        treeline_security_analyzer_SecurityAnalyzer__check_dangerous_imports["⚡ _check_dangerous_imports()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer__check_dangerous_imports
-        treeline_security_analyzer_SecurityAnalyzer__add_security_issue["⚡ _add_security_issue()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer__add_security_issue
-        treeline_security_analyzer_SecurityAnalyzer_generate_security_report["⚡ generate_security_report()"]:::function
-        treeline_security_analyzer_SecurityAnalyzer --> treeline_security_analyzer_SecurityAnalyzer_generate_security_report
-    end
-    subgraph treeline___main__["treeline.__main__"]
-        treeline___main___node["treeline.__main__"]:::module
-    end
+    classDef module fill:#b7e2d8,stroke:#333,stroke-width:2px
+    classDef function fill:#e4d1d1,stroke:#333
+    classDef class fill:#d1e0e4,stroke:#333
+    setup["setup"]:::module
+    tests_test_security_detection["tests.test_security_detection"]:::module
+    tests_test_security_detection_TestTreelineSecurity["📦 TestTreelineSecurity"]:::class
+    tests_test_security_detection --> tests_test_security_detection_TestTreelineSecurity
+    tests_test_security_detection_TestTreelineSecurity_setUp["⚡ setUp()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_setUp
+    tests_test_security_detection_TestTreelineSecurity_create_test_file["⚡ create_test_file()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_create_test_file
+    tests_test_security_detection_TestTreelineSecurity_debug_ast["⚡ debug_ast()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_debug_ast
+    tests_test_security_detection_TestTreelineSecurity_test_sql_injection_detection["⚡ test_sql_injection_detection()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_test_sql_injection_detection
+    tests_test_security_detection_TestTreelineSecurity_test_command_injection_detection["⚡ test_command_injection_detection()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_test_command_injection_detection
+    tests_test_security_detection_TestTreelineSecurity_test_unsafe_deserialization_detection["⚡ test_unsafe_deserialization_detection()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_test_unsafe_deserialization_detection
+    tests_test_security_detection_TestTreelineSecurity_test_hardcoded_secret_detection["⚡ test_hardcoded_secret_detection()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_test_hardcoded_secret_detection
+    tests_test_security_detection_TestTreelineSecurity_test_file_operation_detection["⚡ test_file_operation_detection()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_test_file_operation_detection
+    tests_test_security_detection_TestTreelineSecurity_tearDown["⚡ tearDown()"]:::function
+    tests_test_security_detection_TestTreelineSecurity --> tests_test_security_detection_TestTreelineSecurity_tearDown
+    tests_test_special_char["tests.test_special_char"]:::module
+    tests_test_special_char_test_special_characters["⚡ test_special_characters()"]:::function
+    tests_test_special_char --> tests_test_special_char_test_special_characters
+    tests_test_missing_dir["tests.test_missing_dir"]:::module
+    tests_test_missing_dir_test_non_existent_directory["⚡ test_non_existent_directory()"]:::function
+    tests_test_missing_dir --> tests_test_missing_dir_test_non_existent_directory
+    tests_test_empty_dir["tests.test_empty_dir"]:::module
+    tests_test_empty_dir_test_empty_directory["⚡ test_empty_directory()"]:::function
+    tests_test_empty_dir --> tests_test_empty_dir_test_empty_directory
+    tests_test_core["tests.test_core"]:::module
+    tests_test_core_TestTreeGenerator["📦 TestTreeGenerator"]:::class
+    tests_test_core --> tests_test_core_TestTreeGenerator
+    tests_test_core_TestTreeGenerator_setUp["⚡ setUp()"]:::function
+    tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_setUp
+    tests_test_core_TestTreeGenerator_tearDown["⚡ tearDown()"]:::function
+    tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_tearDown
+    tests_test_core_TestTreeGenerator_test_tree_structure["⚡ test_tree_structure()"]:::function
+    tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_test_tree_structure
+    tests_test_core_TestTreeGenerator_test_markdown_creation["⚡ test_markdown_creation()"]:::function
+    tests_test_core_TestTreeGenerator --> tests_test_core_TestTreeGenerator_test_markdown_creation
+    tests_test_treeline["tests.test_treeline"]:::module
+    tests_test_treeline_TestTreeLine["📦 TestTreeLine"]:::class
+    tests_test_treeline --> tests_test_treeline_TestTreeLine
+    tests_test_treeline_TestTreeLine_setUp["⚡ setUp()"]:::function
+    tests_test_treeline_TestTreeLine --> tests_test_treeline_TestTreeLine_setUp
+    tests_test_treeline_TestTreeLine_tearDown["⚡ tearDown()"]:::function
+    tests_test_treeline_TestTreeLine --> tests_test_treeline_TestTreeLine_tearDown
+    tests_test_treeline_TestTreeLine_test_basic_tree["⚡ test_basic_tree()"]:::function
+    tests_test_treeline_TestTreeLine --> tests_test_treeline_TestTreeLine_test_basic_tree
+    tests_test_nested_dir["tests.test_nested_dir"]:::module
+    tests_test_nested_dir_test_nested_directories["⚡ test_nested_directories()"]:::function
+    tests_test_nested_dir --> tests_test_nested_dir_test_nested_directories
+    treeline_dependency_analyzer["treeline.dependency_analyzer"]:::module
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer["📦 ModuleDependencyAnalyzer"]:::class
+    treeline_dependency_analyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer___init__["⚡ __init__()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer___init__
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer_analyze_directory["⚡ analyze_directory()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_analyze_directory
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_module["⚡ _analyze_module()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_module
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_imports["⚡ _analyze_imports()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__analyze_imports
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer__collect_metrics["⚡ _collect_metrics()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__collect_metrics
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer__calculate_complexity["⚡ _calculate_complexity()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer__calculate_complexity
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_mermaid_graph["⚡ generate_mermaid_graph()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_mermaid_graph
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report["⚡ generate_summary_report()"]:::function
+    treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report
+    treeline_analyzer["treeline.analyzer"]:::module
+    treeline_analyzer_CodeAnalyzer["📦 CodeAnalyzer"]:::class
+    treeline_analyzer --> treeline_analyzer_CodeAnalyzer
+    treeline_analyzer_CodeAnalyzer___init__["⚡ __init__()"]:::function
+    treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer___init__
+    treeline_analyzer_CodeAnalyzer_analyze_file["⚡ analyze_file()"]:::function
+    treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_analyze_file
+    treeline_analyzer_CodeAnalyzer__get_function_params["⚡ _get_function_params()"]:::function
+    treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer__get_function_params
+    treeline_analyzer_CodeAnalyzer__find_function_calls["⚡ _find_function_calls()"]:::function
+    treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer__find_function_calls
+    treeline_analyzer_CodeAnalyzer_get_symbol["⚡ get_symbol()"]:::function
+    treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_get_symbol
+    treeline_analyzer_CodeAnalyzer_format_structure["⚡ format_structure()"]:::function
+    treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_format_structure
+    treeline___init__["treeline.__init__"]:::module
+    treeline___init_____call__["⚡ __call__()"]:::function
+    treeline___init__ --> treeline___init_____call__
+    treeline_enhanced_analyzer["treeline.enhanced_analyzer"]:::module
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer["📦 EnhancedCodeAnalyzer"]:::class
+    treeline_enhanced_analyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer___init__["⚡ __init__()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer___init__
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer_analyze_file["⚡ analyze_file()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer_analyze_file
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_maintainability_index["⚡ _calculate_maintainability_index()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_maintainability_index
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_load["⚡ _calculate_cognitive_load()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_load
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_function_metrics["⚡ _check_function_metrics()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_function_metrics
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cyclomatic_complexity["⚡ _calculate_cyclomatic_complexity()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cyclomatic_complexity
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_complexity["⚡ _calculate_cognitive_complexity()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_cognitive_complexity
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_file_metrics["⚡ _analyze_file_metrics()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_file_metrics
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__read_file["⚡ _read_file()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__read_file
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__parse_content["⚡ _parse_content()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__parse_content
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_elements["⚡ _analyze_code_elements()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_elements
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_class["⚡ _analyze_class()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_class
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_class_metrics["⚡ _check_class_metrics()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__check_class_metrics
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer_format_structure["⚡ format_structure()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer_format_structure
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_metrics_section["⚡ _format_metrics_section()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_metrics_section
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_function["⚡ _analyze_function()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_class_metrics["⚡ _calculate_class_metrics()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_class_metrics
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_function_metrics["⚡ _calculate_function_metrics()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_function_metrics
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_complexity["⚡ _calculate_complexity()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_complexity
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_nested_depth["⚡ _calculate_nested_depth()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__calculate_nested_depth
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_duplication["⚡ _analyze_code_duplication()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_code_duplication
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_imports["⚡ _analyze_imports()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_imports
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_inheritance["⚡ _analyze_inheritance()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__analyze_inheritance
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__add_issue["⚡ _add_issue()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__add_issue
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer_generate_report["⚡ generate_report()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer_generate_report
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_report_sections["⚡ _format_report_sections()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_report_sections
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_overview_section["⚡ _format_overview_section()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_overview_section
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_issues_section["⚡ _format_issues_section()"]:::function
+    treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_issues_section
+    treeline_core["treeline.core"]:::module
+    treeline_core_create_default_ignore["⚡ create_default_ignore()"]:::function
+    treeline_core --> treeline_core_create_default_ignore
+    treeline_core_read_ignore_patterns["⚡ read_ignore_patterns()"]:::function
+    treeline_core --> treeline_core_read_ignore_patterns
+    treeline_core_should_ignore["⚡ should_ignore()"]:::function
+    treeline_core --> treeline_core_should_ignore
+    treeline_core_clean_for_markdown["⚡ clean_for_markdown()"]:::function
+    treeline_core --> treeline_core_clean_for_markdown
+    treeline_core_format_mermaid_section["⚡ format_mermaid_section()"]:::function
+    treeline_core --> treeline_core_format_mermaid_section
+    treeline_core_format_structure["⚡ format_structure()"]:::function
+    treeline_core --> treeline_core_format_structure
+    treeline_core_generate_markdown_report["⚡ generate_markdown_report()"]:::function
+    treeline_core --> treeline_core_generate_markdown_report
+    treeline_core_generate_tree["⚡ generate_tree()"]:::function
+    treeline_core --> treeline_core_generate_tree
+    treeline_core_main["⚡ main()"]:::function
+    treeline_core --> treeline_core_main
+    treeline_security_analyzer["treeline.security_analyzer"]:::module
+    treeline_security_analyzer_TreelineSecurity["📦 TreelineSecurity"]:::class
+    treeline_security_analyzer --> treeline_security_analyzer_TreelineSecurity
+    treeline_security_analyzer_TreelineSecurity___init__["⚡ __init__()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity___init__
+    treeline_security_analyzer_TreelineSecurity_analyze_file["⚡ analyze_file()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity_analyze_file
+    treeline_security_analyzer_TreelineSecurity__collect_imports["⚡ _collect_imports()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__collect_imports
+    treeline_security_analyzer_TreelineSecurity__scan_security_issues["⚡ _scan_security_issues()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__scan_security_issues
+    treeline_security_analyzer_TreelineSecurity__check_all_dangerous_calls["⚡ _check_all_dangerous_calls()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__check_all_dangerous_calls
+    treeline_security_analyzer_TreelineSecurity__check_string_concat["⚡ _check_string_concat()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__check_string_concat
+    treeline_security_analyzer_TreelineSecurity__check_hardcoded_secrets["⚡ _check_hardcoded_secrets()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__check_hardcoded_secrets
+    treeline_security_analyzer_TreelineSecurity__add_issue["⚡ _add_issue()"]:::function
+    treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__add_issue
+    treeline___main__["treeline.__main__"]:::module
     tests_test_special_char_test_special_characters -.->|calls| treeline_core_generate_tree
     tests_test_missing_dir_test_non_existent_directory -.->|calls| treeline_core_generate_tree
     tests_test_empty_dir_test_empty_directory -.->|calls| treeline_core_generate_tree
@@ -504,12 +512,13 @@ graph TD
     treeline_core_generate_tree -.->|calls| treeline_core_generate_markdown_report
     treeline_core_generate_tree -.->|calls| treeline_core_should_ignore
     treeline_core_main -.->|calls| treeline_core_create_default_ignore
-    tests_test_special_char_node --> treeline_core_node
-    tests_test_missing_dir_node --> treeline_core_node
-    tests_test_empty_dir_node --> treeline_core_node
-    tests_test_core_node --> treeline_core_node
-    tests_test_nested_dir_node --> treeline_core_node
-    treeline___main___node --> treeline_core_node
+    tests_test_security_detection --> treeline_security_analyzer
+    tests_test_special_char --> treeline_core
+    tests_test_missing_dir --> treeline_core
+    tests_test_empty_dir --> treeline_core
+    tests_test_core --> treeline_core
+    tests_test_nested_dir --> treeline_core
+    treeline___main__ --> treeline_core
 ```
 ## Code Quality Metrics
 
@@ -537,6 +546,11 @@ graph TD
 - Functions: **1**
 - Classes: **0**
 - Complexity: **1**
+
+### tests.test_security_detection
+- Functions: **9**
+- Classes: **1**
+- Complexity: **11**
 
 ### tests.test_special_char
 - Functions: **1**
@@ -571,7 +585,7 @@ graph TD
 ### treeline.dependency_analyzer
 - Functions: **8**
 - Classes: **1**
-- Complexity: **62**
+- Complexity: **68**
 
 ### treeline.enhanced_analyzer
 - Functions: **31**
@@ -581,9 +595,13 @@ graph TD
 ### treeline.security_analyzer
 - Functions: **8**
 - Classes: **1**
-- Complexity: **27**
+- Complexity: **46**
 
 ## Complexity Hotspots
+
+### generate_mermaid_graph
+- **Module**: treeline.dependency_analyzer
+- **Complexity**: 20
 
 ### _analyze_module
 - **Module**: treeline.dependency_analyzer
@@ -593,12 +611,12 @@ graph TD
 - **Module**: treeline.enhanced_analyzer
 - **Complexity**: 15
 
-### generate_mermaid_graph
+### generate_summary_report
 - **Module**: treeline.dependency_analyzer
 - **Complexity**: 14
 
-### generate_summary_report
-- **Module**: treeline.dependency_analyzer
+### _check_all_dangerous_calls
+- **Module**: treeline.security_analyzer
 - **Complexity**: 14
 
 ### _analyze_file_metrics

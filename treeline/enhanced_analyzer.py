@@ -107,22 +107,22 @@ class EnhancedCodeAnalyzer:
         smells = func_data['code_smells']
         
         if metrics['lines'] > self.QUALITY_METRICS['MAX_FUNCTION_LINES']:
-            smells.append(f"Function exceeds {self.QUALITY_METRICS['MAX_FUNCTION_LINES']} lines (Pylint)")
+            smells.append(f"Function exceeds {self.QUALITY_METRICS['MAX_FUNCTION_LINES']} lines")
             
         if metrics['params'] > self.QUALITY_METRICS['MAX_PARAMS']:
-            smells.append(f"Too many parameters (> {self.QUALITY_METRICS['MAX_PARAMS']}, Pylint)")
+            smells.append(f"Too many parameters (> {self.QUALITY_METRICS['MAX_PARAMS']})")
             
         if metrics['complexity'] > self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']:
-            smells.append(f"High cyclomatic complexity (> {self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']}, McCabe)")
+            smells.append(f"High cyclomatic complexity (> {self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']})")
             
         if metrics['cognitive_complexity'] > self.QUALITY_METRICS['MAX_COGNITIVE_COMPLEXITY']:
-            smells.append(f"High cognitive complexity (> {self.QUALITY_METRICS['MAX_COGNITIVE_COMPLEXITY']}, SonarQube)")
+            smells.append(f"High cognitive complexity (> {self.QUALITY_METRICS['MAX_COGNITIVE_COMPLEXITY']})")
             
         if metrics['nested_depth'] > self.QUALITY_METRICS['MAX_NESTED_DEPTH']:
-            smells.append(f"Excessive nesting depth (> {self.QUALITY_METRICS['MAX_NESTED_DEPTH']}, Pylint)")
+            smells.append(f"Excessive nesting depth (> {self.QUALITY_METRICS['MAX_NESTED_DEPTH']})")
         
         if metrics.get('maintainability_index', 0) < self.QUALITY_METRICS['MIN_MAINTAINABILITY_INDEX']:
-            smells.append(f"Low maintainability index (< {self.QUALITY_METRICS['MIN_MAINTAINABILITY_INDEX']}, Microsoft)")
+            smells.append(f"Low maintainability index (< {self.QUALITY_METRICS['MIN_MAINTAINABILITY_INDEX']})")
             
         if metrics.get('cognitive_load', 0) > self.QUALITY_METRICS['MAX_FUNC_COGNITIVE_LOAD']:
             smells.append(f"High cognitive load (> {self.QUALITY_METRICS['MAX_FUNC_COGNITIVE_LOAD']} items)")

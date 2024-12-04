@@ -121,35 +121,39 @@ class ModuleDependencyAnalyzer:
         """Generate detailed Mermaid graph showing module, function, and class relationships."""
         mermaid_lines = ['graph TD']
         mermaid_lines.append('    %% Styling')
-        mermaid_lines.append('    classDef module fill:#b7e2d8,stroke:#333,stroke-width:2px;')
-        mermaid_lines.append('    classDef function fill:#e4d1d1,stroke:#333;')
-        mermaid_lines.append('    classDef class fill:#d1e0e4,stroke:#333;')
+        mermaid_lines.append('    classDef module fill:#b7e2d8,stroke:#333,stroke-width:2px')
+        mermaid_lines.append('    classDef function fill:#e4d1d1,stroke:#333')
+        mermaid_lines.append('    classDef class fill:#d1e0e4,stroke:#333')
         
+        added_nodes = set()
         for module in self.module_imports:
             clean_module = module.replace('.', '_')
-            
-            mermaid_lines.append(f'    subgraph {clean_module}["{module}"]')
-            mermaid_lines.append(f'        {clean_module}_node["{module}"]:::module')
+            if clean_module not in added_nodes:
+                mermaid_lines.append(f'    {clean_module}["{module}"]:::module')
+                added_nodes.add(clean_module)
             
             for func_name, location in self.function_locations.items():
                 if location['module'] == module:
-                    if 'in_class' not in location:  
-                        clean_func = f"{clean_module}_{func_name}"
-                        mermaid_lines.append(f'        {clean_func}["⚡ {func_name}()"]:::function')
-                        mermaid_lines.append(f'        {clean_module}_node --> {clean_func}')
+                    clean_func = f"{clean_module}_{func_name}"
+                    if clean_func not in added_nodes:
+                        mermaid_lines.append(f'    {clean_func}["⚡ {func_name}()"]:::function')
+                        mermaid_lines.append(f'    {clean_module} --> {clean_func}')
+                        added_nodes.add(clean_func)
             
             if module in self.class_info:
                 for class_name, info in self.class_info[module].items():
                     clean_class = f"{clean_module}_{class_name}"
-                    mermaid_lines.append(f'        {clean_class}["📦 {class_name}"]:::class')
-                    mermaid_lines.append(f'        {clean_module}_node --> {clean_class}')
+                    if clean_class not in added_nodes:
+                        mermaid_lines.append(f'    {clean_class}["📦 {class_name}"]:::class')
+                        mermaid_lines.append(f'    {clean_module} --> {clean_class}')
+                        added_nodes.add(clean_class)
                     
                     for method_name in info['methods']:
                         clean_method = f"{clean_class}_{method_name}"
-                        mermaid_lines.append(f'        {clean_method}["⚡ {method_name}()"]:::function')
-                        mermaid_lines.append(f'        {clean_class} --> {clean_method}')
-            
-            mermaid_lines.append('    end')
+                        if clean_method not in added_nodes:
+                            mermaid_lines.append(f'    {clean_method}["⚡ {method_name}()"]:::function')
+                            mermaid_lines.append(f'    {clean_class} --> {clean_method}')
+                            added_nodes.add(clean_method)
         
         for func_name, calls in self.function_calls.items():
             for call in calls:
@@ -158,14 +162,15 @@ class ModuleDependencyAnalyzer:
                     to_module = self.function_locations[func_name]['module'].replace('.', '_')
                     from_func = f"{from_module}_{call['from_function']}"
                     to_func = f"{to_module}_{func_name}"
-                    mermaid_lines.append(f'    {from_func} -.->|calls| {to_func}')
+                    if from_func in added_nodes and to_func in added_nodes:
+                        mermaid_lines.append(f'    {from_func} -.->|calls| {to_func}')
         
         for module, imports in self.module_imports.items():
             clean_module = module.replace('.', '_')
             for imp in imports:
-                if imp in self.module_imports:  
-                    clean_imp = imp.replace('.', '_')
-                    mermaid_lines.append(f'    {clean_module}_node --> {clean_imp}_node')
+                clean_imp = imp.replace('.', '_')
+                if clean_module in added_nodes and clean_imp in added_nodes:
+                    mermaid_lines.append(f'    {clean_module} --> {clean_imp}')
         
         return '\n'.join(mermaid_lines)
 
