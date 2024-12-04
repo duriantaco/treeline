@@ -55,5 +55,11 @@ For example, if you were to put the treeline-ignore inside the src folder, only 
 4. Push to the branch (git push origin branch)
 5. Open a Pull Request
 
+## Sources for best practices
+
+1. https://peps.python.org/
+2. https://peps.python.org/pep-0008/
+3. https://google.github.io/styleguide/pyguide.html
+
 ## Author
 Oha

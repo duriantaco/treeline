@@ -5,7 +5,7 @@ import argparse
 from .enhanced_analyzer import EnhancedCodeAnalyzer 
 from .dependency_analyzer import ModuleDependencyAnalyzer
 import re
-from .security_analyzer import SecurityAnalyzer
+# from treeline.security_analyzer import TreelineSecurity
 from typing import List, Dict
 
 def create_default_ignore():
@@ -124,6 +124,37 @@ def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]
     
     return lines
 
+def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependencyAnalyzer) -> None:
+    """Generate a markdown report with tree structure and analysis results."""
+    with open("tree.md", 'w', encoding='utf-8') as f:
+        f.write("# Project Analysis Report\n\n")
+        
+        f.write("## Directory Structure\n\n")
+        f.write("```\n")
+        clean_result = "\n".join(clean_for_markdown(line) for line in tree_str)
+        f.write(clean_result)
+        f.write("\n```\n\n")
+        
+        if dep_analyzer:
+            mermaid_section = format_mermaid_section(dep_analyzer)
+            f.write("\n".join(mermaid_section))
+            
+            f.write("## Code Quality Metrics\n\n")
+            for module, metrics in sorted(dep_analyzer.module_metrics.items()):
+                f.write(f"### {module}\n")
+                f.write(f"- Functions: **{metrics['functions']}**\n")
+                f.write(f"- Classes: **{metrics['classes']}**\n")
+                f.write(f"- Complexity: **{metrics['complexity']}**\n\n")
+            
+            f.write("## Complexity Hotspots\n\n")
+            if dep_analyzer.complex_functions:
+                for module, func, complexity in sorted(dep_analyzer.complex_functions, key=lambda x: x[2], reverse=True):
+                    f.write(f"### {func}\n")
+                    f.write(f"- **Module**: {module}\n")
+                    f.write(f"- **Complexity**: {complexity}\n\n")
+            else:
+                f.write("*No complex functions found.*\n\n")
+
 def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=False):
     """Generate tree structure with code quality and security analysis."""
     tree_str = []
@@ -139,56 +170,39 @@ def generate_tree(directory, create_md=False, hide_structure=False, show_params=
         dep_analyzer.analyze_directory(directory)
 
     def add_directory(path, prefix=""):
-        files = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
-        for i, entry in enumerate(files):
-            if should_ignore(entry, ignore_patterns):
-                continue
+        try:
+            files = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+            for i, entry in enumerate(files):
+                if should_ignore(entry, ignore_patterns):
+                    continue
+                    
+                is_last = i == len(files) - 1
+                cur_prefix = prefix + ('└── ' if is_last else '├── ')
+                tree_str.append(f"{cur_prefix}{entry.name}")
                 
-            is_last = i == len(files) - 1
-            tree_str.append(f"{prefix}{'└── ' if is_last else '├── '}{entry.name}")
-            
-            if entry.is_dir():
-                extension = "    " if is_last else "│   "
-                add_directory(entry, prefix + extension)
-            elif not hide_structure and entry.suffix == '.py':
-                extension = "    " if is_last else "│   "
-                if code_analyzer:
-                    structure = code_analyzer.analyze_file(entry)
-                    structure_lines = code_analyzer.format_structure(structure, prefix + extension + "  ")
-                    tree_str.extend(structure_lines)
+                if entry.is_dir():
+                    next_prefix = prefix + ("    " if is_last else "│   ")
+                    add_directory(entry, next_prefix)
+                elif not hide_structure and entry.suffix == '.py':
+                    next_prefix = prefix + ("    " if is_last else "│   ")
+                    if code_analyzer:
+                        try:
+                            structure = code_analyzer.analyze_file(entry)
+                            if structure:
+                                tree_str.extend(code_analyzer.format_structure(structure, next_prefix + "  "))
+                        except Exception as e:
+                            tree_str.append(f"{next_prefix}  ⚠️ Error analyzing: {str(e)}")
+        except Exception as e:
+            tree_str.append(f"{prefix}⚠️ Error reading directory: {str(e)}")
 
-    tree_str.append(str(directory.name))
-    add_directory(directory)
-    
+    try:
+        tree_str.append(str(directory.name))
+        add_directory(directory)
+    except Exception as e:
+        tree_str.append(f"⚠️ Fatal error: {str(e)}")
+
     if create_md:
-        with open("tree.md", 'w', encoding='utf-8') as f:
-            f.write("# Project Analysis Report\n\n")
-            
-            f.write("## Directory Structure\n\n")
-            f.write("```\n")
-            clean_result = "\n".join(clean_for_markdown(line) for line in tree_str)
-            f.write(clean_result)
-            f.write("\n```\n\n")
-            
-            if dep_analyzer:
-                mermaid_section = format_mermaid_section(dep_analyzer)
-                f.write("\n".join(mermaid_section))
-                
-                f.write("## Code Quality Metrics\n\n")
-                for module, metrics in sorted(dep_analyzer.module_metrics.items()):
-                    f.write(f"### {module}\n")
-                    f.write(f"- Functions: **{metrics['functions']}**\n")
-                    f.write(f"- Classes: **{metrics['classes']}**\n")
-                    f.write(f"- Complexity: **{metrics['complexity']}**\n\n")
-                
-                f.write("## Complexity Hotspots\n\n")
-                if dep_analyzer.complex_functions:
-                    for module, func, complexity in sorted(dep_analyzer.complex_functions, key=lambda x: x[2], reverse=True):
-                        f.write(f"### {func}\n")
-                        f.write(f"- **Module**: {module}\n")
-                        f.write(f"- **Complexity**: {complexity}\n\n")
-                else:
-                    f.write("*No complex functions found.*\n\n")
+        generate_markdown_report(tree_str, dep_analyzer)
     
     return "\n".join(tree_str)
 
