@@ -61,19 +61,6 @@ def clean_for_markdown(line: str) -> str:
     
     return clean_line.rstrip()
 
-def format_mermaid_section(dep_analyzer):
-    """Format mermaid graph with proper styling and layout."""
-    mermaid_content = dep_analyzer.generate_mermaid_graph()
-    return [
-        "## Module Dependencies",
-        "",
-        "```mermaid",
-        "%%{init: {'theme': 'neutral', 'flowchart': {'curve': 'basis'} }}%%",  
-        mermaid_content,
-        "```",
-        ""
-    ]
-
 def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]:
     """
     Format the analysis results into a readable tree structure.
@@ -118,7 +105,6 @@ def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]
             if metrics.get('nested_depth', 0) > self.QUALITY_METRICS['MAX_NESTED_DEPTH']:
                 lines.append(f"{indent}  └─ ⚠️ Deep nesting (depth {metrics['nested_depth']})")
         
-        # Add code smells
         for smell in code_smells:
             lines.append(f"{indent}  └─ ⚠️ {smell}")
     
@@ -126,8 +112,19 @@ def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]
 
 def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependencyAnalyzer) -> None:
     """Generate a markdown report with tree structure and analysis results."""
-    with open("tree.md", 'w', encoding='utf-8') as f:
+    docs_dir = Path('docs')
+    docs_dir.mkdir(exist_ok=True)
+    
+    tree_path = docs_dir / 'tree.md'
+    
+    with open(tree_path, 'w', encoding='utf-8') as f:
         f.write("# Project Analysis Report\n\n")
+        
+        f.write("## Code Structure Visualization\n\n")
+        f.write("The following diagrams show the project structure from different perspectives:\n\n")
+        f.write("### Module Dependencies\n")
+        f.write("Overview of how modules are connected:\n\n")
+        f.write(dep_analyzer.generate_mermaid_graphs())
         
         f.write("## Directory Structure\n\n")
         f.write("```\n")
@@ -136,9 +133,6 @@ def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependency
         f.write("\n```\n\n")
         
         if dep_analyzer:
-            mermaid_section = format_mermaid_section(dep_analyzer)
-            f.write("\n".join(mermaid_section))
-            
             f.write("## Code Quality Metrics\n\n")
             for module, metrics in sorted(dep_analyzer.module_metrics.items()):
                 f.write(f"### {module}\n")
@@ -154,6 +148,8 @@ def generate_markdown_report(tree_str: List[str], dep_analyzer: ModuleDependency
                     f.write(f"- **Complexity**: {complexity}\n\n")
             else:
                 f.write("*No complex functions found.*\n\n")
+    
+    print(f"\nReport generated: {tree_path}")
 
 def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=False):
     """Generate tree structure with code quality and security analysis."""
