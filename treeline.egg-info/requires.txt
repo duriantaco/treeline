@@ -1,0 +1,7 @@
+
+[dev]
+pre-commit>=2.21.0
+black>=24.2.0
+isort>=5.13.2
+pytest>=7.0.0
+black[jupyter]
