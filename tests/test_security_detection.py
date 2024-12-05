@@ -28,7 +28,6 @@ class TestTreelineSecurity(unittest.TestCase):
         code = """def get_user_data(user_id):
     query = "SELECT * FROM users WHERE id = " + user_id
     cursor.execute(query)"""
-        tree = self.debug_ast(code)
         path = self.create_test_file(code, "test_sql_injection.py")
         self.analyzer.analyze_file(path)
         issues = self.analyzer.security_issues.get("sql_injection", [])
@@ -59,7 +58,7 @@ def load_data(data):
         issues = self.analyzer.security_issues.get("deserialization", [])
 
         self.assertTrue(
-            len(issues) > 0, "Unsafe deserialization vulnerability was not detected."
+            len(issues) > 0, "Unsafe deserialization vulnerability not detected."
         )
 
     def test_hardcoded_secret_detection(self):
@@ -78,7 +77,7 @@ def load_data(data):
         self.analyzer.analyze_file(path)
         issues = self.analyzer.security_issues.get("file_operations", [])
 
-        self.assertTrue(len(issues) > 0, "Insecure file operation was not detected.")
+        self.assertTrue(len(issues) > 0, "Insecure file operation not detected.")
 
     def tearDown(self):
         for file in self.test_files:
