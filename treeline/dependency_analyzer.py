@@ -577,7 +577,7 @@ class ModuleDependencyAnalyzer:
         
         return '\n'.join(sections)
 
-    
+    ## for the entire graph
     # def generate_mermaid_graph(self) -> str:
     #     """Generate detailed Mermaid graph showing module, function, and class relationships."""
     #     mermaid_lines = ['graph TD']
