@@ -1,7 +1,9 @@
 import os
 import shutil
 import unittest
+
 from treeline.core import generate_tree
+
 
 class TestEmptyDirectory(unittest.TestCase):
     def setUp(self):
