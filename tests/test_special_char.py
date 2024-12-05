@@ -1,7 +1,9 @@
 import os
 import unittest
 from pathlib import Path
+
 from treeline.core import generate_tree
+
 
 class TestSpecialCharacters(unittest.TestCase):
     def setUp(self):
@@ -13,6 +15,7 @@ class TestSpecialCharacters(unittest.TestCase):
         """Clean up test directory"""
         if os.path.exists(self.test_dir):
             import shutil
+
             shutil.rmtree(self.test_dir)
 
     def test_special_characters(self):
@@ -24,6 +27,7 @@ class TestSpecialCharacters(unittest.TestCase):
         result = generate_tree(special_dir)
         self.assertIn("special!@#$", result)
         self.assertIn("file with spaces.txt", result)
+
 
 if __name__ == "__main__":
     unittest.main()
