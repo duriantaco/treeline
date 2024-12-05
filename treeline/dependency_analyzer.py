@@ -3,6 +3,17 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
+from treeline.models.dependency_analyzer import (
+    ComplexFunction,
+    FunctionCallInfo,
+    FunctionLocation,
+    GraphData,
+    Link,
+    MethodInfo,
+    ModuleMetrics,
+    Node,
+)
+
 
 class ModuleDependencyAnalyzer:
     """Analyzes module-level dependencies and generates summary reports."""
@@ -19,29 +30,31 @@ class ModuleDependencyAnalyzer:
         <html>
         <head>
             <title>Code Structure Visualization</title>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+            <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js">
+            </script>
             <style>
-                body { 
-                    margin: 0; 
+                body {
+                    margin: 0;
                     font-family: 'Segoe UI', Arial, sans-serif;
                     background: #f8f9fa;
                 }
-                .node { 
-                    cursor: pointer; 
+                .node {
+                    cursor: pointer;
                 }
-                .node circle { 
-                    fill: #fff; 
-                    stroke-width: 2px; 
+                .node circle {
+                    fill: #fff;
+                    stroke-width: 2px;
                     transition: all 0.3s;
                 }
                 .node:hover circle {
                     filter: brightness(0.95);
                 }
-                .node text { 
+                .node text {
                     font: 12px 'Segoe UI', sans-serif;
                     font-weight: 500;
                 }
-                .link { 
+                .link {
                     stroke-width: 1.5px;
                     stroke-dasharray: 4;
                     opacity: 0.7;
@@ -55,8 +68,8 @@ class ModuleDependencyAnalyzer:
                 .link-calls {
                     stroke: #ea580c; /* orange */
                 }
-                .tooltip { 
-                    position: absolute; 
+                .tooltip {
+                    position: absolute;
                     padding: 12px;
                     background: white;
                     border: none;
@@ -146,15 +159,21 @@ class ModuleDependencyAnalyzer:
                 </div>
                 <div style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
                     <div class="legend-item">
-                        <div style="width: 40px; height: 2px; background: #7c3aed; margin-right: 8px;"></div>
+                        <div style="width: 40px; height: 2px;
+                        background: #7c3aed;
+                        margin-right: 8px;"></div>
                         <span>Imports</span>
                     </div>
                     <div class="legend-item">
-                        <div style="width: 40px; height: 2px; background: #059669; margin-right: 8px;"></div>
+                        <div style="width: 40px; height: 2px;
+                        background: #059669;
+                        margin-right: 8px;"></div>
                         <span>Contains</span>
                     </div>
                     <div class="legend-item">
-                        <div style="width: 40px; height: 2px; background: #ea580c; margin-right: 8px;"></div>
+                        <div style="width: 40px; height: 2px;
+                        background: #ea580c;
+                        margin-right: 8px;"></div>
                         <span>Calls</span>
                     </div>
                 </div>
@@ -165,7 +184,7 @@ class ModuleDependencyAnalyzer:
 
                 let width = window.innerWidth;
                 let height = window.innerHeight;
-                
+
                 const svg = d3.select("#visualization")
                     .attr("width", width)
                     .attr("height", height);
@@ -243,11 +262,11 @@ class ModuleDependencyAnalyzer:
                     tooltip.transition()
                         .duration(200)
                         .style("opacity", .9);
-                    
-                    let connections = data.links.filter(l => 
+
+                    let connections = data.links.filter(l =>
                         l.source.id === d.id || l.target.id === d.id
                     );
-                    
+
                     let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br><br>`;
                     if (connections.length > 0) {
                         tooltipContent += "Connections:<br>";
@@ -259,17 +278,17 @@ class ModuleDependencyAnalyzer:
                             }
                         });
                     }
-                    
+
                     tooltip.html(tooltipContent)
                         .style("left", (event.pageX + 10) + "px")
                         .style("top", (event.pageY - 10) + "px");
-                        
+
                     // Highlight connected nodes
-                    node.style("opacity", n => 
-                        n.id === d.id || 
+                    node.style("opacity", n =>
+                        n.id === d.id ||
                         connections.some(c => c.source.id === n.id || c.target.id === n.id) ? 1 : 0.1
                     );
-                    link.style("opacity", l => 
+                    link.style("opacity", l =>
                         l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
                     );
                 })
@@ -355,7 +374,7 @@ class ModuleDependencyAnalyzer:
                         link.style("opacity", 0.7);
                         return;
                     }
-                    
+
                     const matchedNodes = new Set();
                     node.each(function(d) {
                         if (d.name.toLowerCase().includes(term)) {
@@ -367,7 +386,7 @@ class ModuleDependencyAnalyzer:
                             });
                         }
                     });
-                    
+
                     node.style("opacity", d => matchedNodes.has(d.id) ? 1 : 0.1);
                     link.style("opacity", d =>
                         matchedNodes.has(d.source.id) && matchedNodes.has(d.target.id) ? 0.7 : 0.1
@@ -418,21 +437,22 @@ class ModuleDependencyAnalyzer:
             if isinstance(node, ast.FunctionDef):
                 parent = getattr(node, "parent", None)
                 if isinstance(parent, ast.Module):
-                    self.function_locations[node.name] = {
-                        "module": module_name,
-                        "file": file_path,
-                        "line": node.lineno,
-                    }
+                    location = FunctionLocation(
+                        module=module_name, file=file_path, line=node.lineno
+                    )
+                    self.function_locations[node.name] = location.__dict__
+
                     for child in ast.walk(node):
                         if isinstance(child, ast.Call) and isinstance(
                             child.func, ast.Name
                         ):
+                            call_info = FunctionCallInfo(
+                                from_module=module_name,
+                                from_function=node.name,
+                                line=child.lineno,
+                            )
                             self.function_calls[child.func.id].append(
-                                {
-                                    "from_module": module_name,
-                                    "from_function": node.name,
-                                    "line": child.lineno,
-                                }
+                                call_info.__dict__
                             )
 
             elif isinstance(node, ast.ClassDef):
@@ -445,18 +465,15 @@ class ModuleDependencyAnalyzer:
 
                 for item in node.body:
                     if isinstance(item, ast.FunctionDef):
-                        method_name = f"{node.name}.{item.name}"
-                        class_info["methods"][item.name] = {
-                            "line": item.lineno,
-                            "calls": [],
-                        }
+                        calls = []
                         for child in ast.walk(item):
                             if isinstance(child, ast.Call) and isinstance(
                                 child.func, ast.Name
                             ):
-                                class_info["methods"][item.name]["calls"].append(
-                                    child.func.id
-                                )
+                                calls.append(child.func.id)
+
+                        method_info = MethodInfo(line=item.lineno, calls=calls)
+                        class_info["methods"][item.name] = method_info.__dict__
 
                 self.class_info[module_name][node.name] = class_info
 
@@ -480,17 +497,25 @@ class ModuleDependencyAnalyzer:
             if isinstance(node, ast.FunctionDef):
                 complexity = self._calculate_complexity(node)
                 if complexity > 10:  # Threshold for complex functions
-                    self.complex_functions.append((module_name, node.name, complexity))
+                    complex_func = ComplexFunction(
+                        module=module_name, name=node.name, complexity=complexity
+                    )
+                    self.complex_functions.append(
+                        (
+                            complex_func.module,
+                            complex_func.name,
+                            complex_func.complexity,
+                        )
+                    )
                 total_complexity += complexity
                 functions.append(node.name)
             elif isinstance(node, ast.ClassDef):
                 classes.append(node.name)
 
-        self.module_metrics[module_name] = {
-            "functions": len(functions),
-            "classes": len(classes),
-            "complexity": total_complexity,
-        }
+        metrics = ModuleMetrics(
+            functions=len(functions), classes=len(classes), complexity=total_complexity
+        )
+        self.module_metrics[module_name] = metrics.__dict__
 
     def _calculate_complexity(self, node: ast.AST) -> int:
         """Calculate cyclomatic complexity."""
@@ -530,12 +555,10 @@ class ModuleDependencyAnalyzer:
 
     def generate_module_detail_diagram(self, module: str) -> str:
         """Generate a Mermaid diagram showing functions and classes in a module."""
-        mermaid_lines = ["graph TD\n"]  # Added newline
+        mermaid_lines = ["graph TD\n"]
         mermaid_lines.append("    %% Styling")
         mermaid_lines.append("    classDef fnNode fill:#e4d1d1,stroke:#333")
-        mermaid_lines.append(
-            "    classDef clsNode fill:#d1e0e4,stroke:#333\n"
-        )  # Added newline
+        mermaid_lines.append("    classDef clsNode fill:#d1e0e4,stroke:#333\n")
 
         clean_module = module.replace(".", "_")
 
@@ -765,7 +788,10 @@ class ModuleDependencyAnalyzer:
                             }
                         )
 
-        graph_data = {"nodes": nodes, "links": links}
+        validated_nodes = [Node(**node) for node in nodes]
+        validated_links = [Link(**link) for link in links]
+
+        graph_data = GraphData(nodes=validated_nodes, links=validated_links).__dict__
 
         json_data = json.dumps(graph_data)
 

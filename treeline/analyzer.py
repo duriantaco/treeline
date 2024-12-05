@@ -1,49 +1,10 @@
 import ast
 from collections import defaultdict
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import List, Optional, Set, Tuple
 
-from treeline.type_checker import ValidatedModel, ValidationError
-
-
-@dataclass
-class FunctionCall(ValidatedModel):
-    caller: str
-    called: str
-
-
-@dataclass
-class CodeStructure(ValidatedModel):
-    type: str
-    name: str
-    docstring: Optional[str] = None
-    metrics: Optional[Dict[str, Union[int, float]]] = None
-    code_smells: Optional[List[str]] = None
-
-
-@dataclass
-class FunctionNode(ValidatedModel):
-    name: str
-    docstring: Optional[str]
-    params: Optional[str] = ""
-    relationship: Optional[str] = ""
-    type: str = "function"
-
-
-@dataclass
-class ClassNode(ValidatedModel):
-    name: str
-    docstring: Optional[str]
-    bases: Optional[List[str]] = None
-    relationship: Optional[str] = ""
-    type: str = "class"
-
-
-@dataclass
-class AnalyzerConfig(ValidatedModel):
-    show_params: bool = True
-    show_relationships: bool = True
+from treeline.models.analyzer import CodeStructure, FunctionCall
+from treeline.type_checker import ValidationError
 
 
 class CodeAnalyzer:
@@ -211,7 +172,6 @@ class CodeAnalyzer:
 
         for item_type, name, doc, params, relationship in structure:
             if lines:
-                # Removed unused vertical_line variable
                 lines.append(f"{indent}")
 
             symbol = self.get_symbol(item_type)
