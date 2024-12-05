@@ -14,7 +14,7 @@ class TestEmptyDirectory(unittest.TestCase):
     def tearDown(self):
         """Clean up test directory"""
         if os.path.exists(self.test_dir):
-            shutil.rmtree(self.test_dir) 
+            shutil.rmtree(self.test_dir)
 
     def test_empty_directory(self):
         """Test handling of empty directory"""
