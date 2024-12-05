@@ -5,4 +5,11 @@ Summary: A simple ASCII tree structure generator
 Home-page: https://github.com/duriantaco/treeline
 Author: oha
 Author-email: none
-License: Apache-2.0
+License: MIT
+Requires-Python: >=3.7
+Provides-Extra: dev
+Requires-Dist: pre-commit>=2.21.0; extra == "dev"
+Requires-Dist: black>=24.2.0; extra == "dev"
+Requires-Dist: isort>=5.13.2; extra == "dev"
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: black[jupyter]; extra == "dev"
