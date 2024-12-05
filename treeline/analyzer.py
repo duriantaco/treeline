@@ -1,4 +1,3 @@
-# treeline/treeline/analyzer.py
 import ast
 from collections import defaultdict
 from dataclasses import dataclass
@@ -88,7 +87,8 @@ class CodeAnalyzer:
                         relationship = ""
                         if self.show_relationships:
                             calls = self._find_function_calls(node)
-                            relationship = f"Calls: {', '.join(calls)}" if calls else ""
+                            if calls:
+                                relationship = f"Calls: {', '.join(calls)}"
 
                         item = CodeStructure(
                             type="function",
@@ -119,9 +119,8 @@ class CodeAnalyzer:
                                 for base in node.bases
                                 if isinstance(base, ast.Name)
                             ]
-                            relationship = (
-                                f"Inherits: {', '.join(bases)}" if bases else ""
-                            )
+                            if bases:
+                                relationship = f"Inherits: {', '.join(bases)}"
 
                         item = CodeStructure(
                             type="class",
@@ -212,23 +211,28 @@ class CodeAnalyzer:
 
         for item_type, name, doc, params, relationship in structure:
             if lines:
-                vertical_line = "│" if "│" in indent else " "
+                # Removed unused vertical_line variable
                 lines.append(f"{indent}")
 
             symbol = self.get_symbol(item_type)
 
             if item_type == "class":
-                prefix = f"{self.COLORS['PURPLE']}{self.COLORS['BOLD']}[CLASS]{self.COLORS['END']}"
+                prefix = (
+                    f"{self.COLORS['PURPLE']}{self.COLORS['BOLD']}"
+                    f"[CLASS]{self.COLORS['END']}"
+                )
                 name_colored = f"{self.COLORS['PURPLE']}{name}{self.COLORS['END']}"
             else:
-                prefix = f"{self.COLORS['BLUE']}{self.COLORS['BOLD']}[FUNC]{self.COLORS['END']}"
+                prefix = (
+                    f"{self.COLORS['BLUE']}{self.COLORS['BOLD']}"
+                    f"[FUNC]{self.COLORS['END']}"
+                )
                 name_colored = f"{self.COLORS['BLUE']}{name}{self.COLORS['END']}"
 
             if params:
                 params_colored = f"{self.COLORS['YELLOW']}{params}{self.COLORS['END']}"
-                lines.append(
-                    f"{indent}{prefix} {symbol} {name_colored}{params_colored}"
-                )
+                line = f"{indent}{prefix} {symbol} {name_colored}{params_colored}"
+                lines.append(line)
             else:
                 lines.append(f"{indent}{prefix} {symbol} {name_colored}")
 
@@ -236,13 +240,17 @@ class CodeAnalyzer:
                 doc_clean = " ".join(
                     line.strip() for line in doc.split("\n") if line.strip()
                 )
-                lines.append(
-                    f"{indent}  └─ {self.COLORS['GREEN']}# {doc_clean}{self.COLORS['END']}"
+                doc_line = (
+                    f"{indent}  └─ {self.COLORS['GREEN']}"
+                    f"# {doc_clean}{self.COLORS['END']}"
                 )
+                lines.append(doc_line)
 
             if relationship:
-                lines.append(
-                    f"{indent}  └─ {self.COLORS['CYAN']}$ {relationship}{self.COLORS['END']}"
+                rel_line = (
+                    f"{indent}  └─ {self.COLORS['CYAN']}"
+                    f"$ {relationship}{self.COLORS['END']}"
                 )
+                lines.append(rel_line)
 
         return lines
