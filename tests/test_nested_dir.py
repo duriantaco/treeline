@@ -1,7 +1,9 @@
 import os
 import unittest
 from pathlib import Path
+
 from treeline.core import generate_tree
+
 
 class TestNestedDirectories(unittest.TestCase):
     def setUp(self):
@@ -13,6 +15,7 @@ class TestNestedDirectories(unittest.TestCase):
         """Clean up test directory"""
         if os.path.exists(self.test_dir):
             import shutil
+
             shutil.rmtree(self.test_dir)
 
     def test_nested_directories(self):
@@ -26,6 +29,7 @@ class TestNestedDirectories(unittest.TestCase):
         self.assertIn("level2", result)
         self.assertIn("level3", result)
         self.assertIn("deep_file.txt", result)
+
 
 if __name__ == "__main__":
     unittest.main()
