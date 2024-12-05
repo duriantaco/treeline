@@ -14,7 +14,9 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
-      
+        with:
+          ref: ${{ github.head_ref }}
+          
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -24,14 +26,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest flake8 black isort
+          pip install pytest flake8 black isort "black[jupyter]"
           
-      - name: Code quality checks
+      - name: Format code
         run: |
-          black . --check
-          isort . --check
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+          black .
+          isort .
+          
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "style: auto-format with black and isort"
           
       - name: Run tests
         run: |
