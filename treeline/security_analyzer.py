@@ -1,32 +1,33 @@
 import ast
-import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
+from treeline.models.security import SecurityIssue, SecurityPattern, SecurityPatterns
+
 
 class TreelineSecurity:
     def __init__(self):
-        self.security_issues = defaultdict(list)
-        self.imports = {}
-        self.tree = None
+        self.security_issues: Dict[str, List[SecurityIssue]] = defaultdict(list)
+        self.imports: Dict[str, str] = {}
+        self.tree: ast.AST = None
 
-        self.RISKY_PATTERNS = {
-            "sql_injection": {
-                "patterns": {"execute", "executemany", "raw", "raw_query"},
-                "safe_patterns": {"parameterize", "execute_params"},
-            },
-            "command_injection": {
-                "patterns": {"system", "popen", "run", "shell", "spawn", "call"},
-                "modules": {"os", "subprocess", "commands"},
-            },
-            "deserialization": {
-                "patterns": {"loads", "load", "parse"},
-                "risky_modules": {"pickle", "yaml", "marshal"},
-                "safe_modules": {"json"},
-            },
-            "file_operations": {
-                "patterns": {
+        self.RISKY_PATTERNS = SecurityPatterns(
+            sql_injection=SecurityPattern(
+                patterns={"execute", "executemany", "raw", "raw_query"},
+                safe_patterns={"parameterize", "execute_params"},
+            ),
+            command_injection=SecurityPattern(
+                patterns={"system", "popen", "run", "shell", "spawn", "call"},
+                modules={"os", "subprocess", "commands"},
+            ),
+            deserialization=SecurityPattern(
+                patterns={"loads", "load", "parse"},
+                risky_modules={"pickle", "yaml", "marshal"},
+                safe_modules={"json"},
+            ),
+            file_operations=SecurityPattern(
+                patterns={
                     "open",
                     "read",
                     "write",
@@ -37,8 +38,8 @@ class TreelineSecurity:
                     "remove",
                     "unlink",
                 }
-            },
-        }
+            ),
+        )
 
     def analyze_file(self, file_path: Path) -> None:
         try:
@@ -175,13 +176,13 @@ class TreelineSecurity:
             isinstance(node.right, ast.Constant) and isinstance(node.right.value, str)
         ):
             sql_keywords = ["select", "insert", "update", "delete", "exec", "eval"]
-            print(f"Checking SQL keywords")
+            print("Checking SQL keywords")
             if any(
                 keyword in str(node.left.value).lower()
                 for keyword in sql_keywords
                 if hasattr(node.left, "value")
             ):
-                print(f"Found SQL keyword in left operand")
+                print("Found SQL keyword in left operand")
                 self._add_issue(
                     "sql_injection",
                     "String concatenation with SQL-like commands detected",
@@ -213,6 +214,5 @@ class TreelineSecurity:
     def _add_issue(
         self, category: str, description: str, filename: str, line: int
     ) -> None:
-        self.security_issues[category].append(
-            {"description": description, "file": filename, "line": line}
-        )
+        issue = SecurityIssue(description=description, file=filename, line=line)
+        self.security_issues[category].append(issue.__dict__)

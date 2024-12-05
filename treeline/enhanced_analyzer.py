@@ -1,9 +1,14 @@
 import ast
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 
-from .security_analyzer import TreelineSecurity
+from treeline.models.enhanced_analyzer import (
+    ClassMetrics,
+    FunctionMetrics,
+    QualityIssue,
+)
+from treeline.security_analyzer import TreelineSecurity
 
 security_scanner = TreelineSecurity()
 
@@ -134,7 +139,7 @@ class EnhancedCodeAnalyzer:
 
         if metrics["complexity"] > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]:
             smells.append(
-                f"High cyclomatic complexity (> {self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']})"
+                f"High cyclomatic complexity(> {self.QUALITY_METRICS['MAX_CYCLOMATIC_COMPLEXITY']})"
             )
 
         if (
@@ -334,7 +339,7 @@ class EnhancedCodeAnalyzer:
             < self.QUALITY_METRICS["MIN_PUBLIC_METHODS"]
         ):
             smells.append(
-                f"Too few public methods (< {self.QUALITY_METRICS['MIN_PUBLIC_METHODS']}, SOLID-ISP)"
+                f"Too few public method (< {self.QUALITY_METRICS['MIN_PUBLIC_METHODS']}, SOLID-ISP)"
             )
 
         if (
@@ -452,40 +457,36 @@ class EnhancedCodeAnalyzer:
         return metrics
 
     def _calculate_class_metrics(self, node: ast.ClassDef, content: str) -> Dict:
-        """Calculate comprehensive metrics for a class."""
         methods = [n for n in ast.walk(node) if isinstance(n, ast.FunctionDef)]
         inheritance = self._analyze_inheritance(node)
 
-        return {
-            "lines": node.end_lineno - node.lineno + 1,
-            "method_count": len(methods),
-            "complexity": sum(
-                self._calculate_cyclomatic_complexity(m) for m in methods
-            ),
-            "has_docstring": bool(ast.get_docstring(node)),
-            "public_methods": len([m for m in methods if not m.name.startswith("_")]),
-            "private_methods": len([m for m in methods if m.name.startswith("_")]),
-            "inheritance_depth": inheritance["inheritance_depth"],
-            "imports": self._analyze_imports(node),
-            "docstring_length": len(ast.get_docstring(node) or ""),
-        }
+        metrics = ClassMetrics(
+            lines=node.end_lineno - node.lineno + 1,
+            method_count=len(methods),
+            complexity=sum(self._calculate_cyclomatic_complexity(m) for m in methods),
+            has_docstring=bool(ast.get_docstring(node)),
+            public_methods=len([m for m in methods if not m.name.startswith("_")]),
+            private_methods=len([m for m in methods if m.name.startswith("_")]),
+            inheritance_depth=inheritance["inheritance_depth"],
+            imports=self._analyze_imports(node),
+            docstring_length=len(ast.get_docstring(node) or ""),
+        )
+        return metrics.__dict__
 
     def _calculate_function_metrics(self, node: ast.FunctionDef, content: str) -> Dict:
-        """Calculate comprehensive function metrics."""
-        return {
-            "lines": node.end_lineno - node.lineno + 1,
-            "params": len(node.args.args),
-            "returns": len([n for n in ast.walk(node) if isinstance(n, ast.Return)]),
-            "complexity": self._calculate_cyclomatic_complexity(node),
-            "cognitive_complexity": self._calculate_cognitive_complexity(node),
-            "nested_depth": self._calculate_nested_depth(node),
-            "has_docstring": bool(ast.get_docstring(node)),
-            "maintainability_index": self._calculate_maintainability_index(
-                node, content
-            ),
-            "cognitive_load": self._calculate_cognitive_load(node),
-            "docstring_length": len(ast.get_docstring(node) or ""),
-        }
+        metrics = FunctionMetrics(
+            lines=node.end_lineno - node.lineno + 1,
+            params=len(node.args.args),
+            returns=len([n for n in ast.walk(node) if isinstance(n, ast.Return)]),
+            complexity=self._calculate_cyclomatic_complexity(node),
+            cognitive_complexity=self._calculate_cognitive_complexity(node),
+            nested_depth=self._calculate_nested_depth(node),
+            has_docstring=bool(ast.get_docstring(node)),
+            maintainability_index=self._calculate_maintainability_index(node, content),
+            cognitive_load=self._calculate_cognitive_load(node),
+            docstring_length=len(ast.get_docstring(node) or ""),
+        )
+        return metrics.__dict__
 
     def _calculate_complexity(self, node: ast.AST) -> int:
         """Calculate cyclomatic complexity of code."""
@@ -581,9 +582,8 @@ class EnhancedCodeAnalyzer:
             file_path: Optional path to the file where the issue was found
             line: Optional line number where the issue was found
         """
-        self.quality_issues[category].append(
-            {"description": description, "file_path": file_path, "line": line}
-        )
+        issue = QualityIssue(description=description, file_path=file_path, line=line)
+        self.quality_issues[category].append(issue.__dict__)
 
     def generate_report(self) -> str:
         """Generate a formatted quality report."""

@@ -1,7 +1,5 @@
-import inspect
 from dataclasses import dataclass
-from typing import (Any, Dict, List, Optional, Type, TypeVar, Union, get_args,
-                    get_origin, get_type_hints)
+from typing import Any, Type, TypeVar, Union, get_args, get_origin, get_type_hints
 
 T = TypeVar("T")
 
