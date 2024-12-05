@@ -1,8 +1,44 @@
 # treeline/treeline/analyzer.py
 import ast
 from pathlib import Path
-from typing import List, Tuple, Dict, Set, Optional
+from typing import List, Tuple, Dict, Set, Optional, Union
 from collections import defaultdict
+from dataclasses import dataclass
+from treeline.type_checker import ValidatedModel, ValidationError
+
+@dataclass 
+class FunctionCall(ValidatedModel):
+    caller: str
+    called: str
+
+@dataclass
+class CodeStructure(ValidatedModel):
+    type: str
+    name: str
+    docstring: Optional[str] = None 
+    metrics: Optional[Dict[str, Union[int, float]]] = None
+    code_smells: Optional[List[str]] = None
+
+@dataclass
+class FunctionNode(ValidatedModel):
+    name: str
+    docstring: Optional[str]
+    params: Optional[str] = ''
+    relationship: Optional[str] = ''
+    type: str = 'function'
+
+@dataclass
+class ClassNode(ValidatedModel):
+    name: str
+    docstring: Optional[str]
+    bases: Optional[List[str]] = None
+    relationship: Optional[str] = ''
+    type: str = 'class'
+
+@dataclass
+class AnalyzerConfig(ValidatedModel):
+    show_params: bool = True
+    show_relationships: bool = True
 
 class CodeAnalyzer:
     """Simple analyzer for extracting functions and classes from Python files."""
@@ -29,38 +65,65 @@ class CodeAnalyzer:
                 tree = ast.parse(f.read())
             
             structure = []
-            current_class = None
             
             for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    name = node.name
-                    doc = ast.get_docstring(node) or ''
+                try:
+                    if isinstance(node, ast.FunctionDef):
+                        name = node.name
+                        doc = ast.get_docstring(node) or ''
+                        
+                        params = self._get_function_params(node) if self.show_params else ''
+                        
+                        relationship = ''
+                        if self.show_relationships:
+                            calls = self._find_function_calls(node)
+                            relationship = f"Calls: {', '.join(calls)}" if calls else ""
+                        
+                        item = CodeStructure(
+                                type='function',
+                                name=name,
+                                docstring=doc,
+                                params=params,
+                                relationship=relationship
+                            )
+                        
+                        structure.append((item.type, item.name, item.docstring, item.params, item.relationship))         
                     
-                    params = self._get_function_params(node) if self.show_params else ''
-                    
-                    relationship = ''
-                    if self.show_relationships:
-                        calls = self._find_function_calls(node)
-                        relationship = f"Calls: {', '.join(calls)}" if calls else ""
-                    
-                    structure.append(('function', name, doc, params, relationship))
-                
-                elif isinstance(node, ast.ClassDef):
-                    class_name = node.name
-                    doc = ast.get_docstring(node) or ''
-                    
-                    relationship = ''
-                    if self.show_relationships:
-                        bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
-                        relationship = f"Inherits: {', '.join(bases)}" if bases else ""
-                    
-                    structure.append(('class', class_name, doc, '', relationship))
-            
+                    elif isinstance(node, ast.ClassDef):
+                        name = node.name
+                        doc = ast.get_docstring(node) or ''
+                        
+                        relationship = ''
+                        if self.show_relationships:
+                            bases = [base.id for base in node.bases if isinstance(base, ast.Name)]
+                            relationship = f"Inherits: {', '.join(bases)}" if bases else ""
+                        
+                        item = CodeStructure(
+                                type='class',
+                                name=name,
+                                docstring=doc,
+                                params='',
+                                relationship=relationship
+                            )
+                        
+                        structure.append((item.type, item.name, item.docstring, item.params, item.relationship))
+                            
+                except ValidationError as e:
+                    print(f"Validation error for {name}: {e}")
+                    continue
+
             return structure
-            
-        except Exception as e:
-            return [('error', f"Could not parse file: {str(e)}", '', '', '')]
     
+        except Exception as e:
+                error_item = CodeStructure(
+                    type='error',
+                    name=f"Could not parse file: {str(e)}",
+                    docstring='',
+                    params='',
+                    relationship=''
+                )
+                return [(error_item.type, error_item.name, error_item.docstring, error_item.params, error_item.relationship)]
+                
     def _get_function_params(self, node: ast.FunctionDef) -> str:
         """Extract function parameters with type hints."""
         params = []
@@ -84,11 +147,17 @@ class CodeAnalyzer:
         return f"({', '.join(params)}){returns}"
     
     def _find_function_calls(self, node: ast.AST) -> Set[str]:
-        """Find all function calls within a node."""
         calls = set()
         for child in ast.walk(node):
             if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
-                calls.add(child.func.id)
+                try:
+                    call = FunctionCall(
+                        caller=node.name,
+                        called=child.func.id
+                    )
+                    calls.add(call.called)
+                except ValidationError as e:
+                    print(f"Invalid function call: {e}")
         return calls
     
     @staticmethod

@@ -21,6 +21,7 @@ graph TD
     tests_test_core["tests.test_core"]:::modNode
     tests_test_treeline["tests.test_treeline"]:::modNode
     tests_test_nested_dir["tests.test_nested_dir"]:::modNode
+    treeline_type_checker["treeline.type_checker"]:::modNode
     treeline_dependency_analyzer["treeline.dependency_analyzer"]:::modNode
     treeline_analyzer["treeline.analyzer"]:::modNode
     treeline___init__["treeline.__init__"]:::modNode
@@ -35,6 +36,10 @@ graph TD
     tests_test_empty_dir --> treeline_core
     tests_test_core --> treeline_core
     tests_test_nested_dir --> treeline_core
+    treeline_analyzer --> treeline_type_checker
+    treeline_core --> treeline_enhanced_analyzer
+    treeline_core --> treeline_type_checker
+    treeline_core --> treeline_dependency_analyzer
     treeline___main__ --> treeline_core
 ```
 
@@ -80,6 +85,11 @@ graph TD
 
     subgraph treeline_analyzer["treeline.analyzer"]
         direction TB
+        treeline_analyzer_FunctionCall["📦 FunctionCall"]:::clsNode
+        treeline_analyzer_CodeStructure["📦 CodeStructure"]:::clsNode
+        treeline_analyzer_FunctionNode["📦 FunctionNode"]:::clsNode
+        treeline_analyzer_ClassNode["📦 ClassNode"]:::clsNode
+        treeline_analyzer_AnalyzerConfig["📦 AnalyzerConfig"]:::clsNode
         treeline_analyzer_CodeAnalyzer["📦 CodeAnalyzer"]:::clsNode
         treeline_analyzer_CodeAnalyzer___init__["⚡ __init__"]:::fnNode
         treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer___init__
@@ -108,6 +118,9 @@ graph TD
 
     subgraph treeline_core["treeline.core"]
         direction TB
+        treeline_core_CodeStructure["📦 CodeStructure"]:::clsNode
+        treeline_core_TreeOptions["📦 TreeOptions"]:::clsNode
+        treeline_core_ModuleMetrics["📦 ModuleMetrics"]:::clsNode
         treeline_core_create_default_ignore["⚡ create_default_ignore"]:::fnNode
         treeline_core_read_ignore_patterns["⚡ read_ignore_patterns"]:::fnNode
         treeline_core_should_ignore["⚡ should_ignore"]:::fnNode
@@ -267,6 +280,28 @@ graph TD
     end
 
 ```
+
+### treeline.type_checker
+
+```mermaid
+graph TD
+
+    %% Styling
+    classDef fnNode fill:#e4d1d1,stroke:#333
+    classDef clsNode fill:#d1e0e4,stroke:#333
+
+    subgraph treeline_type_checker["treeline.type_checker"]
+        direction TB
+        treeline_type_checker_ValidationError["📦 ValidationError"]:::clsNode
+        treeline_type_checker_TypeValidator["📦 TypeValidator"]:::clsNode
+        treeline_type_checker_TypeValidator_validate["⚡ validate"]:::fnNode
+        treeline_type_checker_TypeValidator --> treeline_type_checker_TypeValidator_validate
+        treeline_type_checker_ValidatedModel["📦 ValidatedModel"]:::clsNode
+        treeline_type_checker_ValidatedModel___post_init__["⚡ __post_init__"]:::fnNode
+        treeline_type_checker_ValidatedModel --> treeline_type_checker_ValidatedModel___post_init__
+    end
+
+```
 ## Directory Structure
 
 ```
@@ -328,26 +363,51 @@ graph TD
 │ │   **Function**: → __call__
 │ ├─ __main__.py
 │ ├─ analyzer.py
+│ │   **Class**: ◆ FunctionCall
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
+│ │   **Class**: ◆ CodeStructure
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
+│ │   **Class**: ◆ FunctionNode
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
+│ │   **Class**: ◆ ClassNode
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
+│ │   **Class**: ◆ AnalyzerConfig
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
 │ │   **Class**: ◆ CodeAnalyzer
 │ │   └─ # Simple analyzer for extracting functions and classes from Python files.
-│ │   └─ ! High complexity (30)
-│ │   └─ ! Too long (129 lines)
+│ │   └─ ! High complexity (32)
+│ │   └─ ! Too long (162 lines)
 │ │   **Function**: → __init__
 │ │   **Function**: → analyze_file
 │ │   └─ # Extracts functions and classes with optional params and relationships.
-│ │   └─ ! Deep nesting (depth 5)
+│ │   └─ ! Too long (65 lines)
+│ │   └─ ! Deep nesting (depth 6)
+│ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _get_function_params
 │ │   └─ # Extract function parameters with type hints.
 │ │   **Function**: → _find_function_calls
-│ │   └─ # Find all function calls within a node.
 │ │   **Function**: → get_symbol
 │ │   └─ # Maps item types to their display symbols.
 │ │   **Function**: → format_structure
 │ │   └─ # Formats the code structure into displayable lines with colors and prefixes.
 │ │   └─ ! High cognitive load (> 7 items)
 │ ├─ core.py
+│ │   **Class**: ◆ CodeStructure
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
+│ │   **Class**: ◆ TreeOptions
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
+│ │   **Class**: ◆ ModuleMetrics
+│ │   └─ ! Missing class docstring
+│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
 │ │   **Function**: → create_default_ignore
 │ │   └─ # Create default .treeline-ignore if it doesn't exist
 │ │   **Function**: → read_ignore_patterns
@@ -365,7 +425,7 @@ graph TD
 │ │    indent: String to use for indentation
 │ │    Returns:
 │ │    List of formatted strings representing the code structure
-│ │   └─ ! High complexity (12)
+│ │   └─ ! High complexity (13)
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
@@ -374,7 +434,9 @@ graph TD
 │ │   **Function**: → generate_tree
 │ │   └─ # Generate tree structure with code quality and security analysis.
 │ │   └─ ! High complexity (13)
+│ │   └─ ! Too long (59 lines)
 │ │   └─ ! Deep nesting (depth 7)
+│ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
@@ -546,31 +608,48 @@ graph TD
 │ │   **Function**: → walk_cognitive
 │ │   **Function**: → get_depth
 │ │   **Function**: → get_inheritance_depth
-│ └─ security_analyzer.py
-│     **Class**: ◆ TreelineSecurity
-│     └─ ! High complexity (46)
-│     └─ ! Too long (168 lines)
+│ ├─ security_analyzer.py
+│ │   **Class**: ◆ TreelineSecurity
+│ │   └─ ! High complexity (46)
+│ │   └─ ! Too long (168 lines)
+│ │   └─ ! Missing class docstring
+│ │   **Function**: → __init__
+│ │   **Function**: → analyze_file
+│ │   **Function**: → _collect_imports
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   **Function**: → _scan_security_issues
+│ │   └─ ! High cognitive load (> 7 items)
+│ │   **Function**: → _check_all_dangerous_calls
+│ │   └─ # Check for dangerous function calls that may lead to security vulnerabilities.
+│ │   └─ ! High complexity (14)
+│ │   └─ ! Too long (56 lines)
+│ │   └─ ! Deep nesting (depth 6)
+│ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cognitive complexity (> 15)
+│ │   └─ ! Excessive nesting depth (> 4)
+│ │   └─ ! High cognitive load (> 7 items)
+│ │   **Function**: → _check_string_concat
+│ │   └─ # Check for string concatenation with SQL-like commands.
+│ │   **Function**: → _check_hardcoded_secrets
+│ │   **Function**: → _add_issue
+│ └─ type_checker.py
+│     **Class**: ◆ ValidationError
 │     └─ ! Missing class docstring
-│     **Function**: → __init__
-│     **Function**: → analyze_file
-│     **Function**: → _collect_imports
-│     └─ ! High cognitive complexity (> 15)
-│     **Function**: → _scan_security_issues
-│     └─ ! High cognitive load (> 7 items)
-│     **Function**: → _check_all_dangerous_calls
-│     └─ # Check for dangerous function calls that may lead to security vulnerabilities.
-│     └─ ! High complexity (14)
-│     └─ ! Too long (56 lines)
-│     └─ ! Deep nesting (depth 6)
-│     └─ ! Function exceeds 50 lines
+│     └─ ! Too few public methods (< 1, SOLID-ISP)
+│     **Class**: ◆ TypeValidator
+│     └─ # A simple type validation system for runtime type checking.
+│     └─ ! High complexity (11)
+│     **Class**: ◆ ValidatedModel
+│     └─ # Base class for type-validated models.
+│     └─ ! Too few public methods (< 1, SOLID-ISP)
+│     **Function**: → validate
+│     └─ # Validate that a value matches its expected type.
+│     └─ ! High complexity (11)
 │     └─ ! High cyclomatic complexity (> 10)
-│     └─ ! High cognitive complexity (> 15)
-│     └─ ! Excessive nesting depth (> 4)
 │     └─ ! High cognitive load (> 7 items)
-│     **Function**: → _check_string_concat
-│     └─ # Check for string concatenation with SQL-like commands.
-│     **Function**: → _check_hardcoded_secrets
-│     **Function**: → _add_issue
+│     **Function**: → __post_init__
+│     └─ # Validate types after initialization.
 ├─ treeline.egg-info
 │ ├─ dependency_links.txt
 │ ├─ entry_points.txt
@@ -582,7 +661,8 @@ graph TD
 ├─ License
 ├─ open_visualization.html
 ├─ README.md
-└─ setup.py
+├─ setup.py
+└─ tree.md
 ```
 
 ## Code Quality Metrics
@@ -639,13 +719,13 @@ graph TD
 
 ### treeline.analyzer
 - Functions: **6**
-- Classes: **1**
-- Complexity: **30**
+- Classes: **6**
+- Complexity: **32**
 
 ### treeline.core
 - Functions: **9**
-- Classes: **0**
-- Complexity: **55**
+- Classes: **3**
+- Complexity: **56**
 
 ### treeline.dependency_analyzer
 - Functions: **11**
@@ -661,6 +741,11 @@ graph TD
 - Functions: **8**
 - Classes: **1**
 - Complexity: **46**
+
+### treeline.type_checker
+- Functions: **2**
+- Classes: **3**
+- Complexity: **14**
 
 ## Complexity Hotspots
 
@@ -692,11 +777,15 @@ graph TD
 - **Module**: treeline.enhanced_analyzer
 - **Complexity**: 13
 
+### format_structure
+- **Module**: treeline.core
+- **Complexity**: 13
+
 ### generate_tree
 - **Module**: treeline.core
 - **Complexity**: 13
 
-### format_structure
-- **Module**: treeline.core
-- **Complexity**: 12
+### validate
+- **Module**: treeline.type_checker
+- **Complexity**: 11
 
