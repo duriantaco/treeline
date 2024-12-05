@@ -20,15 +20,27 @@ jobs:
         with:
           python-version: "3.11"
           
-      - name: Install linting tools
+      - name: Install package and tools
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black isort
+          pip install -e .
+          pip install pytest flake8 black isort
           
-      - name: Lint with flake8
+      - name: Code quality checks
         run: |
+          black . --check
+          isort . --check
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+          
+      - name: Run tests
+        run: |
+          pytest tests/
+          
+      - name: Build documentation
+        run: |
+          pip install sphinx sphinx-rtd-theme
+          make html
 
   create_release:
     needs: quality
@@ -38,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0  
+          fetch-depth: 0
           
       - name: Create Release
         id: create_release
