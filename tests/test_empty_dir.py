@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 from treeline.core import generate_tree
 
@@ -11,7 +12,7 @@ class TestEmptyDirectory(unittest.TestCase):
     def tearDown(self):
         """Clean up test directory"""
         if os.path.exists(self.test_dir):
-            os.rmdir(self.test_dir)
+            shutil.rmtree(self.test_dir) 
 
     def test_empty_directory(self):
         """Test handling of empty directory"""
@@ -19,6 +20,7 @@ class TestEmptyDirectory(unittest.TestCase):
         os.makedirs(empty_dir)
         result = generate_tree(empty_dir)
         self.assertEqual(result.count("\n"), 0)
+
 
 if __name__ == "__main__":
     unittest.main()
