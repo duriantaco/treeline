@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -37,7 +39,19 @@ jobs:
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
 
       - name: Run pre-commit
-        run: pre-commit run --all-files
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          pre-commit run --all-files
+
+      - name: Handle potential changes
+        run: |
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "style: auto-format with pre-commit hooks"
+            git pull --rebase origin ${{ github.head_ref }}
+            git push origin HEAD:${{ github.head_ref }}
+          fi
 
       - name: Run tests
         run: pytest tests/
