@@ -3,7 +3,11 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List
 
-from treeline.models.security import SecurityIssue, SecurityPattern, SecurityPatterns
+from treeline.models.security_analyzer import (
+    SecurityIssue,
+    SecurityPattern,
+    SecurityPatterns,
+)
 
 
 class TreelineSecurity:
