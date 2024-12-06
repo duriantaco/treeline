@@ -816,7 +816,14 @@ class ModuleDependencyAnalyzer:
             lines.append(f"### {module}")
             lines.append(f"- Functions: **{metrics['functions']}**")
             lines.append(f"- Classes: **{metrics['classes']}**")
-            lines.append(f"- Complexity: **{metrics['complexity']}**")
+
+            complexity_str = str(metrics["complexity"])
+            if (
+                metrics["complexity"]
+                > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]
+            ):
+                complexity_str = f"<span style='color: red'>{complexity_str}</span>"
+            lines.append(f"- Complexity: **{complexity_str}**")
 
             if module in self.class_info:
                 lines.append("\nClasses:")
@@ -860,9 +867,48 @@ class ModuleDependencyAnalyzer:
             for module, func, complexity in sorted_hotspots:
                 lines.append(f"### {func}")
                 lines.append(f"- **Module**: {module}")
-                lines.append(f"- **Complexity**: {complexity}")
+                complexity_str = str(complexity)
+                if complexity > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]:
+                    complexity_str = f"<span style='color: red'>{complexity_str}</span>"
+                lines.append(f"- **Complexity**: {complexity_str}")
                 lines.append("")
         else:
             lines.append("*No complex functions found.*\n")
+
+        lines.append("## Appendix: Code Quality Metrics\n")
+        lines.append(
+            "These metrics represent the target thresholds for maintaining code quality. "
+            "Values exceeding these thresholds are highlighted in red in the report above.\n"
+        )
+
+        lines.append("| Metric | Target Threshold | Description |")
+        lines.append("|--------|-----------------|-------------|")
+
+        metric_descriptions = {
+            "MAX_LINE_LENGTH": "Maximum characters per line",
+            "MAX_DOC_LENGTH": "Maximum characters per documentation line",
+            "MAX_CYCLOMATIC_COMPLEXITY": "Maximum cyclomatic complexity per function",
+            "MAX_COGNITIVE_COMPLEXITY": "Maximum cognitive complexity per function",
+            "MAX_NESTED_DEPTH": "Maximum nested block depth",
+            "MAX_FUNCTION_LINES": "Maximum lines per function",
+            "MAX_PARAMS": "Maximum parameters per function",
+            "MAX_RETURNS": "Maximum return statements per function",
+            "MAX_ARGUMENTS_PER_LINE": "Maximum arguments per line in function calls",
+            "MIN_MAINTAINABILITY_INDEX": "Minimum maintainability index",
+            "MAX_FUNC_COGNITIVE_LOAD": "Maximum cognitive load per function",
+            "MIN_PUBLIC_METHODS": "Minimum public methods per class",
+            "MAX_IMPORT_STATEMENTS": "Maximum import statements per module",
+            "MAX_MODULE_DEPENDENCIES": "Maximum module dependencies",
+            "MAX_INHERITANCE_DEPTH": "Maximum inheritance depth",
+            "MAX_DUPLICATED_LINES": "Maximum consecutive duplicated lines",
+            "MAX_DUPLICATED_BLOCKS": "Maximum duplicated code blocks",
+            "MAX_CLASS_LINES": "Maximum lines per class",
+            "MAX_METHODS_PER_CLASS": "Maximum methods per class",
+            "MAX_CLASS_COMPLEXITY": "Maximum complexity per class",
+        }
+
+        for metric, value in self.QUALITY_METRICS.items():
+            description = metric_descriptions.get(metric, "")
+            lines.append(f"| {metric} | {value} | {description} |")
 
         return "\n".join(lines)
