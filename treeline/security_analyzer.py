@@ -84,23 +84,7 @@ class TreelineSecurity:
                 self._check_hardcoded_secrets(node, filename)
 
     def _check_all_dangerous_calls(self, node: ast.Call, filename: str) -> None:
-        """
-        Check for dangerous function calls that may lead to security vulnerabilities.
-        """
-
-        if isinstance(node.func, ast.Name):
-            func_name = node.func.id
-
-            if func_name in self.RISKY_PATTERNS["command_injection"]["patterns"]:
-                print(f"Found command injection pattern: {func_name}")
-                self._add_issue(
-                    "command_injection",
-                    f"Possible command injection using {func_name}()",
-                    filename,
-                    node.lineno,
-                )
-
-        elif isinstance(node.func, ast.Attribute):
+        if isinstance(node.func, ast.Attribute):
             func_name = node.func.attr
             print(f"Method call: {func_name}")
 
@@ -109,60 +93,39 @@ class TreelineSecurity:
                 orig_module = self.imports.get(module_name, module_name)
                 print(f"Module: {module_name} -> {orig_module}")
 
-                if func_name in self.RISKY_PATTERNS["sql_injection"]["patterns"]:
-                    print(f"Checking SQL injection for {func_name}")
-                    print(f"Args: {[ast.dump(arg) for arg in node.args]}")
-                    if any(
-                        isinstance(arg, (ast.BinOp, ast.JoinedStr)) for arg in node.args
-                    ):
-                        self._add_issue(
-                            "sql_injection",
-                            f"Possible SQL injection in {func_name}()",
-                            filename,
-                            node.lineno,
-                        )
+                if (
+                    orig_module in self.RISKY_PATTERNS.command_injection.modules
+                    and func_name in self.RISKY_PATTERNS.command_injection.patterns
+                ):
+                    self._add_issue(
+                        "command_injection",
+                        f"Possible command injection in {orig_module}.{func_name}()",
+                        filename,
+                        node.lineno,
+                    )
 
-                if orig_module in self.RISKY_PATTERNS["command_injection"]["modules"]:
-                    print(f"Found command injection module: {orig_module}")
-                    if (
-                        func_name
-                        in self.RISKY_PATTERNS["command_injection"]["patterns"]
-                    ):
-                        print(f"Found command injection function: {func_name}")
+                if (
+                    orig_module in {"os", "pathlib", "shutil"}
+                    and func_name in self.RISKY_PATTERNS.file_operations.patterns
+                ):
+                    if any(isinstance(arg, ast.BinOp) for arg in node.args):
                         self._add_issue(
-                            "command_injection",
-                            f"Possible command injection in {orig_module}.{func_name}()",
+                            "file_operations",
+                            f"Insecure file operation in {orig_module}.{func_name}()",
                             filename,
                             node.lineno,
                         )
 
                 if (
-                    orig_module
-                    in self.RISKY_PATTERNS["deserialization"]["risky_modules"]
+                    orig_module in self.RISKY_PATTERNS.deserialization.risky_modules
+                    and func_name in self.RISKY_PATTERNS.deserialization.patterns
                 ):
-                    print(f"Found risky deserialization module: {orig_module}")
-                    if func_name in self.RISKY_PATTERNS["deserialization"]["patterns"]:
-                        print(f"Found risky deserialization function: {func_name}")
-                        self._add_issue(
-                            "deserialization",
-                            f"Unsafe deserialization using {orig_module}.{func_name}()",
-                            filename,
-                            node.lineno,
-                        )
-
-                if func_name in self.RISKY_PATTERNS["file_operations"]["patterns"]:
-                    print(f"Checking file operation for {func_name}")
-                    for arg in node.args:
-                        if isinstance(arg, ast.BinOp):
-                            print(
-                                f"Found string concatenation in argument of {func_name}"
-                            )
-                            self._add_issue(
-                                "file_operations",
-                                f"Insecure file operation in {orig_module}.{func_name}()",
-                                filename,
-                                node.lineno,
-                            )
+                    self._add_issue(
+                        "deserialization",
+                        f"Unsafe deserialization using {orig_module}.{func_name}()",
+                        filename,
+                        node.lineno,
+                    )
 
     def _check_string_concat(self, node: ast.BinOp, filename: str) -> None:
         """
