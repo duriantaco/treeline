@@ -1,30 +1,30 @@
 from dataclasses import dataclass
 
-from ..type_checker import ValidatedModel
+from ..type_checker import TypeChecked
 
 
 @dataclass
-class FunctionLocation(ValidatedModel):
+class FunctionLocation(TypeChecked):
     module: str
     file: str
     line: int
 
 
 @dataclass
-class FunctionCallInfo(ValidatedModel):
+class FunctionCallInfo(TypeChecked):
     from_module: str
     from_function: str
     line: int
 
 
 @dataclass
-class ClassMethod(ValidatedModel):
+class ClassMethod(TypeChecked):
     line: int
     calls: list[str]
 
 
 @dataclass
-class ClassInfo(ValidatedModel):
+class ClassInfo(TypeChecked):
     module: str
     file: str
     line: int
@@ -32,40 +32,40 @@ class ClassInfo(ValidatedModel):
 
 
 @dataclass
-class ModuleMetrics(ValidatedModel):
+class ModuleMetrics(TypeChecked):
     functions: int
     classes: int
     complexity: int
 
 
 @dataclass
-class ComplexFunction(ValidatedModel):
+class ComplexFunction(TypeChecked):
     module: str
     name: str
     complexity: int
 
 
 @dataclass
-class MethodInfo(ValidatedModel):
+class MethodInfo(TypeChecked):
     line: int
     calls: list[str]
 
 
 @dataclass
-class Node(ValidatedModel):
+class Node(TypeChecked):
     id: int
     name: str
     type: str
 
 
 @dataclass
-class Link(ValidatedModel):
+class Link(TypeChecked):
     source: int
     target: int
     type: str
 
 
 @dataclass
-class GraphData(ValidatedModel):
+class GraphData(TypeChecked):
     nodes: list[Node]
     links: list[Link]

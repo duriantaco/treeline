@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from treeline.type_checker import ValidatedModel
+from treeline.type_checker import TypeChecked
 
 
 @dataclass
-class FunctionMetrics(ValidatedModel):
+class FunctionMetrics(TypeChecked):
     lines: int
     params: int
     returns: int
@@ -19,7 +19,7 @@ class FunctionMetrics(ValidatedModel):
 
 
 @dataclass
-class ClassMetrics(ValidatedModel):
+class ClassMetrics(TypeChecked):
     lines: int
     method_count: int
     complexity: int
@@ -32,13 +32,13 @@ class ClassMetrics(ValidatedModel):
 
 
 @dataclass
-class CodeDuplication(ValidatedModel):
+class CodeDuplication(TypeChecked):
     duplicated_blocks: int
     duplicated_lines: int
 
 
 @dataclass
-class QualityIssue(ValidatedModel):
+class QualityIssue(TypeChecked):
     description: str
     file_path: Optional[str]
     line: Optional[int]
