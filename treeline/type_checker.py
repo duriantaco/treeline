@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Type, get_args, get_origin
+from typing import Any, Type, Union, get_args, get_origin
 
 
 class TypeValidator:
@@ -15,12 +15,19 @@ class TypeValidator:
         Raises:
             TypeError: If the value doesn't match the expected type
         """
+        origin = get_origin(expected_type)
+        if origin is Union:
+            args = get_args(expected_type)
+            if len(args) == 2 and args[1] is type(None):
+                if value is None:
+                    return
+                expected_type = args[0]
+                origin = get_origin(expected_type)
+
         if value is None:
             if expected_type is type(None):
                 return
             raise TypeError(f"Expected {expected_type}, got None")
-
-        origin = get_origin(expected_type)
 
         if origin is not None:
             args = get_args(expected_type)

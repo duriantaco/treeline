@@ -1,6 +1,6 @@
 # models/security.py
 from dataclasses import dataclass
-from typing import Set
+from typing import Optional, Set
 
 from ..type_checker import TypeChecked
 
@@ -8,10 +8,10 @@ from ..type_checker import TypeChecked
 @dataclass
 class SecurityPattern(TypeChecked):
     patterns: Set[str]
-    safe_patterns: Set[str] = None
-    modules: Set[str] = None
-    risky_modules: Set[str] = None
-    safe_modules: Set[str] = None
+    safe_patterns: Optional[Set[str]] = None
+    modules: Optional[Set[str]] = None
+    risky_modules: Optional[Set[str]] = None
+    safe_modules: Optional[Set[str]] = None
 
 
 @dataclass
