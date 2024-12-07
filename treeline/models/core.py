@@ -2,11 +2,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from treeline.type_checker import ValidatedModel
+from treeline.type_checker import TypeChecked
 
 
 @dataclass
-class CodeStructure(ValidatedModel):
+class CodeStructure(TypeChecked):
     type: str
     name: str
     docstring: Optional[str] = None
@@ -15,7 +15,7 @@ class CodeStructure(ValidatedModel):
 
 
 @dataclass
-class TreeOptions(ValidatedModel):
+class TreeOptions(TypeChecked):
     directory: Union[str, Path]
     create_md: bool = False
     hide_structure: bool = False
@@ -24,7 +24,7 @@ class TreeOptions(ValidatedModel):
 
 
 @dataclass
-class ModuleMetrics(ValidatedModel):
+class ModuleMetrics(TypeChecked):
     functions: int
     classes: int
     complexity: float

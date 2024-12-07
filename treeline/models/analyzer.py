@@ -1,17 +1,17 @@
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 
-from treeline.type_checker import ValidatedModel
+from treeline.type_checker import TypeChecked
 
 
 @dataclass
-class FunctionCall(ValidatedModel):
+class FunctionCall(TypeChecked):
     caller: str
     called: str
 
 
 @dataclass
-class CodeStructure(ValidatedModel):
+class CodeStructure(TypeChecked):
     type: str
     name: str
     docstring: Optional[str] = None
@@ -20,7 +20,7 @@ class CodeStructure(ValidatedModel):
 
 
 @dataclass
-class FunctionNode(ValidatedModel):
+class FunctionNode(TypeChecked):
     name: str
     docstring: Optional[str]
     params: Optional[str] = ""
@@ -29,7 +29,7 @@ class FunctionNode(ValidatedModel):
 
 
 @dataclass
-class ClassNode(ValidatedModel):
+class ClassNode(TypeChecked):
     name: str
     docstring: Optional[str]
     bases: Optional[List[str]] = None
@@ -38,6 +38,6 @@ class ClassNode(ValidatedModel):
 
 
 @dataclass
-class AnalyzerConfig(ValidatedModel):
+class AnalyzerConfig(TypeChecked):
     show_params: bool = True
     show_relationships: bool = True

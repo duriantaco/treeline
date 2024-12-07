@@ -2,11 +2,11 @@
 from dataclasses import dataclass
 from typing import Set
 
-from ..type_checker import ValidatedModel
+from ..type_checker import TypeChecked
 
 
 @dataclass
-class SecurityPattern(ValidatedModel):
+class SecurityPattern(TypeChecked):
     patterns: Set[str]
     safe_patterns: Set[str] = None
     modules: Set[str] = None
@@ -15,14 +15,14 @@ class SecurityPattern(ValidatedModel):
 
 
 @dataclass
-class SecurityIssue(ValidatedModel):
+class SecurityIssue(TypeChecked):
     description: str
     file: str
     line: int
 
 
 @dataclass
-class SecurityPatterns(ValidatedModel):
+class SecurityPatterns(TypeChecked):
     sql_injection: SecurityPattern
     command_injection: SecurityPattern
     deserialization: SecurityPattern
