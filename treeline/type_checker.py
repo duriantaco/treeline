@@ -78,3 +78,9 @@ class TypeChecked:
                 TypeValidator.validate(value, field_type)
             except TypeError as e:
                 raise TypeError(f"Invalid type for {field_name}: {str(e)}")
+
+
+class ValidationError(Exception):
+    """Raised when type validation fails"""
+
+    pass
