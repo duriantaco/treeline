@@ -1,61 +1,86 @@
-from typing import Any, Type, TypeVar, get_origin, get_args, get_type_hints
 from dataclasses import dataclass
-import inspect
-from typing import List, Dict, Optional, Union
+from typing import Any, Type, Union, get_args, get_origin
 
-T = TypeVar('T')
-
-class ValidationError(Exception):
-    pass
 
 class TypeValidator:
-    """A simple type validation system for runtime type checking."""
-    
     @staticmethod
-    def validate(value: Any, expected_type: Type[T]) -> None:
-        """Validate that a value matches its expected type."""
+    def validate(value: Any, expected_type: Type) -> None:
+        """
+        Validates that a value matches the expected type, with support for generics.
+
+        Args:
+            value: The value to validate
+            expected_type: The expected type (can be a generic type)
+
+        Raises:
+            TypeError: If the value doesn't match the expected type
+        """
         origin = get_origin(expected_type)
-        args = get_args(expected_type)
-        
-        if origin is Union and type(None) in args:
-            if value is None:
+        if origin is Union:
+            args = get_args(expected_type)
+            if len(args) == 2 and args[1] is type(None):
+                if value is None:
+                    return
+                expected_type = args[0]
+                origin = get_origin(expected_type)
+
+        if value is None:
+            if expected_type is type(None):
                 return
-            other_type = next(t for t in args if t is not type(None))
-            expected_type = other_type
-        
-        if origin is list:
-            if not isinstance(value, list):
-                raise ValidationError(f"Expected list but got {type(value)}")
-            element_type = args[0]
-            for item in value:
-                TypeValidator.validate(item, element_type)
-            return
-            
-        if origin is dict:
-            if not isinstance(value, dict):
-                raise ValidationError(f"Expected dict but got {type(value)}")
-            key_type, value_type = args
-            for k, v in value.items():
-                TypeValidator.validate(k, key_type)
-                TypeValidator.validate(v, value_type)
-            return
-        
-        if not isinstance(value, expected_type):
-            raise ValidationError(
-                f"Expected type {expected_type.__name__} but got {type(value).__name__}"
-            )
+            raise TypeError(f"Expected {expected_type}, got None")
+
+        if origin is not None:
+            args = get_args(expected_type)
+
+            if origin == list:
+                if not isinstance(value, list):
+                    raise TypeError(f"Expected list, got {type(value)}")
+                for item in value:
+                    TypeValidator.validate(item, args[0])
+
+            elif origin == dict:
+                if not isinstance(value, dict):
+                    raise TypeError(f"Expected dict, got {type(value)}")
+                key_type, value_type = args
+                for k, v in value.items():
+                    TypeValidator.validate(k, key_type)
+                    TypeValidator.validate(v, value_type)
+
+            elif origin == tuple:
+                if not isinstance(value, tuple):
+                    raise TypeError(f"Expected tuple, got {type(value)}")
+                if len(value) != len(args):
+                    raise TypeError(
+                        f"Expected tuple of length {len(args)}, got length {len(value)}"
+                    )
+                for item, item_type in zip(value, args):
+                    TypeValidator.validate(item, item_type)
+
+            elif origin == set:
+                if not isinstance(value, set):
+                    raise TypeError(f"Expected set, got {type(value)}")
+                for item in value:
+                    TypeValidator.validate(item, args[0])
+        else:
+            if not isinstance(value, expected_type):
+                raise TypeError(f"Expected {expected_type}, got {type(value)}")
+
 
 @dataclass
-class ValidatedModel:
-    """Base class for type-validated models."""
-    
+class TypeChecked:
+    """Base class for type-checked dataclasses"""
+
     def __post_init__(self):
-        """Validate types after initialization."""
-        hints = get_type_hints(self.__class__)
-        
-        for field_name, expected_type in hints.items():
+        """Validate types after initialization"""
+        for field_name, field_type in self.__annotations__.items():
             value = getattr(self, field_name)
             try:
-                TypeValidator.validate(value, expected_type)
-            except ValidationError as e:
-                raise ValidationError(f"Field '{field_name}': {str(e)}")
+                TypeValidator.validate(value, field_type)
+            except TypeError as e:
+                raise TypeError(f"Invalid type for {field_name}: {str(e)}")
+
+
+class ValidationError(Exception):
+    """Raised when type validation fails"""
+
+    pass

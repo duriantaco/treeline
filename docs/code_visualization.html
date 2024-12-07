@@ -5,27 +5,27 @@
             <title>Code Structure Visualization</title>
             <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
             <style>
-                body { 
-                    margin: 0; 
+                body {
+                    margin: 0;
                     font-family: 'Segoe UI', Arial, sans-serif;
                     background: #f8f9fa;
                 }
-                .node { 
-                    cursor: pointer; 
+                .node {
+                    cursor: pointer;
                 }
-                .node circle { 
-                    fill: #fff; 
-                    stroke-width: 2px; 
+                .node circle {
+                    fill: #fff;
+                    stroke-width: 2px;
                     transition: all 0.3s;
                 }
                 .node:hover circle {
                     filter: brightness(0.95);
                 }
-                .node text { 
+                .node text {
                     font: 12px 'Segoe UI', sans-serif;
                     font-weight: 500;
                 }
-                .link { 
+                .link {
                     stroke-width: 1.5px;
                     stroke-dasharray: 4;
                     opacity: 0.7;
@@ -39,8 +39,8 @@
                 .link-calls {
                     stroke: #ea580c; /* orange */
                 }
-                .tooltip { 
-                    position: absolute; 
+                .tooltip {
+                    position: absolute;
                     padding: 12px;
                     background: white;
                     border: none;
@@ -149,7 +149,7 @@
 
                 let width = window.innerWidth;
                 let height = window.innerHeight;
-                
+
                 const svg = d3.select("#visualization")
                     .attr("width", width)
                     .attr("height", height);
@@ -227,11 +227,11 @@
                     tooltip.transition()
                         .duration(200)
                         .style("opacity", .9);
-                    
-                    let connections = data.links.filter(l => 
+
+                    let connections = data.links.filter(l =>
                         l.source.id === d.id || l.target.id === d.id
                     );
-                    
+
                     let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br><br>`;
                     if (connections.length > 0) {
                         tooltipContent += "Connections:<br>";
@@ -243,17 +243,17 @@
                             }
                         });
                     }
-                    
+
                     tooltip.html(tooltipContent)
                         .style("left", (event.pageX + 10) + "px")
                         .style("top", (event.pageY - 10) + "px");
-                        
+
                     // Highlight connected nodes
-                    node.style("opacity", n => 
-                        n.id === d.id || 
+                    node.style("opacity", n =>
+                        n.id === d.id ||
                         connections.some(c => c.source.id === n.id || c.target.id === n.id) ? 1 : 0.1
                     );
-                    link.style("opacity", l => 
+                    link.style("opacity", l =>
                         l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
                     );
                 })
@@ -339,7 +339,7 @@
                         link.style("opacity", 0.7);
                         return;
                     }
-                    
+
                     const matchedNodes = new Set();
                     node.each(function(d) {
                         if (d.name.toLowerCase().includes(term)) {
@@ -351,7 +351,7 @@
                             });
                         }
                     });
-                    
+
                     node.style("opacity", d => matchedNodes.has(d.id) ? 1 : 0.1);
                     link.style("opacity", d =>
                         matchedNodes.has(d.source.id) && matchedNodes.has(d.target.id) ? 0.7 : 0.1
@@ -369,4 +369,3 @@
             </script>
         </body>
         </html>
-        

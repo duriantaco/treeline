@@ -37,9 +37,9 @@ graph TD
     tests_test_core --> treeline_core
     tests_test_nested_dir --> treeline_core
     treeline_analyzer --> treeline_type_checker
-    treeline_core --> treeline_enhanced_analyzer
     treeline_core --> treeline_type_checker
     treeline_core --> treeline_dependency_analyzer
+    treeline_core --> treeline_enhanced_analyzer
     treeline___main__ --> treeline_core
 ```
 
@@ -306,6 +306,7 @@ graph TD
 
 ```
 
+├─ build
 ├─ docs
 │ ├─ code_visualization.html
 │ ├─ index.html
@@ -313,6 +314,11 @@ graph TD
 ├─ example
 │ ├─ tree.md
 │ └─ tut1.ipynb
+├─ source
+│ ├─ _static
+│ ├─ _templates
+│ ├─ conf.py
+│ └─ index.rst
 ├─ tests
 │ ├─ test_core.py
 │ │   **Class**: ◆ TestTreeGenerator
@@ -324,18 +330,32 @@ graph TD
 │ │   **Function**: → test_markdown_creation
 │ │   └─ # Test if markdown file is created when flag is True
 │ ├─ test_empty_dir.py
+│ │   **Class**: ◆ TestEmptyDirectory
+│ │   └─ ! Missing class docstring
+│ │   **Function**: → setUp
+│ │   └─ # Set up test directory
+│ │   **Function**: → tearDown
+│ │   └─ # Clean up test directory
 │ │   **Function**: → test_empty_directory
 │ │   └─ # Test handling of empty directory
 │ ├─ test_missing_dir.py
+│ │   **Class**: ◆ TestMissingDirectory
+│ │   └─ ! Missing class docstring
 │ │   **Function**: → test_non_existent_directory
 │ │   └─ # Test handling of non-existent directory
 │ ├─ test_nested_dir.py
+│ │   **Class**: ◆ TestNestedDirectories
+│ │   └─ ! Missing class docstring
+│ │   **Function**: → setUp
+│ │   └─ # Set up test directory
+│ │   **Function**: → tearDown
+│ │   └─ # Clean up test directory
 │ │   **Function**: → test_nested_directories
 │ │   └─ # Test handling of nested directories
 │ ├─ test_security_detection.py
 │ │   **Class**: ◆ TestTreelineSecurity
 │ │   └─ ! High complexity (11)
-│ │   └─ ! Too long (72 lines)
+│ │   └─ ! Too long (78 lines)
 │ │   └─ ! Missing class docstring
 │ │   **Function**: → setUp
 │ │   **Function**: → create_test_file
@@ -349,6 +369,12 @@ graph TD
 │ │   **Function**: → test_file_operation_detection
 │ │   **Function**: → tearDown
 │ ├─ test_special_char.py
+│ │   **Class**: ◆ TestSpecialCharacters
+│ │   └─ ! Missing class docstring
+│ │   **Function**: → setUp
+│ │   └─ # Set up test directory
+│ │   **Function**: → tearDown
+│ │   └─ # Clean up test directory
 │ │   **Function**: → test_special_characters
 │ │   └─ # Test handling of special characters in names
 │ └─ test_treeline.py
@@ -381,11 +407,11 @@ graph TD
 │ │   **Class**: ◆ CodeAnalyzer
 │ │   └─ # Simple analyzer for extracting functions and classes from Python files.
 │ │   └─ ! High complexity (32)
-│ │   └─ ! Too long (162 lines)
+│ │   └─ ! Too long (199 lines)
 │ │   **Function**: → __init__
 │ │   **Function**: → analyze_file
 │ │   └─ # Extracts functions and classes with optional params and relationships.
-│ │   └─ ! Too long (65 lines)
+│ │   └─ ! Too long (99 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! Excessive nesting depth (> 4)
@@ -426,6 +452,8 @@ graph TD
 │ │    Returns:
 │ │    List of formatted strings representing the code structure
 │ │   └─ ! High complexity (13)
+│ │   └─ ! Too long (61 lines)
+│ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
@@ -434,7 +462,7 @@ graph TD
 │ │   **Function**: → generate_tree
 │ │   └─ # Generate tree structure with code quality and security analysis.
 │ │   └─ ! High complexity (13)
-│ │   └─ ! Too long (59 lines)
+│ │   └─ ! Too long (73 lines)
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
@@ -452,7 +480,7 @@ graph TD
 │ │   **Class**: ◆ ModuleDependencyAnalyzer
 │ │   └─ # Analyzes module-level dependencies and generates summary reports.
 │ │   └─ ! High complexity (92)
-│ │   └─ ! Too long (811 lines)
+│ │   └─ ! Too long (836 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
@@ -464,7 +492,9 @@ graph TD
 │ │   **Function**: → _analyze_module
 │ │   └─ # Analyze a single module's contents and relationships.
 │ │   └─ ! High complexity (15)
+│ │   └─ ! Too long (54 lines)
 │ │   └─ ! Deep nesting (depth 7)
+│ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
@@ -481,7 +511,9 @@ graph TD
 │ │   **Function**: → generate_module_detail_diagram
 │ │   └─ # Generate a Mermaid diagram showing functions and classes in a module.
 │ │   └─ ! High complexity (17)
+│ │   └─ ! Too long (61 lines)
 │ │   └─ ! Deep nesting (depth 5)
+│ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
@@ -491,7 +523,7 @@ graph TD
 │ │   **Function**: → generate_html_visualization
 │ │   └─ # Generate an interactive HTML visualization using D3.js
 │ │   └─ ! High complexity (18)
-│ │   └─ ! Too long (111 lines)
+│ │   └─ ! Too long (94 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
@@ -499,7 +531,7 @@ graph TD
 │ │   **Function**: → generate_summary_report
 │ │   └─ # Generate a readable markdown report with a link to the interactive visualization.
 │ │   └─ ! High complexity (14)
-│ │   └─ ! Too long (56 lines)
+│ │   └─ ! Too long (69 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
@@ -512,7 +544,7 @@ graph TD
 │ │    This analyzer implements industry-standard code quality checks and metrics
 │ │    following Clean Code principles, SOLID principles, and PEP 8 standards.
 │ │   └─ ! High complexity (123)
-│ │   └─ ! Too long (530 lines)
+│ │   └─ ! Too long (612 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
@@ -550,7 +582,7 @@ graph TD
 │ │    content: File content as string
 │ │    file_path: Path to the file being analyzed
 │ │   └─ ! High complexity (13)
-│ │   └─ ! Too long (63 lines)
+│ │   └─ ! Too long (66 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
@@ -569,6 +601,8 @@ graph TD
 │ │   **Function**: → format_structure
 │ │   └─ # Format the analysis results into a tree structure.
 │ │   └─ ! High complexity (15)
+│ │   └─ ! Too long (56 lines)
+│ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
@@ -611,7 +645,8 @@ graph TD
 │ ├─ security_analyzer.py
 │ │   **Class**: ◆ TreelineSecurity
 │ │   └─ ! High complexity (46)
-│ │   └─ ! Too long (168 lines)
+│ │   └─ ! Too long (211 lines)
+│ │   └─ ! Class too long
 │ │   └─ ! Missing class docstring
 │ │   **Function**: → __init__
 │ │   **Function**: → analyze_file
@@ -622,7 +657,7 @@ graph TD
 │ │   **Function**: → _check_all_dangerous_calls
 │ │   └─ # Check for dangerous function calls that may lead to security vulnerabilities.
 │ │   └─ ! High complexity (14)
-│ │   └─ ! Too long (56 lines)
+│ │   └─ ! Too long (80 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity (> 10)
@@ -656,18 +691,23 @@ graph TD
 │ ├─ PKG-INFO
 │ ├─ SOURCES.txt
 │ └─ top_level.txt
+├─ .pre-commit-config.yaml
 ├─ .treeline-ignore
-├─ code_visualization.html
 ├─ License
-├─ open_visualization.html
+├─ make.bat
+├─ Makefile
 ├─ README.md
-├─ setup.py
-└─ tree.md
+└─ setup.py
 ```
 
 ## Code Quality Metrics
 
 ### setup
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### source.conf
 - Functions: **0**
 - Classes: **0**
 - Complexity: **0**
@@ -678,19 +718,19 @@ graph TD
 - Complexity: **5**
 
 ### tests.test_empty_dir
-- Functions: **1**
-- Classes: **0**
-- Complexity: **1**
+- Functions: **3**
+- Classes: **1**
+- Complexity: **4**
 
 ### tests.test_missing_dir
 - Functions: **1**
-- Classes: **0**
+- Classes: **1**
 - Complexity: **1**
 
 ### tests.test_nested_dir
-- Functions: **1**
-- Classes: **0**
-- Complexity: **1**
+- Functions: **3**
+- Classes: **1**
+- Complexity: **4**
 
 ### tests.test_security_detection
 - Functions: **9**
@@ -698,9 +738,9 @@ graph TD
 - Complexity: **11**
 
 ### tests.test_special_char
-- Functions: **1**
-- Classes: **0**
-- Complexity: **1**
+- Functions: **3**
+- Classes: **1**
+- Complexity: **4**
 
 ### tests.test_treeline
 - Functions: **3**
@@ -788,4 +828,3 @@ graph TD
 ### validate
 - **Module**: treeline.type_checker
 - **Complexity**: 11
-

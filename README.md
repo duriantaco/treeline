@@ -7,7 +7,7 @@ A simple directory tree structure generator that can create ASCII tree represent
 
 ## Usage
 
-### As a python module 
+### As a python module
 
 ```
 # Generate and print tree structure
@@ -29,7 +29,7 @@ my_project
 └── setup.py
 ```
 
-### In terminal 
+### In terminal
 
 1. `treeline # Show current directory tree`
 2. `treeline /path/to/dir # Show specific directory tree`
@@ -42,7 +42,7 @@ my_project
 
 ## Note
 
-the .treeline-ignore will ignore whatever is in the folder. 
+the .treeline-ignore will ignore whatever is in the folder.
 
 For example, if you were to put the treeline-ignore inside the src folder, only files within the src folder will be ignored
 
