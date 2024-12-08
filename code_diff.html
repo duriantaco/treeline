@@ -1,0 +1,408 @@
+
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Code Structure Visualization</title>
+            <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js">
+            </script>
+            <style>
+                body {
+                    margin: 0;
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background: #f8f9fa;
+                }
+                .node {
+                    cursor: pointer;
+                }
+                .node circle {
+                    fill: #fff; /* If no changes, node stays white */
+                }
+                .node:hover circle {
+                    filter: brightness(0.95);
+                }
+                .node text {
+                    font: 12px 'Segoe UI', sans-serif;
+                    font-weight: 500;
+                }
+                .link {
+                    stroke-width: 1.5px;
+                    stroke-dasharray: 4;
+                    opacity: 0.7;
+                }
+
+                .link-added { stroke: #22c55e; stroke-width: 3px; }
+                .link-removed { stroke: #ef4444; stroke-width: 3px; opacity: 0.7; }
+
+                .link-imports {
+                    stroke: #7c3aed; /* purple */
+                }
+                .link-contains {
+                    stroke: #059669; /* green */
+                }
+                .link-calls {
+                    stroke: #ea580c; /* orange */
+                }
+                .tooltip {
+                    position: absolute;
+                    padding: 12px;
+                    background: white;
+                    border: none;
+                    border-radius: 8px;
+                    pointer-events: none;
+                    font-size: 14px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    max-width: 300px;
+                }
+                #controls {
+                    position: fixed;
+                    top: 20px;
+                    left: 20px;
+                    background: white;
+                    padding: 16px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                    z-index: 1000;
+                }
+                #search {
+                    width: 250px;
+                    padding: 8px 12px;
+                    margin-bottom: 12px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                    font-size: 14px;
+                }
+                button {
+                    background: #1d4ed8;
+                    color: white;
+                    border: none;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    margin-right: 8px;
+                    transition: background 0.3s;
+                }
+                button:hover {
+                    background: #1e40af;
+                }
+                .legend {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 20px;
+                    background: white;
+                    padding: 16px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+                .legend-item {
+                    display: flex;
+                    align-items: center;
+                    margin-bottom: 8px;
+                    font-size: 14px;
+                }
+                .legend-color {
+                    width: 16px;
+                    height: 16px;
+                    border-radius: 4px;
+                    margin-right: 8px;
+                }
+                .node-module circle { stroke: #0284c7; }
+                .node-class circle { stroke: #0891b2; }
+                .node-function circle { stroke: #0d9488; }
+
+                .node-added circle { fill: #22c55e; }    /* Green for added */
+                .node-removed circle { fill: #ef4444; }  /* Red for removed */
+
+            .node-added circle { fill: #22c55e; }  /* Green */
+            .node-removed circle { fill: #ef4444; opacity: 0.7; }  /* Red */
+            .node-modified circle { fill: #eab308; }  /* Yellow */
+            .link-added { stroke: #22c55e; stroke-width: 3px; }
+            .link-removed { stroke: #ef4444; stroke-width: 3px; opacity: 0.7; }
+
+</style>
+        </head>
+        <body>
+            <div id="controls">
+                <input type="text" id="search" placeholder="Search nodes...">
+                <button onclick="resetZoom()">Reset View</button>
+                <button onclick="toggleLayout()">Toggle Layout</button>
+            </div>
+            <div class="legend">
+                <h3 style="margin-top: 0; margin-bottom: 12px;">Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0284c7;"></div>
+                    <span>Module</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0891b2;"></div>
+                    <span>Class</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #0d9488;"></div>
+                    <span>Function</span>
+                </div>
+                <div style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+                    <div class="legend-item">
+                        <div style="width: 40px; height: 2px;
+                        background: #7c3aed;
+                        margin-right: 8px;"></div>
+                        <span>Imports</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 40px; height: 2px;
+                        background: #059669;
+                        margin-right: 8px;"></div>
+                        <span>Contains</span>
+                    </div>
+                    <div class="legend-item">
+                        <div style="width: 40px; height: 2px;
+                        background: #ea580c;
+                        margin-right: 8px;"></div>
+                        <span>Calls</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 12px;">
+                    <h4 style="margin-top: 0; margin-bottom: 8px;">Changes</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #22c55e;"></div>
+                        <span>Added</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ef4444;"></div>
+                        <span>Removed</span>
+                    </div>
+                </div>
+            </div>
+            <svg id="visualization"></svg>
+            <script>
+                const data = {"nodes": [{"id": 0, "name": "treeline.models.core", "type": "module", "status": "added"}, {"id": 1, "name": "treeline.security_analyzer", "type": "module", "status": "added"}, {"id": 2, "name": "tests.test_missing_dir", "type": "module", "status": "added"}, {"id": 3, "name": "treeline.core", "type": "module", "status": "added"}, {"id": 4, "name": "tests.test_empty_dir", "type": "module", "status": "added"}, {"id": 5, "name": "setup", "type": "module", "status": "added"}, {"id": 6, "name": "tests.test_nested_dir", "type": "module", "status": "added"}, {"id": 7, "name": "treeline.models.enhanced_analyzer", "type": "module", "status": "added"}, {"id": 8, "name": "treeline.dependency_analyzer", "type": "module", "status": "added"}, {"id": 9, "name": "treeline.models.analyzer", "type": "module", "status": "added"}, {"id": 10, "name": "treeline.models.dependency_analyzer", "type": "module", "status": "added"}, {"id": 11, "name": "tests.test_security_detection", "type": "module", "status": "added"}, {"id": 12, "name": "treeline.models.security_analyzer", "type": "module", "status": "added"}, {"id": 13, "name": "tests.test_special_char", "type": "module", "status": "added"}, {"id": 14, "name": "treeline.__main__", "type": "module", "status": "added"}, {"id": 15, "name": "tests.test_treeline", "type": "module", "status": "added"}, {"id": 16, "name": "source.conf", "type": "module", "status": "added"}, {"id": 17, "name": "tests.test_core", "type": "module", "status": "added"}, {"id": 18, "name": "treeline.models.__init__", "type": "module", "status": "added"}, {"id": 19, "name": "treeline.analyzer", "type": "module", "status": "added"}, {"id": 20, "name": "treeline.type_checker", "type": "module", "status": "added"}, {"id": 21, "name": "treeline.enhanced_analyzer", "type": "module", "status": "added"}, {"id": 22, "name": "treeline.__init__", "type": "module", "status": "added"}, {"id": 23, "name": "TestTreelineSecurity", "type": "class", "status": "added"}, {"id": 24, "name": "TestTreeGenerator", "type": "class", "status": "added"}, {"id": 25, "name": "TestTreeLine", "type": "class", "status": "added"}, {"id": 26, "name": "ValidationError", "type": "class", "status": "added"}, {"id": 27, "name": "TypeValidator", "type": "class", "status": "added"}, {"id": 28, "name": "ValidatedModel", "type": "class", "status": "added"}, {"id": 29, "name": "TypeChecked", "type": "class", "status": "added"}, {"id": 30, "name": "ModuleDependencyAnalyzer", "type": "class", "status": "added"}, {"id": 31, "name": "FunctionCall", "type": "class", "status": "added"}, {"id": 32, "name": "CodeStructure", "type": "class", "status": "added"}, {"id": 33, "name": "FunctionNode", "type": "class", "status": "added"}, {"id": 34, "name": "ClassNode", "type": "class", "status": "added"}, {"id": 35, "name": "AnalyzerConfig", "type": "class", "status": "added"}, {"id": 36, "name": "CodeAnalyzer", "type": "class", "status": "added"}, {"id": 37, "name": "EnhancedCodeAnalyzer", "type": "class", "status": "added"}, {"id": 38, "name": "CodeStructure", "type": "class", "status": "added"}, {"id": 39, "name": "TreeOptions", "type": "class", "status": "added"}, {"id": 40, "name": "ModuleMetrics", "type": "class", "status": "added"}, {"id": 41, "name": "TreelineSecurity", "type": "class", "status": "added"}, {"id": 42, "name": "TestSpecialCharacters", "type": "class", "status": "added"}, {"id": 43, "name": "TestEmptyDirectory", "type": "class", "status": "added"}, {"id": 44, "name": "TestNestedDirectories", "type": "class", "status": "added"}, {"id": 45, "name": "FunctionLocation", "type": "class", "status": "added"}, {"id": 46, "name": "FunctionCallInfo", "type": "class", "status": "added"}, {"id": 47, "name": "ClassMethod", "type": "class", "status": "added"}, {"id": 48, "name": "ClassInfo", "type": "class", "status": "added"}, {"id": 49, "name": "ModuleMetrics", "type": "class", "status": "added"}, {"id": 50, "name": "ComplexFunction", "type": "class", "status": "added"}, {"id": 51, "name": "MethodInfo", "type": "class", "status": "added"}, {"id": 52, "name": "Node", "type": "class", "status": "added"}, {"id": 53, "name": "Link", "type": "class", "status": "added"}, {"id": 54, "name": "GraphData", "type": "class", "status": "added"}, {"id": 55, "name": "FunctionCall", "type": "class", "status": "added"}, {"id": 56, "name": "CodeStructure", "type": "class", "status": "added"}, {"id": 57, "name": "FunctionNode", "type": "class", "status": "added"}, {"id": 58, "name": "ClassNode", "type": "class", "status": "added"}, {"id": 59, "name": "AnalyzerConfig", "type": "class", "status": "added"}, {"id": 60, "name": "FunctionMetrics", "type": "class", "status": "added"}, {"id": 61, "name": "ClassMetrics", "type": "class", "status": "added"}, {"id": 62, "name": "CodeDuplication", "type": "class", "status": "added"}, {"id": 63, "name": "QualityIssue", "type": "class", "status": "added"}, {"id": 64, "name": "CodeStructure", "type": "class", "status": "added"}, {"id": 65, "name": "TreeOptions", "type": "class", "status": "added"}, {"id": 66, "name": "ModuleMetrics", "type": "class", "status": "added"}, {"id": 67, "name": "SecurityPattern", "type": "class", "status": "added"}, {"id": 68, "name": "SecurityIssue", "type": "class", "status": "added"}, {"id": 69, "name": "SecurityPatterns", "type": "class", "status": "added"}, {"id": 70, "name": "test_special_characters", "type": "function", "status": "added"}, {"id": 71, "name": "test_non_existent_directory", "type": "function", "status": "added"}, {"id": 72, "name": "test_empty_directory", "type": "function", "status": "added"}, {"id": 73, "name": "test_nested_directories", "type": "function", "status": "added"}, {"id": 74, "name": "__call__", "type": "function", "status": "added"}, {"id": 75, "name": "create_default_ignore", "type": "function", "status": "added"}, {"id": 76, "name": "read_ignore_patterns", "type": "function", "status": "added"}, {"id": 77, "name": "should_ignore", "type": "function", "status": "added"}, {"id": 78, "name": "clean_for_markdown", "type": "function", "status": "added"}, {"id": 79, "name": "format_structure", "type": "function", "status": "added"}, {"id": 80, "name": "generate_markdown_report", "type": "function", "status": "added"}, {"id": 81, "name": "generate_tree", "type": "function", "status": "added"}, {"id": 82, "name": "main", "type": "function", "status": "added"}, {"id": 0, "name": "setup", "type": "module", "status": "removed"}, {"id": 1, "name": "tests.test_nested_dir", "type": "module", "status": "removed"}, {"id": 2, "name": "tests.test_special_char", "type": "module", "status": "removed"}, {"id": 3, "name": "treeline.__main__", "type": "module", "status": "removed"}, {"id": 4, "name": "tests.test_treeline", "type": "module", "status": "removed"}, {"id": 5, "name": "treeline.analyzer", "type": "module", "status": "removed"}, {"id": 6, "name": "treeline.enhanced_analyzer", "type": "module", "status": "removed"}, {"id": 7, "name": "treeline.security_analyzer", "type": "module", "status": "removed"}, {"id": 8, "name": "tests.test_core", "type": "module", "status": "removed"}, {"id": 9, "name": "treeline.type_checker", "type": "module", "status": "removed"}, {"id": 10, "name": "treeline.dependency_analyzer", "type": "module", "status": "removed"}, {"id": 11, "name": "treeline.__init__", "type": "module", "status": "removed"}, {"id": 12, "name": "tests.test_missing_dir", "type": "module", "status": "removed"}, {"id": 13, "name": "treeline.core", "type": "module", "status": "removed"}, {"id": 14, "name": "tests.test_security_detection", "type": "module", "status": "removed"}, {"id": 15, "name": "tests.test_empty_dir", "type": "module", "status": "removed"}, {"id": 16, "name": "TestTreelineSecurity", "type": "class", "status": "removed"}, {"id": 17, "name": "TestTreeGenerator", "type": "class", "status": "removed"}, {"id": 18, "name": "TestTreeLine", "type": "class", "status": "removed"}, {"id": 19, "name": "ValidationError", "type": "class", "status": "removed"}, {"id": 20, "name": "TypeValidator", "type": "class", "status": "removed"}, {"id": 21, "name": "ValidatedModel", "type": "class", "status": "removed"}, {"id": 22, "name": "ModuleDependencyAnalyzer", "type": "class", "status": "removed"}, {"id": 23, "name": "FunctionCall", "type": "class", "status": "removed"}, {"id": 24, "name": "CodeStructure", "type": "class", "status": "removed"}, {"id": 25, "name": "FunctionNode", "type": "class", "status": "removed"}, {"id": 26, "name": "ClassNode", "type": "class", "status": "removed"}, {"id": 27, "name": "AnalyzerConfig", "type": "class", "status": "removed"}, {"id": 28, "name": "CodeAnalyzer", "type": "class", "status": "removed"}, {"id": 29, "name": "EnhancedCodeAnalyzer", "type": "class", "status": "removed"}, {"id": 30, "name": "CodeStructure", "type": "class", "status": "removed"}, {"id": 31, "name": "TreeOptions", "type": "class", "status": "removed"}, {"id": 32, "name": "ModuleMetrics", "type": "class", "status": "removed"}, {"id": 33, "name": "TreelineSecurity", "type": "class", "status": "removed"}, {"id": 34, "name": "test_special_characters", "type": "function", "status": "removed"}, {"id": 35, "name": "test_non_existent_directory", "type": "function", "status": "removed"}, {"id": 36, "name": "test_empty_directory", "type": "function", "status": "removed"}, {"id": 37, "name": "test_nested_directories", "type": "function", "status": "removed"}, {"id": 38, "name": "__call__", "type": "function", "status": "removed"}, {"id": 39, "name": "create_default_ignore", "type": "function", "status": "removed"}, {"id": 40, "name": "read_ignore_patterns", "type": "function", "status": "removed"}, {"id": 41, "name": "should_ignore", "type": "function", "status": "removed"}, {"id": 42, "name": "clean_for_markdown", "type": "function", "status": "removed"}, {"id": 43, "name": "format_structure", "type": "function", "status": "removed"}, {"id": 44, "name": "generate_markdown_report", "type": "function", "status": "removed"}, {"id": 45, "name": "generate_tree", "type": "function", "status": "removed"}, {"id": 46, "name": "main", "type": "function", "status": "removed"}], "links": [{"source": 11, "target": 23, "type": "contains", "status": "added"}, {"source": 17, "target": 24, "type": "contains", "status": "added"}, {"source": 15, "target": 25, "type": "contains", "status": "added"}, {"source": 20, "target": 26, "type": "contains", "status": "added"}, {"source": 20, "target": 27, "type": "contains", "status": "added"}, {"source": 20, "target": 28, "type": "contains", "status": "added"}, {"source": 20, "target": 29, "type": "contains", "status": "added"}, {"source": 8, "target": 30, "type": "contains", "status": "added"}, {"source": 19, "target": 31, "type": "contains", "status": "added"}, {"source": 19, "target": 32, "type": "contains", "status": "added"}, {"source": 19, "target": 33, "type": "contains", "status": "added"}, {"source": 19, "target": 34, "type": "contains", "status": "added"}, {"source": 19, "target": 35, "type": "contains", "status": "added"}, {"source": 19, "target": 36, "type": "contains", "status": "added"}, {"source": 21, "target": 37, "type": "contains", "status": "added"}, {"source": 3, "target": 38, "type": "contains", "status": "added"}, {"source": 3, "target": 39, "type": "contains", "status": "added"}, {"source": 3, "target": 40, "type": "contains", "status": "added"}, {"source": 1, "target": 41, "type": "contains", "status": "added"}, {"source": 13, "target": 42, "type": "contains", "status": "unchanged"}, {"source": 4, "target": 43, "type": "contains", "status": "added"}, {"source": 6, "target": 44, "type": "contains", "status": "added"}, {"source": 10, "target": 45, "type": "contains", "status": "added"}, {"source": 10, "target": 46, "type": "contains", "status": "added"}, {"source": 10, "target": 47, "type": "contains", "status": "added"}, {"source": 10, "target": 48, "type": "contains", "status": "added"}, {"source": 10, "target": 49, "type": "contains", "status": "added"}, {"source": 10, "target": 50, "type": "contains", "status": "added"}, {"source": 10, "target": 51, "type": "contains", "status": "added"}, {"source": 10, "target": 52, "type": "contains", "status": "added"}, {"source": 10, "target": 53, "type": "contains", "status": "added"}, {"source": 10, "target": 54, "type": "contains", "status": "added"}, {"source": 9, "target": 55, "type": "contains", "status": "added"}, {"source": 9, "target": 56, "type": "contains", "status": "added"}, {"source": 9, "target": 57, "type": "contains", "status": "added"}, {"source": 9, "target": 58, "type": "contains", "status": "added"}, {"source": 9, "target": 59, "type": "contains", "status": "added"}, {"source": 7, "target": 60, "type": "contains", "status": "added"}, {"source": 7, "target": 61, "type": "contains", "status": "added"}, {"source": 7, "target": 62, "type": "contains", "status": "added"}, {"source": 7, "target": 63, "type": "contains", "status": "added"}, {"source": 0, "target": 64, "type": "contains", "status": "added"}, {"source": 0, "target": 65, "type": "contains", "status": "added"}, {"source": 0, "target": 66, "type": "contains", "status": "added"}, {"source": 12, "target": 67, "type": "contains", "status": "added"}, {"source": 12, "target": 68, "type": "contains", "status": "added"}, {"source": 12, "target": 69, "type": "contains", "status": "added"}, {"source": 13, "target": 70, "type": "contains", "status": "added"}, {"source": 2, "target": 71, "type": "contains", "status": "added"}, {"source": 4, "target": 72, "type": "contains", "status": "added"}, {"source": 6, "target": 73, "type": "contains", "status": "added"}, {"source": 22, "target": 74, "type": "contains", "status": "added"}, {"source": 3, "target": 75, "type": "contains", "status": "added"}, {"source": 3, "target": 76, "type": "contains", "status": "added"}, {"source": 3, "target": 77, "type": "contains", "status": "added"}, {"source": 3, "target": 78, "type": "contains", "status": "added"}, {"source": 3, "target": 79, "type": "contains", "status": "added"}, {"source": 3, "target": 80, "type": "contains", "status": "added"}, {"source": 3, "target": 81, "type": "contains", "status": "added"}, {"source": 3, "target": 82, "type": "contains", "status": "added"}, {"source": 70, "target": 81, "type": "calls", "status": "added"}, {"source": 71, "target": 81, "type": "calls", "status": "added"}, {"source": 72, "target": 81, "type": "calls", "status": "added"}, {"source": 73, "target": 81, "type": "calls", "status": "added"}, {"source": 74, "target": 81, "type": "calls", "status": "added"}, {"source": 82, "target": 81, "type": "calls", "status": "added"}, {"source": 74, "target": 81, "type": "calls", "status": "added"}, {"source": 82, "target": 81, "type": "calls", "status": "added"}, {"source": 80, "target": 78, "type": "calls", "status": "added"}, {"source": 80, "target": 78, "type": "calls", "status": "added"}, {"source": 81, "target": 76, "type": "calls", "status": "added"}, {"source": 81, "target": 76, "type": "calls", "status": "added"}, {"source": 81, "target": 80, "type": "calls", "status": "added"}, {"source": 81, "target": 80, "type": "calls", "status": "added"}, {"source": 81, "target": 77, "type": "calls", "status": "added"}, {"source": 81, "target": 77, "type": "calls", "status": "added"}, {"source": 82, "target": 75, "type": "calls", "status": "added"}, {"source": 82, "target": 75, "type": "calls", "status": "added"}, {"source": 11, "target": 1, "type": "imports", "status": "added"}, {"source": 13, "target": 3, "type": "imports", "status": "added"}, {"source": 2, "target": 3, "type": "imports", "status": "added"}, {"source": 4, "target": 3, "type": "imports", "status": "added"}, {"source": 17, "target": 3, "type": "imports", "status": "added"}, {"source": 6, "target": 3, "type": "imports", "status": "added"}, {"source": 8, "target": 10, "type": "imports", "status": "added"}, {"source": 19, "target": 20, "type": "imports", "status": "added"}, {"source": 19, "target": 9, "type": "imports", "status": "added"}, {"source": 21, "target": 7, "type": "imports", "status": "added"}, {"source": 21, "target": 1, "type": "imports", "status": "added"}, {"source": 3, "target": 21, "type": "imports", "status": "added"}, {"source": 3, "target": 20, "type": "imports", "status": "added"}, {"source": 3, "target": 0, "type": "imports", "status": "added"}, {"source": 3, "target": 8, "type": "imports", "status": "added"}, {"source": 1, "target": 12, "type": "imports", "status": "added"}, {"source": 14, "target": 3, "type": "imports", "status": "added"}, {"source": 9, "target": 20, "type": "imports", "status": "added"}, {"source": 7, "target": 20, "type": "imports", "status": "added"}, {"source": 0, "target": 20, "type": "imports", "status": "added"}, {"source": 14, "target": 16, "type": "contains", "status": "removed"}, {"source": 8, "target": 17, "type": "contains", "status": "removed"}, {"source": 4, "target": 18, "type": "contains", "status": "removed"}, {"source": 9, "target": 19, "type": "contains", "status": "removed"}, {"source": 9, "target": 20, "type": "contains", "status": "removed"}, {"source": 9, "target": 21, "type": "contains", "status": "removed"}, {"source": 10, "target": 22, "type": "contains", "status": "removed"}, {"source": 5, "target": 23, "type": "contains", "status": "removed"}, {"source": 5, "target": 24, "type": "contains", "status": "removed"}, {"source": 5, "target": 25, "type": "contains", "status": "removed"}, {"source": 5, "target": 26, "type": "contains", "status": "removed"}, {"source": 5, "target": 27, "type": "contains", "status": "removed"}, {"source": 5, "target": 28, "type": "contains", "status": "removed"}, {"source": 6, "target": 29, "type": "contains", "status": "removed"}, {"source": 13, "target": 30, "type": "contains", "status": "removed"}, {"source": 13, "target": 31, "type": "contains", "status": "removed"}, {"source": 13, "target": 32, "type": "contains", "status": "removed"}, {"source": 7, "target": 33, "type": "contains", "status": "removed"}, {"source": 2, "target": 34, "type": "contains", "status": "removed"}, {"source": 12, "target": 35, "type": "contains", "status": "removed"}, {"source": 15, "target": 36, "type": "contains", "status": "removed"}, {"source": 1, "target": 37, "type": "contains", "status": "removed"}, {"source": 11, "target": 38, "type": "contains", "status": "removed"}, {"source": 13, "target": 39, "type": "contains", "status": "removed"}, {"source": 13, "target": 40, "type": "contains", "status": "removed"}, {"source": 13, "target": 41, "type": "contains", "status": "removed"}, {"source": 13, "target": 43, "type": "contains", "status": "removed"}, {"source": 13, "target": 44, "type": "contains", "status": "removed"}, {"source": 13, "target": 45, "type": "contains", "status": "removed"}, {"source": 13, "target": 46, "type": "contains", "status": "removed"}, {"source": 34, "target": 45, "type": "calls", "status": "removed"}, {"source": 35, "target": 45, "type": "calls", "status": "removed"}, {"source": 36, "target": 45, "type": "calls", "status": "removed"}, {"source": 37, "target": 45, "type": "calls", "status": "removed"}, {"source": 38, "target": 45, "type": "calls", "status": "removed"}, {"source": 46, "target": 45, "type": "calls", "status": "removed"}, {"source": 44, "target": 42, "type": "calls", "status": "removed"}, {"source": 45, "target": 40, "type": "calls", "status": "removed"}, {"source": 45, "target": 44, "type": "calls", "status": "removed"}, {"source": 45, "target": 41, "type": "calls", "status": "removed"}, {"source": 46, "target": 39, "type": "calls", "status": "removed"}, {"source": 14, "target": 7, "type": "imports", "status": "removed"}, {"source": 2, "target": 13, "type": "imports", "status": "removed"}, {"source": 12, "target": 13, "type": "imports", "status": "removed"}, {"source": 15, "target": 13, "type": "imports", "status": "removed"}, {"source": 8, "target": 13, "type": "imports", "status": "removed"}, {"source": 1, "target": 13, "type": "imports", "status": "removed"}, {"source": 5, "target": 9, "type": "imports", "status": "removed"}, {"source": 13, "target": 6, "type": "imports", "status": "removed"}, {"source": 13, "target": 9, "type": "imports", "status": "removed"}, {"source": 13, "target": 10, "type": "imports", "status": "removed"}, {"source": 3, "target": 13, "type": "imports", "status": "removed"}]};
+
+                let width = window.innerWidth;
+                let height = window.innerHeight;
+
+                const svg = d3.select("#visualization")
+                    .attr("width", width)
+                    .attr("height", height);
+
+                // Define arrow markers for different link types
+                svg.append("defs").selectAll("marker")
+                    .data(["imports", "contains", "calls"])
+                    .join("marker")
+                    .attr("id", d => `arrow-${d}`)
+                    .attr("viewBox", "0 -5 10 10")
+                    .attr("refX", 15)
+                    .attr("refY", 0)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto")
+                    .append("path")
+                    .attr("fill", d => d === "imports" ? "#7c3aed" : d === "contains" ? "#059669" : "#ea580c")
+                    .attr("d", "M0,-5L10,0L0,5");
+
+                const g = svg.append("g");
+
+                const zoom = d3.zoom()
+                    .scaleExtent([0.1, 4])
+                    .on("zoom", (event) => {
+                        g.attr("transform", event.transform);
+                    });
+
+                svg.call(zoom);
+
+                function resetZoom() {
+                    svg.transition().duration(750).call(
+                        zoom.transform,
+                        d3.zoomIdentity
+                    );
+                }
+
+                let isRadial = false;
+                const simulation = d3.forceSimulation()
+                    .force("link", d3.forceLink().id(d => d.id).distance(150))
+                    .force("charge", d3.forceManyBody().strength(-1000))
+                    .force("x", d3.forceX(width / 2).strength(0.1))
+                    .force("y", d3.forceY(height / 2).strength(0.1))
+                    .force("collision", d3.forceCollide().radius(50));
+
+                const tooltip = d3.select("body").append("div")
+                    .attr("class", "tooltip")
+                    .style("opacity", 0);
+
+                const link = g.append("g")
+                    .selectAll("path")
+                    .data(data.links)
+                    .join("path")
+                    .attr("class", function(d) {
+                        return "link link-" + d.type + (d.status ? " link-" + d.status : "");
+                    })
+                    .attr("marker-end", function(d) {
+                        return "url(#arrow-" + d.type + ")";
+                    });
+
+                const node = g.append("g")
+                    .selectAll(".node")
+                    .data(data.nodes)
+                    .join("g")
+                    .attr("class", function(d) {
+                        return "node node-" + d.type + (d.status ? " node-" + d.status : "");
+                    })
+                    .call(drag(simulation));
+
+                node.append("circle")
+                    .attr("r", d => getNodeSize(d))
+
+                node.append("text")
+                    .attr("dy", ".35em")
+                    .attr("x", d => getNodeSize(d) + 5)
+                    .text(d => d.name)
+                    .style("fill", "#333");
+
+                // Add hover effects
+                node.on("mouseover", function(event, d) {
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+
+                    let connections = data.links.filter(l =>
+                        l.source.id === d.id || l.target.id === d.id
+                    );
+
+                    let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br><br>`;
+                    if (connections.length > 0) {
+                        tooltipContent += "Connections:<br>";
+                        connections.forEach(c => {
+                            if (c.source.id === d.id) {
+                                tooltipContent += `→ ${c.target.name} (${c.type})<br>`;
+                            } else {
+                                tooltipContent += `← ${c.source.name} (${c.type})<br>`;
+                            }
+                        });
+                    }
+
+                    tooltip.html(tooltipContent)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 10) + "px");
+
+                    // Highlight connected nodes
+                    node.style("opacity", n =>
+                        n.id === d.id ||
+                        connections.some(c => c.source.id === n.id || c.target.id === n.id) ? 1 : 0.1
+                    );
+                    link.style("opacity", l =>
+                        l.source.id === d.id || l.target.id === d.id ? 1 : 0.1
+                    );
+                })
+                .on("mouseout", function() {
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                    node.style("opacity", 1);
+                    link.style("opacity", 0.7);
+                });
+
+                simulation
+                    .nodes(data.nodes)
+                    .on("tick", ticked);
+
+                simulation.force("link")
+                    .links(data.links);
+
+                function ticked() {
+                    link.attr("d", linkArc);
+                    node.attr("transform", d => `translate(${d.x},${d.y})`);
+                }
+
+                function linkArc(d) {
+                    return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
+                }
+
+                function getNodeSize(node) {
+                    switch(node.type) {
+                        case 'module': return 12;
+                        case 'class': return 10;
+                        default: return 8;
+                    }
+                }
+
+                function drag(simulation) {
+                    function dragstarted(event) {
+                        if (!event.active) simulation.alphaTarget(0.3).restart();
+                        event.subject.fx = event.subject.x;
+                        event.subject.fy = event.subject.y;
+                    }
+
+                    function dragged(event) {
+                        event.subject.fx = event.x;
+                        event.subject.fy = event.y;
+                    }
+
+                    function dragended(event) {
+                        if (!event.active) simulation.alphaTarget(0);
+                        event.subject.fx = null;
+                        event.subject.fy = null;
+                    }
+
+                    return d3.drag()
+                        .on("start", dragstarted)
+                        .on("drag", dragged)
+                        .on("end", dragended);
+                }
+
+                function toggleLayout() {
+                    isRadial = !isRadial;
+                    if (isRadial) {
+                        simulation
+                            .force("x", null)
+                            .force("y", null)
+                            .force("r", d3.forceRadial(250, width / 2, height / 2))
+                            .force("charge", d3.forceManyBody().strength(-100));
+                    } else {
+                        simulation
+                            .force("r", null)
+                            .force("x", d3.forceX(width / 2).strength(0.1))
+                            .force("y", d3.forceY(height / 2).strength(0.1))
+                            .force("charge", d3.forceManyBody().strength(-1000));
+                    }
+                    simulation.alpha(1).restart();
+                }
+
+                // Search functionality with highlighting
+                d3.select("#search").on("input", function() {
+                    const term = this.value.toLowerCase();
+                    if (term === "") {
+                        node.style("opacity", 1);
+                        link.style("opacity", 0.7);
+                        return;
+                    }
+
+                    const matchedNodes = new Set();
+                    node.each(function(d) {
+                        if (d.name.toLowerCase().includes(term)) {
+                            matchedNodes.add(d.id);
+                            // Also add connected nodes
+                            data.links.forEach(l => {
+                                if (l.source.id === d.id) matchedNodes.add(l.target.id);
+                                if (l.target.id === d.id) matchedNodes.add(l.source.id);
+                            });
+                        }
+                    });
+
+                    node.style("opacity", d => matchedNodes.has(d.id) ? 1 : 0.1);
+                    link.style("opacity", d =>
+                        matchedNodes.has(d.source.id) && matchedNodes.has(d.target.id) ? 0.7 : 0.1
+                    );
+                });
+
+                // Window resize handler
+                window.addEventListener("resize", () => {
+                    width = window.innerWidth;
+                    height = window.innerHeight;
+                    svg.attr("width", width).attr("height", height);
+                    simulation.force("center", d3.forceCenter(width / 2, height / 2));
+                    simulation.alpha(1).restart();
+                });
+            </script>
+        </body>
+        </html>
