@@ -1,13 +1,19 @@
+.. _quickstart-guide:
+
 Quick Start Guide
-==============
+==================
 
 This guide will help you get started with Treeline's core features for analyzing and visualizing your Python codebase.
 
+.. _quickstart-basic-usage:
+
 Basic Usage
----------
+------------
+
+.. _quickstart-code-analysis:
 
 1. Simple Code Analysis
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Analyze a Python project's structure:
 
@@ -23,8 +29,10 @@ Analyze a Python project's structure:
     )
     print(tree)
 
+.. _quickstart-quality-report:
+
 2. Generate Quality Report
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Analyze code quality and metrics:
 
@@ -41,8 +49,10 @@ Analyze code quality and metrics:
     report = analyzer.generate_report()
     print(report)
 
+.. _quickstart-visualize:
+
 3. Visualize Dependencies
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Create interactive dependency graphs:
 
@@ -60,8 +70,10 @@ Create interactive dependency graphs:
     with open("dependencies.html", "w") as f:
         f.write(dep_analyzer.generate_html_visualization())
 
+.. _quickstart-compare:
+
 4. Compare Code Changes
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Visualize structural changes between Git commits:
 
@@ -78,8 +90,10 @@ Visualize structural changes between Git commits:
     with open("code_diff.html", "w") as f:
         f.write(diff_html)
 
+.. _quickstart-cli:
+
 Command Line Interface
--------------------
+-----------------------
 
 Treeline can also be used from the command line:
 
@@ -100,8 +114,10 @@ Treeline can also be used from the command line:
     # Hide code structure
     treeline --hide-structure
 
+.. _quickstart-options:
+
 Common Options
-------------
+---------------
 
 .. code-block:: python
 
@@ -113,8 +129,10 @@ Common Options
         show_relationships=False  # Show code relationships
     )
 
+.. _quickstart-metrics:
+
 Quality Metrics
--------------
+----------------
 
 Treeline checks for various quality metrics including:
 
@@ -125,13 +143,20 @@ Treeline checks for various quality metrics including:
 - Import statements (limit: 15)
 - Inheritance depth (limit: 3)
 
-Next Steps
----------
+.. _quickstart-next-steps:
 
-- Check out the :ref:`User Guide <user_guide/index>` for detailed feature explanations
+Next Steps
+-----------
+
+- Explore the :doc:`/user_guide` for detailed feature explanations
+- Learn about :doc:`/code_analysis` for in-depth analysis
+- Check out :doc:`/visualization` for visualization options
+- See :doc:`/git_integration` for version control features
+
+.. _quickstart-example:
 
 Example Project Analysis
----------------------
+-------------------------
 
 Here's a complete example analyzing a Python project:
 

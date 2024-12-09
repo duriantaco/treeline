@@ -28,7 +28,7 @@ jobs:
 
       - name: Build docs
         run: |
-          sphinx-build -b html source build/html
+          sphinx-build -b html docs build/html
 
       # Optional
     #   - name: Deploy to GitHub Pages

@@ -19,7 +19,7 @@ class EnhancedCodeAnalyzer:
     """
 
     QUALITY_METRICS = {
-        "MAX_LINE_LENGTH": 79,
+        "MAX_LINE_LENGTH": 150,
         "MAX_DOC_LENGTH": 72,
         "MAX_CYCLOMATIC_COMPLEXITY": 10,
         "MAX_COGNITIVE_COMPLEXITY": 15,

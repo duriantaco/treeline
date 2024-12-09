@@ -1,13 +1,19 @@
+.. _visualization-guide:
+
 Visualization Guide
-================
+====================
 
 Treeline provides powerful visualization tools to help you understand your codebase structure and track changes over time.
 
+.. _visualization-dependency-graphs:
+
 Interactive Dependency Graphs
--------------------------
+------------------------------
+
+.. _visualization-basic:
 
 Basic Visualization
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 Generate an interactive visualization of your code structure:
 
@@ -21,8 +27,10 @@ Generate an interactive visualization of your code structure:
     with open("visualization.html", "w") as f:
         f.write(analyzer.generate_html_visualization())
 
+.. _visualization-features:
+
 Visualization Features
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The interactive visualization includes:
 
@@ -42,8 +50,10 @@ The interactive visualization includes:
    - Search functionality
    - Layout toggling
 
+.. _visualization-git-integration:
+
 Git Integration and Diff Visualization
----------------------------------
+---------------------------------------
 
 The Git diff visualization shows structural changes between commits:
 
@@ -62,8 +72,10 @@ The Git diff visualization shows structural changes between commits:
         "def456"   # newer commit
     )
 
+.. _visualization-diff-features:
+
 Diff Visualization Features
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Color Coding
    - Added elements (green)
@@ -82,11 +94,15 @@ Diff Visualization Features
    - Structural changes
    - File content diffs
 
+.. _visualization-working:
+
 Working with Visualizations
-------------------------
+----------------------------
+
+.. _visualization-customizing:
 
 Customizing the Display
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Control visualization parameters:
 
@@ -102,8 +118,10 @@ Control visualization parameters:
         'function': '#0d9488'
     }
 
+.. _visualization-filtering:
+
 Filtering and Search
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 Use the built-in search functionality:
 
@@ -117,8 +135,10 @@ Use the built-in search functionality:
    - Show only function calls
    - Show only inheritance
 
+.. _visualization-layout:
+
 Layout Options
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 Toggle between different layout algorithms:
 
@@ -132,11 +152,15 @@ Toggle between different layout algorithms:
    - Circular arrangement
    - Central focus
 
+.. _visualization-git-features:
+
 Git Integration Features
----------------------
+-------------------------
+
+.. _visualization-commit-comparison:
 
 Commit Comparison
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Compare code structure between commits:
 
@@ -156,8 +180,10 @@ Compare code structure between commits:
         "feature"    # Feature branch
     )
 
+.. _visualization-interactive-diff:
+
 Interactive Diff Features
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 1. Node Details
    - Click nodes to show details
@@ -174,11 +200,15 @@ Interactive Diff Features
    - Filter by change type
    - Search within diffs
 
+.. _visualization-export:
+
 Exporting and Sharing
-------------------
+----------------------
+
+.. _visualization-export-options:
 
 Export Options
-~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 1. HTML Export:
    - Self-contained HTML file
@@ -190,8 +220,10 @@ Export Options
    - SVG export
    - High-resolution output
 
+.. _visualization-embedding:
+
 Embedding in Documentation
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Include visualizations in documentation:
 
@@ -204,8 +236,10 @@ Include visualizations in documentation:
             frameborder="0">
     </iframe>
 
+.. _visualization-best-practices:
+
 Best Practices
------------
+---------------
 
 1. Performance
    - Limit scope for large codebases
@@ -222,11 +256,15 @@ Best Practices
    - Track important changes
    - Document significant changes
 
+.. _visualization-troubleshooting:
+
 Troubleshooting
-------------
+----------------
+
+.. _visualization-common-issues:
 
 Common Issues
-~~~~~~~~~~
+~~~~~~~~~~~~~~
 
 1. Layout Issues
    - Reset zoom if visualization is hidden
@@ -243,9 +281,9 @@ Common Issues
    - Check commit references
    - Verify file paths
 
-Next Steps
---------
+.. _visualization-next-steps:
 
-- Explore :ref:`git integration <git_integration>` for more VCS features
-- Learn about :ref:`quality metrics <quality_metrics>` visualization
-- Configure :ref:`custom rules <configuration>` for visualization
+Next Steps
+-----------
+
+- Explore :doc:`/git_integration` for more VCS features
