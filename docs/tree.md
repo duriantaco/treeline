@@ -14,33 +14,44 @@ graph TD
     classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px
 
     setup["setup"]:::modNode
-    tests_test_security_detection["tests.test_security_detection"]:::modNode
     tests_test_special_char["tests.test_special_char"]:::modNode
-    tests_test_missing_dir["tests.test_missing_dir"]:::modNode
     tests_test_empty_dir["tests.test_empty_dir"]:::modNode
     tests_test_core["tests.test_core"]:::modNode
     tests_test_treeline["tests.test_treeline"]:::modNode
     tests_test_nested_dir["tests.test_nested_dir"]:::modNode
     treeline_type_checker["treeline.type_checker"]:::modNode
+    treeline_diff_visualizer["treeline.diff_visualizer"]:::modNode
     treeline_dependency_analyzer["treeline.dependency_analyzer"]:::modNode
     treeline_analyzer["treeline.analyzer"]:::modNode
     treeline___init__["treeline.__init__"]:::modNode
     treeline_enhanced_analyzer["treeline.enhanced_analyzer"]:::modNode
     treeline_core["treeline.core"]:::modNode
-    treeline_security_analyzer["treeline.security_analyzer"]:::modNode
     treeline___main__["treeline.__main__"]:::modNode
+    treeline_models_dependency_analyzer["treeline.models.dependency_analyzer"]:::modNode
+    treeline_models_analyzer["treeline.models.analyzer"]:::modNode
+    treeline_models___init__["treeline.models.__init__"]:::modNode
+    treeline_models_enhanced_analyzer["treeline.models.enhanced_analyzer"]:::modNode
+    treeline_models_core["treeline.models.core"]:::modNode
 
-    tests_test_security_detection --> treeline_security_analyzer
     tests_test_special_char --> treeline_core
-    tests_test_missing_dir --> treeline_core
     tests_test_empty_dir --> treeline_core
     tests_test_core --> treeline_core
     tests_test_nested_dir --> treeline_core
+    treeline_diff_visualizer --> treeline_dependency_analyzer
+    treeline_diff_visualizer --> treeline_models_dependency_analyzer
+    treeline_dependency_analyzer --> treeline_models_dependency_analyzer
     treeline_analyzer --> treeline_type_checker
+    treeline_analyzer --> treeline_models_analyzer
+    treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
     treeline_core --> treeline_type_checker
     treeline_core --> treeline_dependency_analyzer
     treeline_core --> treeline_enhanced_analyzer
+    treeline_core --> treeline_diff_visualizer
+    treeline_core --> treeline_models_core
     treeline___main__ --> treeline_core
+    treeline_models_analyzer --> treeline_type_checker
+    treeline_models_enhanced_analyzer --> treeline_type_checker
+    treeline_models_core --> treeline_type_checker
 ```
 
 ### treeline.__init__
@@ -85,11 +96,6 @@ graph TD
 
     subgraph treeline_analyzer["treeline.analyzer"]
         direction TB
-        treeline_analyzer_FunctionCall["📦 FunctionCall"]:::clsNode
-        treeline_analyzer_CodeStructure["📦 CodeStructure"]:::clsNode
-        treeline_analyzer_FunctionNode["📦 FunctionNode"]:::clsNode
-        treeline_analyzer_ClassNode["📦 ClassNode"]:::clsNode
-        treeline_analyzer_AnalyzerConfig["📦 AnalyzerConfig"]:::clsNode
         treeline_analyzer_CodeAnalyzer["📦 CodeAnalyzer"]:::clsNode
         treeline_analyzer_CodeAnalyzer___init__["⚡ __init__"]:::fnNode
         treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer___init__
@@ -118,9 +124,6 @@ graph TD
 
     subgraph treeline_core["treeline.core"]
         direction TB
-        treeline_core_CodeStructure["📦 CodeStructure"]:::clsNode
-        treeline_core_TreeOptions["📦 TreeOptions"]:::clsNode
-        treeline_core_ModuleMetrics["📦 ModuleMetrics"]:::clsNode
         treeline_core_create_default_ignore["⚡ create_default_ignore"]:::fnNode
         treeline_core_read_ignore_patterns["⚡ read_ignore_patterns"]:::fnNode
         treeline_core_should_ignore["⚡ should_ignore"]:::fnNode
@@ -173,6 +176,46 @@ graph TD
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_html_visualization
         treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report["⚡ generate_summary_report"]:::fnNode
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report
+    end
+
+```
+
+### treeline.diff_visualizer
+
+```mermaid
+graph TD
+
+    %% Styling
+    classDef fnNode fill:#e4d1d1,stroke:#333
+    classDef clsNode fill:#d1e0e4,stroke:#333
+
+    subgraph treeline_diff_visualizer["treeline.diff_visualizer"]
+        direction TB
+        treeline_diff_visualizer_DiffVisualizer["📦 DiffVisualizer"]:::clsNode
+        treeline_diff_visualizer_DiffVisualizer___init__["⚡ __init__"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer___init__
+        treeline_diff_visualizer_DiffVisualizer__serialize_graph_data["⚡ _serialize_graph_data"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_graph_data
+        treeline_diff_visualizer_DiffVisualizer__serialize_node["⚡ _serialize_node"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_node
+        treeline_diff_visualizer_DiffVisualizer__serialize_link["⚡ _serialize_link"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_link
+        treeline_diff_visualizer_DiffVisualizer__node_was_modified_serial["⚡ _node_was_modified_serial"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__node_was_modified_serial
+        treeline_diff_visualizer_DiffVisualizer__get_node_changes_serial["⚡ _get_node_changes_serial"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__get_node_changes_serial
+        treeline_diff_visualizer_DiffVisualizer__run_git_command["⚡ _run_git_command"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__run_git_command
+        treeline_diff_visualizer_DiffVisualizer__is_git_repo["⚡ _is_git_repo"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__is_git_repo
+        treeline_diff_visualizer_DiffVisualizer__commit_exists["⚡ _commit_exists"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__commit_exists
+        treeline_diff_visualizer_DiffVisualizer__analyze_commit["⚡ _analyze_commit"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__analyze_commit
+        treeline_diff_visualizer_DiffVisualizer__compute_changes["⚡ _compute_changes"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__compute_changes
+        treeline_diff_visualizer_DiffVisualizer_generate_structural_diff["⚡ generate_structural_diff"]:::fnNode
+        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer_generate_structural_diff
     end
 
 ```
@@ -249,7 +292,7 @@ graph TD
 
 ```
 
-### treeline.security_analyzer
+### treeline.models.__init__
 
 ```mermaid
 graph TD
@@ -258,25 +301,90 @@ graph TD
     classDef fnNode fill:#e4d1d1,stroke:#333
     classDef clsNode fill:#d1e0e4,stroke:#333
 
-    subgraph treeline_security_analyzer["treeline.security_analyzer"]
+    subgraph treeline_models___init__["treeline.models.__init__"]
         direction TB
-        treeline_security_analyzer_TreelineSecurity["📦 TreelineSecurity"]:::clsNode
-        treeline_security_analyzer_TreelineSecurity___init__["⚡ __init__"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity___init__
-        treeline_security_analyzer_TreelineSecurity_analyze_file["⚡ analyze_file"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity_analyze_file
-        treeline_security_analyzer_TreelineSecurity__collect_imports["⚡ _collect_imports"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__collect_imports
-        treeline_security_analyzer_TreelineSecurity__scan_security_issues["⚡ _scan_security_issues"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__scan_security_issues
-        treeline_security_analyzer_TreelineSecurity__check_all_dangerous_calls["⚡ _check_all_dangerous_calls"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__check_all_dangerous_calls
-        treeline_security_analyzer_TreelineSecurity__check_string_concat["⚡ _check_string_concat"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__check_string_concat
-        treeline_security_analyzer_TreelineSecurity__check_hardcoded_secrets["⚡ _check_hardcoded_secrets"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__check_hardcoded_secrets
-        treeline_security_analyzer_TreelineSecurity__add_issue["⚡ _add_issue"]:::fnNode
-        treeline_security_analyzer_TreelineSecurity --> treeline_security_analyzer_TreelineSecurity__add_issue
+    end
+
+```
+
+### treeline.models.analyzer
+
+```mermaid
+graph TD
+
+    %% Styling
+    classDef fnNode fill:#e4d1d1,stroke:#333
+    classDef clsNode fill:#d1e0e4,stroke:#333
+
+    subgraph treeline_models_analyzer["treeline.models.analyzer"]
+        direction TB
+        treeline_models_analyzer_FunctionCall["📦 FunctionCall"]:::clsNode
+        treeline_models_analyzer_CodeStructure["📦 CodeStructure"]:::clsNode
+        treeline_models_analyzer_FunctionNode["📦 FunctionNode"]:::clsNode
+        treeline_models_analyzer_ClassNode["📦 ClassNode"]:::clsNode
+        treeline_models_analyzer_AnalyzerConfig["📦 AnalyzerConfig"]:::clsNode
+    end
+
+```
+
+### treeline.models.core
+
+```mermaid
+graph TD
+
+    %% Styling
+    classDef fnNode fill:#e4d1d1,stroke:#333
+    classDef clsNode fill:#d1e0e4,stroke:#333
+
+    subgraph treeline_models_core["treeline.models.core"]
+        direction TB
+        treeline_models_core_CodeStructure["📦 CodeStructure"]:::clsNode
+        treeline_models_core_TreeOptions["📦 TreeOptions"]:::clsNode
+        treeline_models_core_ModuleMetrics["📦 ModuleMetrics"]:::clsNode
+    end
+
+```
+
+### treeline.models.dependency_analyzer
+
+```mermaid
+graph TD
+
+    %% Styling
+    classDef fnNode fill:#e4d1d1,stroke:#333
+    classDef clsNode fill:#d1e0e4,stroke:#333
+
+    subgraph treeline_models_dependency_analyzer["treeline.models.dependency_analyzer"]
+        direction TB
+        treeline_models_dependency_analyzer_FunctionLocation["📦 FunctionLocation"]:::clsNode
+        treeline_models_dependency_analyzer_FunctionCallInfo["📦 FunctionCallInfo"]:::clsNode
+        treeline_models_dependency_analyzer_ClassMethod["📦 ClassMethod"]:::clsNode
+        treeline_models_dependency_analyzer_ClassInfo["📦 ClassInfo"]:::clsNode
+        treeline_models_dependency_analyzer_ModuleMetrics["📦 ModuleMetrics"]:::clsNode
+        treeline_models_dependency_analyzer_ComplexFunction["📦 ComplexFunction"]:::clsNode
+        treeline_models_dependency_analyzer_MethodInfo["📦 MethodInfo"]:::clsNode
+        treeline_models_dependency_analyzer_Node["📦 Node"]:::clsNode
+        treeline_models_dependency_analyzer_Link["📦 Link"]:::clsNode
+        treeline_models_dependency_analyzer_GraphData["📦 GraphData"]:::clsNode
+    end
+
+```
+
+### treeline.models.enhanced_analyzer
+
+```mermaid
+graph TD
+
+    %% Styling
+    classDef fnNode fill:#e4d1d1,stroke:#333
+    classDef clsNode fill:#d1e0e4,stroke:#333
+
+    subgraph treeline_models_enhanced_analyzer["treeline.models.enhanced_analyzer"]
+        direction TB
+        treeline_models_enhanced_analyzer_FunctionMetrics["📦 FunctionMetrics"]:::clsNode
+        treeline_models_enhanced_analyzer_ClassMetrics["📦 ClassMetrics"]:::clsNode
+        treeline_models_enhanced_analyzer_CodeDuplication["📦 CodeDuplication"]:::clsNode
+        treeline_models_enhanced_analyzer_QualityIssue["📦 QualityIssue"]:::clsNode
     end
 
 ```
@@ -292,13 +400,13 @@ graph TD
 
     subgraph treeline_type_checker["treeline.type_checker"]
         direction TB
-        treeline_type_checker_ValidationError["📦 ValidationError"]:::clsNode
         treeline_type_checker_TypeValidator["📦 TypeValidator"]:::clsNode
         treeline_type_checker_TypeValidator_validate["⚡ validate"]:::fnNode
         treeline_type_checker_TypeValidator --> treeline_type_checker_TypeValidator_validate
-        treeline_type_checker_ValidatedModel["📦 ValidatedModel"]:::clsNode
-        treeline_type_checker_ValidatedModel___post_init__["⚡ __post_init__"]:::fnNode
-        treeline_type_checker_ValidatedModel --> treeline_type_checker_ValidatedModel___post_init__
+        treeline_type_checker_TypeChecked["📦 TypeChecked"]:::clsNode
+        treeline_type_checker_TypeChecked___post_init__["⚡ __post_init__"]:::fnNode
+        treeline_type_checker_TypeChecked --> treeline_type_checker_TypeChecked___post_init__
+        treeline_type_checker_ValidationError["📦 ValidationError"]:::clsNode
     end
 
 ```
@@ -306,7 +414,6 @@ graph TD
 
 ```
 
-├─ build
 ├─ docs
 │ ├─ code_visualization.html
 │ ├─ index.html
@@ -315,8 +422,6 @@ graph TD
 │ ├─ tree.md
 │ └─ tut1.ipynb
 ├─ source
-│ ├─ _static
-│ ├─ _templates
 │ ├─ conf.py
 │ └─ index.rst
 ├─ tests
@@ -338,11 +443,6 @@ graph TD
 │ │   └─ # Clean up test directory
 │ │   **Function**: → test_empty_directory
 │ │   └─ # Test handling of empty directory
-│ ├─ test_missing_dir.py
-│ │   **Class**: ◆ TestMissingDirectory
-│ │   └─ ! Missing class docstring
-│ │   **Function**: → test_non_existent_directory
-│ │   └─ # Test handling of non-existent directory
 │ ├─ test_nested_dir.py
 │ │   **Class**: ◆ TestNestedDirectories
 │ │   └─ ! Missing class docstring
@@ -352,22 +452,6 @@ graph TD
 │ │   └─ # Clean up test directory
 │ │   **Function**: → test_nested_directories
 │ │   └─ # Test handling of nested directories
-│ ├─ test_security_detection.py
-│ │   **Class**: ◆ TestTreelineSecurity
-│ │   └─ ! High complexity (11)
-│ │   └─ ! Too long (78 lines)
-│ │   └─ ! Missing class docstring
-│ │   **Function**: → setUp
-│ │   **Function**: → create_test_file
-│ │   └─ # Helper method to create a temporary test file.
-│ │   **Function**: → debug_ast
-│ │   └─ # Helper to print AST for debugging
-│ │   **Function**: → test_sql_injection_detection
-│ │   **Function**: → test_command_injection_detection
-│ │   **Function**: → test_unsafe_deserialization_detection
-│ │   **Function**: → test_hardcoded_secret_detection
-│ │   **Function**: → test_file_operation_detection
-│ │   **Function**: → tearDown
 │ ├─ test_special_char.py
 │ │   **Class**: ◆ TestSpecialCharacters
 │ │   └─ ! Missing class docstring
@@ -385,35 +469,96 @@ graph TD
 │     **Function**: → test_basic_tree
 │     └─ # Test if tree structure is generated correctly
 ├─ treeline
+│ ├─ models
+│ │ ├─ __init__.py
+│ │ ├─ analyzer.py
+│ │ │   **Class**: ◆ FunctionCall
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ CodeStructure
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ FunctionNode
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ ClassNode
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ AnalyzerConfig
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ ├─ core.py
+│ │ │   **Class**: ◆ CodeStructure
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ TreeOptions
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ ModuleMetrics
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ ├─ dependency_analyzer.py
+│ │ │   **Class**: ◆ FunctionLocation
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ FunctionCallInfo
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ ClassMethod
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ ClassInfo
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ ModuleMetrics
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ ComplexFunction
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ MethodInfo
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ Node
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ Link
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   **Class**: ◆ GraphData
+│ │ │   └─ ! Missing class docstring
+│ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ └─ enhanced_analyzer.py
+│ │     **Class**: ◆ FunctionMetrics
+│ │     └─ ! Missing class docstring
+│ │     └─ ! Too few public method (< 1, SOLID-ISP)
+│ │     **Class**: ◆ ClassMetrics
+│ │     └─ ! Missing class docstring
+│ │     └─ ! Too few public method (< 1, SOLID-ISP)
+│ │     **Class**: ◆ CodeDuplication
+│ │     └─ ! Missing class docstring
+│ │     └─ ! Too few public method (< 1, SOLID-ISP)
+│ │     **Class**: ◆ QualityIssue
+│ │     └─ ! Missing class docstring
+│ │     └─ ! Too few public method (< 1, SOLID-ISP)
 │ ├─ __init__.py
 │ │   **Function**: → __call__
 │ ├─ __main__.py
 │ ├─ analyzer.py
-│ │   **Class**: ◆ FunctionCall
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
-│ │   **Class**: ◆ CodeStructure
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
-│ │   **Class**: ◆ FunctionNode
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
-│ │   **Class**: ◆ ClassNode
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
-│ │   **Class**: ◆ AnalyzerConfig
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
 │ │   **Class**: ◆ CodeAnalyzer
 │ │   └─ # Simple analyzer for extracting functions and classes from Python files.
-│ │   └─ ! High complexity (32)
-│ │   └─ ! Too long (199 lines)
+│ │   └─ ! High complexity (34)
+│ │   └─ ! Too long (207 lines)
+│ │   └─ ! Class too long
 │ │   **Function**: → __init__
 │ │   **Function**: → analyze_file
 │ │   └─ # Extracts functions and classes with optional params and relationships.
+│ │   └─ ! High complexity (12)
 │ │   └─ ! Too long (99 lines)
-│ │   └─ ! Deep nesting (depth 6)
+│ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cyclomatic complexity(> 10)
+│ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _get_function_params
@@ -425,15 +570,6 @@ graph TD
 │ │   └─ # Formats the code structure into displayable lines with colors and prefixes.
 │ │   └─ ! High cognitive load (> 7 items)
 │ ├─ core.py
-│ │   **Class**: ◆ CodeStructure
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
-│ │   **Class**: ◆ TreeOptions
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
-│ │   **Class**: ◆ ModuleMetrics
-│ │   └─ ! Missing class docstring
-│ │   └─ ! Too few public methods (< 1, SOLID-ISP)
 │ │   **Function**: → create_default_ignore
 │ │   └─ # Create default .treeline-ignore if it doesn't exist
 │ │   **Function**: → read_ignore_patterns
@@ -454,7 +590,7 @@ graph TD
 │ │   └─ ! High complexity (13)
 │ │   └─ ! Too long (61 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → generate_markdown_report
@@ -465,11 +601,15 @@ graph TD
 │ │   └─ ! Too long (73 lines)
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → main
+│ │   └─ ! Too long (83 lines)
+│ │   └─ ! Deep nesting (depth 5)
+│ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! Excessive nesting depth (> 4)
 │ │   **Function**: → add_directory
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! High cognitive complexity (> 15)
@@ -479,23 +619,23 @@ graph TD
 │ ├─ dependency_analyzer.py
 │ │   **Class**: ◆ ModuleDependencyAnalyzer
 │ │   └─ # Analyzes module-level dependencies and generates summary reports.
-│ │   └─ ! High complexity (92)
-│ │   └─ ! Too long (836 lines)
+│ │   └─ ! High complexity (95)
+│ │   └─ ! Too long (916 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
 │ │   **Function**: → __init__
-│ │   └─ ! Too long (379 lines)
+│ │   └─ ! Too long (391 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   **Function**: → analyze_directory
 │ │   └─ # Analyze all Python files in directory.
 │ │   **Function**: → _analyze_module
 │ │   └─ # Analyze a single module's contents and relationships.
 │ │   └─ ! High complexity (15)
-│ │   └─ ! Too long (54 lines)
+│ │   └─ ! Too long (52 lines)
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
@@ -511,10 +651,10 @@ graph TD
 │ │   **Function**: → generate_module_detail_diagram
 │ │   └─ # Generate a Mermaid diagram showing functions and classes in a module.
 │ │   └─ ! High complexity (17)
-│ │   └─ ! Too long (61 lines)
+│ │   └─ ! Too long (59 lines)
 │ │   └─ ! Deep nesting (depth 5)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
@@ -523,28 +663,61 @@ graph TD
 │ │   **Function**: → generate_html_visualization
 │ │   └─ # Generate an interactive HTML visualization using D3.js
 │ │   └─ ! High complexity (18)
-│ │   └─ ! Too long (94 lines)
+│ │   └─ ! Too long (112 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → generate_summary_report
 │ │   └─ # Generate a readable markdown report with a link to the interactive visualization.
-│ │   └─ ! High complexity (14)
-│ │   └─ ! Too long (69 lines)
+│ │   └─ ! High complexity (17)
+│ │   └─ ! Too long (115 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
+│ ├─ diff_visualizer.py
+│ │   **Class**: ◆ DiffVisualizer
+│ │   └─ # Visualizes structural differences between different versions of Python code.
+│ │   └─ ! High complexity (32)
+│ │   └─ ! Too long (266 lines)
+│ │   └─ ! Class too long
+│ │   └─ ! Too many methods
+│ │   **Function**: → __init__
+│ │   **Function**: → _serialize_graph_data
+│ │   └─ # Convert a GraphData object to a serializable dictionary
+│ │   **Function**: → _serialize_node
+│ │   └─ # Convert a Node object to a serializable dictionary
+│ │   **Function**: → _serialize_link
+│ │   └─ # Convert a link dictionary to a serializable format
+│ │   **Function**: → _node_was_modified_serial
+│ │   └─ # Check if a serialized node's important properties changed
+│ │   **Function**: → _get_node_changes_serial
+│ │   └─ # Get detailed changes for modified serialized nodes
+│ │   **Function**: → _run_git_command
+│ │   └─ # Run a git command with error handling
+│ │   **Function**: → _is_git_repo
+│ │   **Function**: → _commit_exists
+│ │   **Function**: → _analyze_commit
+│ │   └─ # Analyze a specific commit and return serializable data
+│ │   **Function**: → _compute_changes
+│ │   └─ # Compute the differences between two dependency graphs
+│ │   **Function**: → generate_structural_diff
+│ │   └─ # Generate a visual diff between two commits
+│ │   └─ ! Too long (101 lines)
+│ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cognitive load (> 7 items)
+│ │   **Function**: → node_key
+│ │   **Function**: → link_key
 │ ├─ enhanced_analyzer.py
 │ │   **Class**: ◆ EnhancedCodeAnalyzer
 │ │   └─ # Enhanced analyzer for code quality and maintainability metrics.
 │ │    This analyzer implements industry-standard code quality checks and metrics
 │ │    following Clean Code principles, SOLID principles, and PEP 8 standards.
 │ │   └─ ! High complexity (123)
-│ │   └─ ! Too long (612 lines)
+│ │   └─ ! Too long (606 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
@@ -584,7 +757,7 @@ graph TD
 │ │   └─ ! High complexity (13)
 │ │   └─ ! Too long (66 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _read_file
@@ -603,7 +776,7 @@ graph TD
 │ │   └─ ! High complexity (15)
 │ │   └─ ! Too long (56 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → _format_metrics_section
@@ -611,9 +784,7 @@ graph TD
 │ │   **Function**: → _analyze_function
 │ │   └─ # Analyze a function's quality metrics.
 │ │   **Function**: → _calculate_class_metrics
-│ │   └─ # Calculate comprehensive metrics for a class.
 │ │   **Function**: → _calculate_function_metrics
-│ │   └─ # Calculate comprehensive function metrics.
 │ │   **Function**: → _calculate_complexity
 │ │   └─ # Calculate cyclomatic complexity of code.
 │ │   **Function**: → _calculate_nested_depth
@@ -642,60 +813,49 @@ graph TD
 │ │   **Function**: → walk_cognitive
 │ │   **Function**: → get_depth
 │ │   **Function**: → get_inheritance_depth
-│ ├─ security_analyzer.py
-│ │   **Class**: ◆ TreelineSecurity
-│ │   └─ ! High complexity (46)
-│ │   └─ ! Too long (211 lines)
-│ │   └─ ! Class too long
-│ │   └─ ! Missing class docstring
-│ │   **Function**: → __init__
-│ │   **Function**: → analyze_file
-│ │   **Function**: → _collect_imports
-│ │   └─ ! High cognitive complexity (> 15)
-│ │   **Function**: → _scan_security_issues
-│ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _check_all_dangerous_calls
-│ │   └─ # Check for dangerous function calls that may lead to security vulnerabilities.
-│ │   └─ ! High complexity (14)
-│ │   └─ ! Too long (80 lines)
-│ │   └─ ! Deep nesting (depth 6)
-│ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity (> 10)
-│ │   └─ ! High cognitive complexity (> 15)
-│ │   └─ ! Excessive nesting depth (> 4)
-│ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _check_string_concat
-│ │   └─ # Check for string concatenation with SQL-like commands.
-│ │   **Function**: → _check_hardcoded_secrets
-│ │   **Function**: → _add_issue
 │ └─ type_checker.py
-│     **Class**: ◆ ValidationError
-│     └─ ! Missing class docstring
-│     └─ ! Too few public methods (< 1, SOLID-ISP)
 │     **Class**: ◆ TypeValidator
-│     └─ # A simple type validation system for runtime type checking.
-│     └─ ! High complexity (11)
-│     **Class**: ◆ ValidatedModel
-│     └─ # Base class for type-validated models.
-│     └─ ! Too few public methods (< 1, SOLID-ISP)
+│     └─ ! High complexity (22)
+│     └─ ! Too long (62 lines)
+│     └─ ! Missing class docstring
+│     **Class**: ◆ TypeChecked
+│     └─ # Base class for type-checked dataclasses
+│     └─ ! Too few public method (< 1, SOLID-ISP)
+│     **Class**: ◆ ValidationError
+│     └─ # Raised when type validation fails
+│     └─ ! Too few public method (< 1, SOLID-ISP)
 │     **Function**: → validate
-│     └─ # Validate that a value matches its expected type.
-│     └─ ! High complexity (11)
-│     └─ ! High cyclomatic complexity (> 10)
+│     └─ # Validates that a value matches the expected type, with support for generics.
+│      Args:
+│      value: The value to validate
+│      expected_type: The expected type (can be a generic type)
+│      Raises:
+│      TypeError: If the value doesn't match the expected type
+│     └─ ! High complexity (22)
+│     └─ ! Too long (60 lines)
+│     └─ ! Deep nesting (depth 6)
+│     └─ ! Function exceeds 50 lines
+│     └─ ! High cyclomatic complexity(> 10)
+│     └─ ! High cognitive complexity (> 15)
+│     └─ ! Excessive nesting depth (> 4)
 │     └─ ! High cognitive load (> 7 items)
 │     **Function**: → __post_init__
-│     └─ # Validate types after initialization.
+│     └─ # Validate types after initialization
 ├─ treeline.egg-info
 │ ├─ dependency_links.txt
 │ ├─ entry_points.txt
 │ ├─ PKG-INFO
+│ ├─ requires.txt
 │ ├─ SOURCES.txt
 │ └─ top_level.txt
+├─ .flake8
 ├─ .pre-commit-config.yaml
 ├─ .treeline-ignore
+├─ code_diff.html
 ├─ License
 ├─ make.bat
 ├─ Makefile
+├─ pyproject.toml
 ├─ README.md
 └─ setup.py
 ```
@@ -722,20 +882,10 @@ graph TD
 - Classes: **1**
 - Complexity: **4**
 
-### tests.test_missing_dir
-- Functions: **1**
-- Classes: **1**
-- Complexity: **1**
-
 ### tests.test_nested_dir
 - Functions: **3**
 - Classes: **1**
 - Complexity: **4**
-
-### tests.test_security_detection
-- Functions: **9**
-- Classes: **1**
-- Complexity: **11**
 
 ### tests.test_special_char
 - Functions: **3**
@@ -759,41 +909,74 @@ graph TD
 
 ### treeline.analyzer
 - Functions: **6**
-- Classes: **6**
-- Complexity: **32**
+- Classes: **1**
+- Complexity: **34**
 
 ### treeline.core
 - Functions: **9**
-- Classes: **3**
-- Complexity: **56**
+- Classes: **0**
+- Complexity: **61**
 
 ### treeline.dependency_analyzer
 - Functions: **11**
 - Classes: **1**
-- Complexity: **92**
+- Complexity: **95**
+
+### treeline.diff_visualizer
+- Functions: **14**
+- Classes: **1**
+- Complexity: **32**
 
 ### treeline.enhanced_analyzer
 - Functions: **31**
 - Classes: **1**
 - Complexity: **123**
 
-### treeline.security_analyzer
-- Functions: **8**
-- Classes: **1**
-- Complexity: **46**
+### treeline.models.__init__
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### treeline.models.analyzer
+- Functions: **0**
+- Classes: **5**
+- Complexity: **0**
+
+### treeline.models.core
+- Functions: **0**
+- Classes: **3**
+- Complexity: **0**
+
+### treeline.models.dependency_analyzer
+- Functions: **0**
+- Classes: **10**
+- Complexity: **0**
+
+### treeline.models.enhanced_analyzer
+- Functions: **0**
+- Classes: **4**
+- Complexity: **0**
 
 ### treeline.type_checker
 - Functions: **2**
 - Classes: **3**
-- Complexity: **14**
+- Complexity: **25**
 
 ## Complexity Hotspots
+
+### validate
+- **Module**: treeline.type_checker
+- **Complexity**: 22
 
 ### generate_html_visualization
 - **Module**: treeline.dependency_analyzer
 - **Complexity**: 18
 
 ### generate_module_detail_diagram
+- **Module**: treeline.dependency_analyzer
+- **Complexity**: 17
+
+### generate_summary_report
 - **Module**: treeline.dependency_analyzer
 - **Complexity**: 17
 
@@ -804,14 +987,6 @@ graph TD
 ### format_structure
 - **Module**: treeline.enhanced_analyzer
 - **Complexity**: 15
-
-### generate_summary_report
-- **Module**: treeline.dependency_analyzer
-- **Complexity**: 14
-
-### _check_all_dangerous_calls
-- **Module**: treeline.security_analyzer
-- **Complexity**: 14
 
 ### _analyze_file_metrics
 - **Module**: treeline.enhanced_analyzer
@@ -825,6 +1000,6 @@ graph TD
 - **Module**: treeline.core
 - **Complexity**: 13
 
-### validate
-- **Module**: treeline.type_checker
-- **Complexity**: 11
+### analyze_file
+- **Module**: treeline.analyzer
+- **Complexity**: 12

@@ -1,5 +1,5 @@
 [flake8]
-max-line-length = 100
+max-line-length = 150
 extend-ignore = E266
 per-file-ignores =
     # ignoring line length in dependency_analyzer.py and security analyzer cos it has complex string formatting
