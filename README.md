@@ -4,7 +4,7 @@
   <img src="assets/Treeline.png" alt="Treeline Logo" width="600"/>
 </p>
 
-A powerful Python toolkit for analyzing and visualizing code structure, dependencies, and generating directory trees. treeline helps developers understand codebases through ASCII tree representations, interactive dependency graphs, and structural diff visualizations.
+A Python toolkit for analyzing and visualizing code structure, dependencies, and generating directory trees. treeline helps developers understand codebases through ASCII tree representations, interactive dependency graphs, and structural diff visualizations.
 
 <p align="center">
   <img src="assets/output.gif" alt="Treeline Demo" width="800"/>
