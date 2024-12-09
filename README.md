@@ -1,5 +1,14 @@
 # treeline
-A simple directory tree structure generator that can create ASCII tree representations and save them as markdown files.
+
+<p align="center">
+  <img src="assets/Treeline.png" alt="Treeline Logo" width="600"/>
+</p>
+
+A powerful Python toolkit for analyzing and visualizing code structure, dependencies, and generating directory trees. treeline helps developers understand codebases through ASCII tree representations, interactive dependency graphs, and structural diff visualizations.
+
+<p align="center">
+  <img src="assets/output.gif" alt="Treeline Demo" width="800"/>
+</p>
 
 ## Installation
 
@@ -10,42 +19,158 @@ A simple directory tree structure generator that can create ASCII tree represent
 ### As a python module
 
 ```
+from treeline import treeline
+
 # Generate and print tree structure
 print(treeline("/path/to/directory"))
 
-#Generate tree and save to markdown file
-treeline("/path/to/directory", create_md=True)`
-```
+# Generate tree and save to markdown file
+treeline("/path/to/directory", create_md=True)
 
-#### Example output:
-```
-my_project
-├── src
-│   ├── __init__.py
-│   └── main.py
-├── tests
-│   └── test_main.py
-├── README.md
-└── setup.py
+# Advanced code analysis
+from treeline.dependency_analyzer import ModuleDependencyAnalyzer
+from treeline.diff_visualizer import DiffVisualizer
+from pathlib import Path
+
+# Analyze code dependencies
+analyzer = ModuleDependencyAnalyzer()
+analyzer.analyze_directory(Path("."))
+
+# Generate interactive visualization
+with open("dependencies.html", "w", encoding="utf-8") as f:
+    f.write(analyzer.generate_html_visualization())
+
+# Compare code structure between git commits
+visualizer = DiffVisualizer()
+diff_html = visualizer.generate_structural_diff("HEAD^", "HEAD")
+with open("code_diff.html", "w", encoding="utf-8") as f:
+    f.write(diff_html)
 ```
 
 ### In terminal
 
-1. `treeline # Show current directory tree`
-2. `treeline /path/to/dir # Show specific directory tree`
-3. `treeline -m # Create markdown file (tree.md)`
-4. `treeline -i ".pyc,.git" # Ignore patterns`
-5. `treeline -h # Show help message`
-6. `treeline --hide-structure # Hide all code structure`
-7. `treeline --no-params # Hide function parameters`
-8. `treeline --no-relationships # Hide code relationships`
+#### Basic commands
+```
+# Show current directory tree
+treeline
+```
+```
+# Show specific directory tree
+treeline /path/to/dir
+```
+```
+# Create markdown file (tree.md)
+treeline -m
+```
+```
+# Ignore specific patterns
+treeline -i ".pyc,.git"
+```
+```
+# Show help message
+treeline -h
+```
+#### Code analysis commands
+```
+# Generate code dependency visualization
+treeline --analyze
+```
+```
+# Create diff visualization between git commits
+treeline --diff HEAD^ HEAD
+```
+```
+# Show code metrics and complexity analysis
+treeline --metrics
+```
+```
+# Export analysis to HTML report
+treeline --report
+```
 
-## Note
+#### Visualization Options
+```
+# Create diff visualization between git commits
+treeline --diff HEAD^ HEAD
+```
+```
+# Hide all code structure details
+treeline --hide-structure
+```
+```
+# Hide function parameters
+treeline --no-params
+```
+```
+# Hide code relationships
+treeline --no-relationships
+```
+```
+# Show only specific types of relationships
+treeline --show-relationships "imports,calls"
+```
+```
+# Customize visualization layout
+treeline --layout "force-directed|radial"
+```
+```
+# Filter by module types
+treeline --show-types "module,class,function"
+```
 
+#### Analysis filters
+```
+# Show only files with complexity above threshold
+treeline --min-complexity 10
+```
+```
+# Filter by specific module patterns
+treeline --module-pattern "*/models/*"
+```
+```
+# Show only modified files (with git)
+treeline --show-modified
+```
+```
+# Focus on specific relationships
+treeline --focus "imports|calls|contains"
+```
+
+## Configuration
+
+### .treeline-ignore
 the .treeline-ignore will ignore whatever is in the folder.
 
-For example, if you were to put the treeline-ignore inside the src folder, only files within the src folder will be ignored
+Place .treeline-ignore in any directory to apply rules to that directory and its subdirectories.
 
+```
+# Ignore all .pyc files
+*.pyc
+
+# Ignore specific directories
+__pycache__
+.git
+.venv
+
+# Ignore specific files
+config.local.py
+secrets.py
+```
+### Analysis configuration
+
+Create a treeline.config.json to customize analysis settings:
+
+```
+{
+  "complexity_threshold": 10,
+  "ignore_patterns": [".pyc", ".git"],
+  "relationship_types": ["imports", "calls", "contains"],
+  "visualization": {
+    "layout": "force-directed",
+    "theme": "light"
+  }
+}
+```
 
 ## Contributing
 
