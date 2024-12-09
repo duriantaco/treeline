@@ -5,17 +5,19 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
-    -   id: check-added-large-files
     -   id: debug-statements
     -   id: check-case-conflict
     -   id: check-merge-conflict
+    -   id: check-added-large-files
+        args: [--maxkb=5120]
+        exclude: ^assets/.*\.(gif|png)$
 
 -   repo: https://github.com/psf/black
     rev: 24.10.0
     hooks:
     -   id: black
         language_version: python3
-        additional_dependencies: [".[jupyter]"]
+        additional_dependencies: ['.[jupyter]']
 
 -   repo: https://github.com/pycqa/isort
     rev: 5.13.2

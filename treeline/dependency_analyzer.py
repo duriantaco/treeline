@@ -7,7 +7,6 @@ from treeline.models.dependency_analyzer import (
     ComplexFunction,
     FunctionCallInfo,
     FunctionLocation,
-    GraphData,
     Link,
     MethodInfo,
     ModuleMetrics,
@@ -43,9 +42,7 @@ class ModuleDependencyAnalyzer:
                     cursor: pointer;
                 }
                 .node circle {
-                    fill: #fff;
-                    stroke-width: 2px;
-                    transition: all 0.3s;
+                    fill: #fff; /* If no changes, node stays white */
                 }
                 .node:hover circle {
                     filter: brightness(0.95);
@@ -59,6 +56,10 @@ class ModuleDependencyAnalyzer:
                     stroke-dasharray: 4;
                     opacity: 0.7;
                 }
+
+                .link-added { stroke: #22c55e; stroke-width: 3px; }
+                .link-removed { stroke: #ef4444; stroke-width: 3px; opacity: 0.7; }
+
                 .link-imports {
                     stroke: #7c3aed; /* purple */
                 }
@@ -135,6 +136,9 @@ class ModuleDependencyAnalyzer:
                 .node-module circle { stroke: #0284c7; }
                 .node-class circle { stroke: #0891b2; }
                 .node-function circle { stroke: #0d9488; }
+
+                .node-added circle { fill: #22c55e; }    /* Green for added */
+                .node-removed circle { fill: #ef4444; }  /* Red for removed */
             </style>
         </head>
         <body>
@@ -249,7 +253,6 @@ class ModuleDependencyAnalyzer:
 
                 node.append("circle")
                     .attr("r", d => getNodeSize(d))
-                    .style("fill", "#fff");
 
                 node.append("text")
                     .attr("dy", ".35em")
@@ -791,9 +794,24 @@ class ModuleDependencyAnalyzer:
         validated_nodes = [Node(**node) for node in nodes]
         validated_links = [Link(**link) for link in links]
 
-        graph_data = GraphData(nodes=validated_nodes, links=validated_links).__dict__
+        graph_data = {
+            "nodes": [
+                {"id": node.id, "name": node.name, "type": node.type}
+                for node in validated_nodes
+            ],
+            "links": [
+                {"source": link.source, "target": link.target, "type": link.type}
+                for link in validated_links
+            ],
+        }
 
         json_data = json.dumps(graph_data)
+
+        print("Number of nodes:", len(nodes))
+        print("Sample nodes:", nodes[:3] if nodes else "No nodes")
+        print("Number of links:", len(links))
+        print("Sample links:", links[:3] if links else "No links")
+        print("Graph data:", json_data[:200] if json_data else "No data")
 
         return self.html_template.replace("GRAPH_DATA_PLACEHOLDER", json_data)
 
