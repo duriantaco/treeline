@@ -8,9 +8,6 @@ from treeline.models.enhanced_analyzer import (
     FunctionMetrics,
     QualityIssue,
 )
-from treeline.security_analyzer import TreelineSecurity
-
-security_scanner = TreelineSecurity()
 
 
 class EnhancedCodeAnalyzer:
@@ -177,7 +174,7 @@ class EnhancedCodeAnalyzer:
 
         Based on McCabe, 1976 and implementation in Radon/SonarQube.
         """
-        complexity = 1  # Base complexity
+        complexity = 1
         for child in ast.walk(node):
             if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
                 complexity += 1
@@ -197,10 +194,10 @@ class EnhancedCodeAnalyzer:
 
             for child in ast.iter_child_nodes(node):
                 if isinstance(child, (ast.If, ast.While, ast.For)):
-                    complexity += 1 + nesting  # Base + nesting level
+                    complexity += 1 + nesting
                     complexity += walk_cognitive(child, nesting + 1)
                 elif isinstance(child, ast.BoolOp):
-                    complexity += len(child.values) - 1  # Each additional condition
+                    complexity += len(child.values) - 1
                 else:
                     complexity += walk_cognitive(child, nesting)
 
@@ -551,7 +548,7 @@ class EnhancedCodeAnalyzer:
                 if isinstance(node, ast.Import):
                     for alias in node.names:
                         dependencies.add(alias.name.split(".")[0])
-                else:  # ImportFrom
+                else:
                     if node.module:
                         dependencies.add(node.module.split(".")[0])
 
@@ -592,7 +589,6 @@ class EnhancedCodeAnalyzer:
                 self._format_overview_section(),
                 self._format_issues_section(),
                 self._format_metrics_section(),
-                security_scanner.get_security_section(),
             ]
         )
 
