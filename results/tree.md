@@ -14,7 +14,6 @@ graph TD
     classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px
 
     setup["setup"]:::modNode
-    source_conf["source.conf"]:::modNode
     tests_test_special_char["tests.test_special_char"]:::modNode
     tests_test_empty_dir["tests.test_empty_dir"]:::modNode
     tests_test_core["tests.test_core"]:::modNode
@@ -33,6 +32,7 @@ graph TD
     treeline_models___init__["treeline.models.__init__"]:::modNode
     treeline_models_enhanced_analyzer["treeline.models.enhanced_analyzer"]:::modNode
     treeline_models_core["treeline.models.core"]:::modNode
+    docs_conf["docs.conf"]:::modNode
 
     tests_test_special_char --> treeline_core
     tests_test_empty_dir --> treeline_core
@@ -41,14 +41,14 @@ graph TD
     treeline_diff_visualizer --> treeline_dependency_analyzer
     treeline_diff_visualizer --> treeline_models_dependency_analyzer
     treeline_dependency_analyzer --> treeline_models_dependency_analyzer
-    treeline_analyzer --> treeline_models_analyzer
     treeline_analyzer --> treeline_type_checker
+    treeline_analyzer --> treeline_models_analyzer
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
-    treeline_core --> treeline_models_core
-    treeline_core --> treeline_type_checker
-    treeline_core --> treeline_dependency_analyzer
     treeline_core --> treeline_diff_visualizer
     treeline_core --> treeline_enhanced_analyzer
+    treeline_core --> treeline_type_checker
+    treeline_core --> treeline_dependency_analyzer
+    treeline_core --> treeline_models_core
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
@@ -420,9 +420,115 @@ graph TD
 │ ├─ screenshot1.png
 │ └─ Treeline.png
 ├─ docs
-│ ├─ code_visualization.html
-│ ├─ index.html
-│ └─ tree.md
+│ ├─ _static
+│ ├─ build
+│ │ ├─ doctrees
+│ │ │ ├─ code_analysis.doctree
+│ │ │ ├─ environment.pickle
+│ │ │ ├─ git_integration.doctree
+│ │ │ ├─ index.doctree
+│ │ │ ├─ installation.doctree
+│ │ │ ├─ quickstart.doctree
+│ │ │ ├─ user_guide.doctree
+│ │ │ └─ visualization.doctree
+│ │ └─ html
+│ │   ├─ _sources
+│ │   │ ├─ code_analysis.rst.txt
+│ │   │ ├─ git_integration.rst.txt
+│ │   │ ├─ index.rst.txt
+│ │   │ ├─ installation.rst.txt
+│ │   │ ├─ quickstart.rst.txt
+│ │   │ ├─ user_guide.rst.txt
+│ │   │ └─ visualization.rst.txt
+│ │   ├─ _static
+│ │   │ ├─ css
+│ │   │ │ ├─ fonts
+│ │   │ │ │ ├─ fontawesome-webfont.eot
+│ │   │ │ │ ├─ fontawesome-webfont.svg
+│ │   │ │ │ ├─ fontawesome-webfont.ttf
+│ │   │ │ │ ├─ fontawesome-webfont.woff
+│ │   │ │ │ ├─ fontawesome-webfont.woff2
+│ │   │ │ │ ├─ lato-bold-italic.woff
+│ │   │ │ │ ├─ lato-bold-italic.woff2
+│ │   │ │ │ ├─ lato-bold.woff
+│ │   │ │ │ ├─ lato-bold.woff2
+│ │   │ │ │ ├─ lato-normal-italic.woff
+│ │   │ │ │ ├─ lato-normal-italic.woff2
+│ │   │ │ │ ├─ lato-normal.woff
+│ │   │ │ │ ├─ lato-normal.woff2
+│ │   │ │ │ ├─ Roboto-Slab-Bold.woff
+│ │   │ │ │ ├─ Roboto-Slab-Bold.woff2
+│ │   │ │ │ ├─ Roboto-Slab-Regular.woff
+│ │   │ │ │ └─ Roboto-Slab-Regular.woff2
+│ │   │ │ ├─ badge_only.css
+│ │   │ │ └─ theme.css
+│ │   │ ├─ fonts
+│ │   │ │ ├─ Lato
+│ │   │ │ │ ├─ lato-bold.eot
+│ │   │ │ │ ├─ lato-bold.ttf
+│ │   │ │ │ ├─ lato-bold.woff
+│ │   │ │ │ ├─ lato-bold.woff2
+│ │   │ │ │ ├─ lato-bolditalic.eot
+│ │   │ │ │ ├─ lato-bolditalic.ttf
+│ │   │ │ │ ├─ lato-bolditalic.woff
+│ │   │ │ │ ├─ lato-bolditalic.woff2
+│ │   │ │ │ ├─ lato-italic.eot
+│ │   │ │ │ ├─ lato-italic.ttf
+│ │   │ │ │ ├─ lato-italic.woff
+│ │   │ │ │ ├─ lato-italic.woff2
+│ │   │ │ │ ├─ lato-regular.eot
+│ │   │ │ │ ├─ lato-regular.ttf
+│ │   │ │ │ ├─ lato-regular.woff
+│ │   │ │ │ └─ lato-regular.woff2
+│ │   │ │ └─ RobotoSlab
+│ │   │ │   ├─ roboto-slab-v7-bold.eot
+│ │   │ │   ├─ roboto-slab-v7-bold.ttf
+│ │   │ │   ├─ roboto-slab-v7-bold.woff
+│ │   │ │   ├─ roboto-slab-v7-bold.woff2
+│ │   │ │   ├─ roboto-slab-v7-regular.eot
+│ │   │ │   ├─ roboto-slab-v7-regular.ttf
+│ │   │ │   ├─ roboto-slab-v7-regular.woff
+│ │   │ │   └─ roboto-slab-v7-regular.woff2
+│ │   │ ├─ js
+│ │   │ │ ├─ badge_only.js
+│ │   │ │ ├─ theme.js
+│ │   │ │ └─ versions.js
+│ │   │ ├─ _sphinx_javascript_frameworks_compat.js
+│ │   │ ├─ basic.css
+│ │   │ ├─ doctools.js
+│ │   │ ├─ documentation_options.js
+│ │   │ ├─ file.png
+│ │   │ ├─ jquery.js
+│ │   │ ├─ language_data.js
+│ │   │ ├─ minus.png
+│ │   │ ├─ plus.png
+│ │   │ ├─ pygments.css
+│ │   │ ├─ searchtools.js
+│ │   │ └─ sphinx_highlight.js
+│ │   ├─ .buildinfo
+│ │   ├─ .buildinfo.bak
+│ │   ├─ code_analysis.html
+│ │   ├─ genindex.html
+│ │   ├─ git_integration.html
+│ │   ├─ index.html
+│ │   ├─ installation.html
+│ │   ├─ objects.inv
+│ │   ├─ quickstart.html
+│ │   ├─ search.html
+│ │   ├─ searchindex.js
+│ │   ├─ user_guide.html
+│ │   └─ visualization.html
+│ ├─ code_analysis.rst
+│ ├─ conf.py
+│ ├─ git_integration.rst
+│ ├─ index.rst
+│ ├─ installation.rst
+│ ├─ make.bat
+│ ├─ Makefile
+│ ├─ quickstart.rst
+│ ├─ requirements.txt
+│ ├─ user_guide.rst
+│ └─ visualization.rst
 ├─ example
 │ ├─ code_diff.html
 │ ├─ dependencies.html
@@ -437,15 +543,8 @@ graph TD
 │ │   └─ # Multiply two numbers.
 │ ├─ tree.md
 │ └─ tut1.ipynb
-├─ source
-│ ├─ code_analysis.rst
-│ ├─ conf.py
-│ ├─ git_integration.rst
-│ ├─ index.rst
-│ ├─ installation.rst
-│ ├─ quickstart.rst
-│ ├─ user_guide.rst
-│ └─ visualization.rst
+├─ results
+│ └─ tree.md
 ├─ tests
 │ ├─ test_core.py
 │ │   **Class**: ◆ TestTreeGenerator
@@ -620,7 +719,7 @@ graph TD
 │ │   **Function**: → generate_tree
 │ │   └─ # Generate tree structure with code quality and security analysis.
 │ │   └─ ! High complexity (13)
-│ │   └─ ! Too long (73 lines)
+│ │   └─ ! Too long (80 lines)
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
@@ -628,7 +727,7 @@ graph TD
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → main
-│ │   └─ ! Too long (83 lines)
+│ │   └─ ! Too long (86 lines)
 │ │   └─ ! Deep nesting (depth 5)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! Excessive nesting depth (> 4)
@@ -872,19 +971,27 @@ graph TD
 │ ├─ requires.txt
 │ ├─ SOURCES.txt
 │ └─ top_level.txt
-├─ .flake8
+├─ .dockerignore
+├─ .editorconfig
 ├─ .pre-commit-config.yaml
+├─ .readthedocs.yaml
 ├─ .treeline-ignore
 ├─ code_diff.html
+├─ docker-compose.yaml
+├─ dockerfile
 ├─ License
-├─ make.bat
-├─ Makefile
 ├─ pyproject.toml
 ├─ README.md
-└─ setup.py
+├─ setup.py
+└─ tox.ini
 ```
 
 ## Code Quality Metrics
+
+### docs.conf
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
 
 ### example.sample
 - Functions: **4**
@@ -892,11 +999,6 @@ graph TD
 - Complexity: **4**
 
 ### setup
-- Functions: **0**
-- Classes: **0**
-- Complexity: **0**
-
-### source.conf
 - Functions: **0**
 - Classes: **0**
 - Complexity: **0**
