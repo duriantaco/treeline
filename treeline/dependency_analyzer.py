@@ -280,6 +280,23 @@ class ModuleDependencyAnalyzer:
 
                 node.append("circle")
                     .attr("r", d => getNodeSize(d))
+                    .style("fill", d => {
+                        if (d.metrics && (
+                            d.metrics.complexity > 10 ||
+                            d.metrics.cognitive_complexity > 15 ||
+                            (d.type === 'class' && d.metrics.complexity > 50)
+                        )) {
+                            return "#ef4444"; // Red fill for complex nodes
+                        }
+                        return "#fff";
+                    })
+                    .style("stroke", d => {
+                        if (d.type === 'module') return "#0284c7";
+                        if (d.type === 'class') return "#0891b2";
+                        return "#0d9488";
+                    })
+                    .style("stroke-width", "2px");
+
 
                 node.append("text")
                     .attr("dy", ".35em")
@@ -287,7 +304,6 @@ class ModuleDependencyAnalyzer:
                     .text(d => d.name)
                     .style("fill", "#333");
 
-                // Add hover effects
                 node.on("mouseover", function(event, d) {
                     tooltip.transition()
                         .duration(200)
@@ -297,9 +313,39 @@ class ModuleDependencyAnalyzer:
                         l.source.id === d.id || l.target.id === d.id
                     );
 
-                    let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br><br>`;
+                    let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br>`;
+
+                    // Add metrics section
+                    if (d.metrics) {
+                        tooltipContent += '<br><strong>Metrics:</strong><br>';
+                        for (let [key, value] of Object.entries(d.metrics)) {
+                            if (key === 'complexity') {
+                                tooltipContent += `Cyclomatic Complexity: ${value}`;
+                                if (value > 10) tooltipContent += ' ⚠️';
+                                tooltipContent += '<br>';
+                            }
+                            else if (key === 'cognitive_complexity') {
+                                tooltipContent += `Cognitive Complexity: ${value}`;
+                                if (value > 15) tooltipContent += ' ⚠️';
+                                tooltipContent += '<br>';
+                            }
+                            else if (key === 'lines') {
+                                tooltipContent += `Lines: ${value}<br>`;
+                            }
+                        }
+                    }
+
+                    // Add code smells section
+                    if (d.code_smells && d.code_smells.length > 0) {
+                        tooltipContent += '<br><strong>Issues:</strong><br>';
+                        d.code_smells.forEach(smell => {
+                            tooltipContent += `• ${smell}<br>`;
+                        });
+                    }
+
+                    // Add connections section
                     if (connections.length > 0) {
-                        tooltipContent += "Connections:<br>";
+                        tooltipContent += '<br><strong>Connections:</strong><br>';
                         connections.forEach(c => {
                             if (c.source.id === d.id) {
                                 tooltipContent += `→ ${c.target.name} (${c.type})<br>`;
@@ -329,6 +375,20 @@ class ModuleDependencyAnalyzer:
                     node.style("opacity", 1);
                     link.style("opacity", 0.7);
                 });
+
+                const legendContent = d3.select(".legend")
+                .append("div")
+                .style("margin-top", "16px")
+                .style("border-top", "1px solid #e5e7eb")
+                .style("padding-top", "12px");
+
+                legendContent.append("div")
+                .attr("class", "legend-item")
+                .html(`
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Complex Node (Exceeds Complexity Threshold)</span>
+                `);
+
 
                 simulation
                     .nodes(data.nodes)
@@ -744,22 +804,60 @@ class ModuleDependencyAnalyzer:
         links = []
         node_lookup = {}
 
+        # Module nodes
         for module in all_modules:
             node_id = len(nodes)
             node_lookup[module] = node_id
-            nodes.append({"id": node_id, "name": module, "type": "module"})
+            nodes.append(
+                {
+                    "id": node_id,
+                    "name": module,
+                    "type": "module",
+                    "metrics": self.module_metrics.get(module, {}),
+                    "code_smells": [],
+                }
+            )
 
+        # Class nodes
         for module, classes in self.class_info.items():
             if module not in node_lookup:
                 node_id = len(nodes)
                 node_lookup[module] = node_id
-                nodes.append({"id": node_id, "name": module, "type": "module"})
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "name": module,
+                        "type": "module",
+                        "metrics": self.module_metrics.get(module, {}),
+                        "code_smells": [],
+                    }
+                )
 
             for class_name, info in classes.items():
                 node_id = len(nodes)
                 node_key = f"{module}.{class_name}"
                 node_lookup[node_key] = node_id
-                nodes.append({"id": node_id, "name": class_name, "type": "class"})
+
+                # Include class metrics and complexity
+                class_metrics = info.get("metrics", {})
+                class_metrics.update(
+                    {
+                        "complexity": info.get("complexity", 0),
+                        "cognitive_complexity": info.get("cognitive_complexity", 0),
+                        "lines": info.get("lines", 0),
+                    }
+                )
+
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "name": class_name,
+                        "type": "class",
+                        "metrics": class_metrics,
+                        "code_smells": info.get("code_smells", []),
+                    }
+                )
+
                 links.append(
                     {
                         "source": node_lookup[module],
@@ -768,6 +866,7 @@ class ModuleDependencyAnalyzer:
                     }
                 )
 
+        # Function nodes
         for func_name, location in self.function_locations.items():
             if "module" not in location:
                 continue
@@ -776,16 +875,42 @@ class ModuleDependencyAnalyzer:
             if module not in node_lookup:
                 node_id = len(nodes)
                 node_lookup[module] = node_id
-                nodes.append({"id": node_id, "name": module, "type": "module"})
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "name": module,
+                        "type": "module",
+                        "metrics": self.module_metrics.get(module, {}),
+                        "code_smells": [],
+                    }
+                )
 
             node_id = len(nodes)
             node_key = f"{module}.{func_name}"
             node_lookup[node_key] = node_id
-            nodes.append({"id": node_id, "name": func_name, "type": "function"})
+
+            # Include function metrics
+            func_metrics = {
+                "complexity": location.get("complexity", 0),
+                "cognitive_complexity": location.get("cognitive_complexity", 0),
+                "lines": location.get("lines", 0),
+            }
+
+            nodes.append(
+                {
+                    "id": node_id,
+                    "name": func_name,
+                    "type": "function",
+                    "metrics": func_metrics,
+                    "code_smells": location.get("code_smells", []),
+                }
+            )
+
             links.append(
                 {"source": node_lookup[module], "target": node_id, "type": "contains"}
             )
 
+        # Add function call links
         for func_name, calls in self.function_calls.items():
             if func_name not in self.function_locations:
                 continue
@@ -806,6 +931,7 @@ class ModuleDependencyAnalyzer:
                         }
                     )
 
+        # Add import links
         for module, imports in self.module_imports.items():
             if module in node_lookup:
                 for imp in imports:
@@ -823,7 +949,13 @@ class ModuleDependencyAnalyzer:
 
         graph_data = {
             "nodes": [
-                {"id": node.id, "name": node.name, "type": node.type}
+                {
+                    "id": node.id,
+                    "name": node.name,
+                    "type": node.type,
+                    "metrics": node.metrics,
+                    "code_smells": node.code_smells,
+                }
                 for node in validated_nodes
             ],
             "links": [
@@ -833,13 +965,6 @@ class ModuleDependencyAnalyzer:
         }
 
         json_data = json.dumps(graph_data)
-
-        # print("Number of nodes:", len(nodes))
-        # print("Sample nodes:", nodes[:3] if nodes else "No nodes")
-        # print("Number of links:", len(links))
-        # print("Sample links:", links[:3] if links else "No links")
-        # print("Graph data:", json_data[:200] if json_data else "No data")
-
         return self.html_template.replace("GRAPH_DATA_PLACEHOLDER", json_data)
 
     def clean_for_markdown(self, line: str) -> str:

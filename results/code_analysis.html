@@ -151,9 +151,9 @@ graph TD
     treeline_analyzer --> treeline_type_checker
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
     treeline_core --> treeline_enhanced_analyzer
-    treeline_core --> treeline_models_core
-    treeline_core --> treeline_type_checker
     treeline_core --> treeline_dependency_analyzer
+    treeline_core --> treeline_type_checker
+    treeline_core --> treeline_models_core
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
@@ -408,6 +408,8 @@ graph TD
         treeline_models_dependency_analyzer_ComplexFunction["📦 ComplexFunction"]:::clsNode
         treeline_models_dependency_analyzer_MethodInfo["📦 MethodInfo"]:::clsNode
         treeline_models_dependency_analyzer_Node["📦 Node"]:::clsNode
+        treeline_models_dependency_analyzer_Node___post_init__["⚡ __post_init__"]:::fnNode
+        treeline_models_dependency_analyzer_Node --> treeline_models_dependency_analyzer_Node___post_init__
         treeline_models_dependency_analyzer_Link["📦 Link"]:::clsNode
         treeline_models_dependency_analyzer_GraphData["📦 GraphData"]:::clsNode
     end
@@ -686,6 +688,7 @@ graph TD
 │ │ │   <strong>Class</strong>: ◆ GraphData
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│ │ │   <strong>Function</strong>: → __post_init__
 │ │ └─ enhanced_analyzer.py
 │ │     <strong>Class</strong>: ◆ FunctionMetrics
 │ │     └─ ! Missing class docstring
@@ -772,12 +775,12 @@ graph TD
 │ │   <strong>Class</strong>: ◆ ModuleDependencyAnalyzer
 │ │   └─ <h1>Analyzes module-level dependencies and generates summary reports.</h1>
 │ │   └─ ! High complexity (92)
-│ │   └─ ! Too long (1091 lines)
+│ │   └─ ! Too long (1183 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
 │ │   <strong>Function</strong>: → __init__
-│ │   └─ ! Too long (415 lines)
+│ │   └─ ! Too long (475 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   <strong>Function</strong>: → analyze_directory
 │ │   └─ <h1>Analyze all Python files in directory.</h1>
@@ -815,7 +818,7 @@ graph TD
 │ │   <strong>Function</strong>: → generate_html_visualization
 │ │   └─ <h1>Generate an interactive HTML visualization using D3.js</h1>
 │ │   └─ ! High complexity (18)
-│ │   └─ ! Too long (112 lines)
+│ │   └─ ! Too long (161 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
@@ -825,7 +828,7 @@ graph TD
 │ │   <strong>Function</strong>: → generate_reports
 │ │   └─ <h1>Generate comprehensive HTML and markdown reports of the code analysis.</h1>
 │ │   └─ ! High complexity (12)
-│ │   └─ ! Too long (243 lines)
+│ │   └─ ! Too long (226 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
@@ -1129,26 +1132,26 @@ Classes:
 <li>Methods:</li>
 </ul>  - ⚡ __init__ (line 23)
     Calls: defaultdict, defaultdict, defaultdict, defaultdict, defaultdict
-  - ⚡ analyze_directory (line 439)
+  - ⚡ analyze_directory (line 499)
     Calls: open, str, print, str
-  - ⚡ _analyze_module (line 457)
+  - ⚡ _analyze_module (line 517)
     Calls: isinstance, setattr, getattr, isinstance, isinstance, FunctionLocation, isinstance, isinstance, isinstance, FunctionCallInfo, MethodInfo, isinstance, isinstance
-  - ⚡ _analyze_imports (line 510)
+  - ⚡ _analyze_imports (line 570)
     Calls: isinstance, isinstance
-  - ⚡ _collect_metrics (line 520)
+  - ⚡ _collect_metrics (line 580)
     Calls: ModuleMetrics, isinstance, isinstance, len, len, ComplexFunction
-  - ⚡ _calculate_complexity (line 550)
+  - ⚡ _calculate_complexity (line 610)
     Calls: isinstance, isinstance, len
-  - ⚡ generate_module_overview_diagram (line 560)
+  - ⚡ generate_module_overview_diagram (line 620)
     Calls: set
-  - ⚡ generate_module_detail_diagram (line 586)
+  - ⚡ generate_module_detail_diagram (line 646)
     Calls: set
-  - ⚡ generate_mermaid_graphs (line 646)
+  - ⚡ generate_mermaid_graphs (line 706)
     Calls: sorted
-  - ⚡ generate_html_visualization (line 732)
+  - ⚡ generate_html_visualization (line 792)
     Calls: set, len, len, Node, Link, len, len, len
-  - ⚡ clean_for_markdown (line 845)
-  - ⚡ generate_reports (line 868)
+  - ⚡ clean_for_markdown (line 954)
+  - ⚡ generate_reports (line 977)
     Calls: Path, sorted, range, print, print, print, print, print, open, str, sorted, open, open, str
 <h3>treeline.enhanced_analyzer</h3>
 <ul><li>Functions: <strong>31</strong></li>
@@ -1249,9 +1252,9 @@ Classes:
 <h4>📦 ModuleMetrics</h4>
 <ul><li>Defined at line 27</li>
 </ul><h3>treeline.models.dependency_analyzer</h3>
-<ul><li>Functions: <strong>0</strong></li>
+<ul><li>Functions: <strong>1</strong></li>
 <li>Classes: <strong>10</strong></li>
-<li>Complexity: <strong>0</strong></li>
+<li>Complexity: <strong>3</strong></li>
 </ul>
 Classes:
 
@@ -1277,13 +1280,15 @@ Classes:
 <ul><li>Defined at line 49</li>
 </ul>
 <h4>📦 Node</h4>
-<ul><li>Defined at line 55</li>
-</ul>
+<ul><li>Defined at line 54</li>
+<li>Methods:</li>
+</ul>  - ⚡ __post_init__ (line 61)
+
 <h4>📦 Link</h4>
-<ul><li>Defined at line 62</li>
+<ul><li>Defined at line 69</li>
 </ul>
 <h4>📦 GraphData</h4>
-<ul><li>Defined at line 69</li>
+<ul><li>Defined at line 75</li>
 </ul><h3>treeline.models.enhanced_analyzer</h3>
 <ul><li>Functions: <strong>0</strong></li>
 <li>Classes: <strong>4</strong></li>
