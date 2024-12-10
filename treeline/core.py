@@ -10,10 +10,22 @@ from treeline.type_checker import ValidationError
 
 
 def create_default_ignore():
-    """Create default .treeline-ignore if it doesn't exist"""
+    """Create default .treeline-ignore if it doesn't exist."""
     if not Path(".treeline-ignore").exists():
         with open(".treeline-ignore", "w") as f:
-            f.write("*.pyc\n__pycache__\n.git\n.env\nvenv/\n.DS_Store\nnode_modules/\n")
+            f.write(
+                "*.pyc\n"
+                "__pycache__/\n"
+                ".git/\n"
+                ".env/\n"
+                "venv/\n"
+                ".venv/\n"
+                ".DS_Store\n"
+                "node_modules/\n"
+                "env/\n"
+                "build/\n"
+                "dist/\n"
+            )
         print("Created .treeline-ignore file")
 
 
@@ -29,18 +41,25 @@ def read_ignore_patterns() -> List[str]:
 
 
 def should_ignore(path: Path, ignore_patterns: List[str]) -> bool:
-    """Check if path should be ignored based on patterns"""
-    path_str = str(path)
+    """Check if path should be ignored based on patterns."""
+    path_str = str(path.resolve())
+
     for pattern in ignore_patterns:
         if pattern.endswith("/"):
-            if pattern[:-1] in path_str:
+            if path.is_dir() and pattern[:-1] in path_str:
                 return True
+
         elif pattern.startswith("*."):
-            if path_str.endswith(pattern[1:]):
+            if path.suffix == pattern[1:]:
                 return True
-        else:
-            if pattern in path_str:
-                return True
+
+        elif pattern in path_str:
+            return True
+
+    if "site-packages" in path_str or "lib" in path_str:
+        if any(p in path_str for p in ["venv", ".venv", "env", ".env"]):
+            return True
+
     return False
 
 
