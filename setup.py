@@ -7,9 +7,11 @@ setup(
     package_data={
         "treeline": ["default_ignore"],
     },
-    description="A simple ASCII tree structure generator",
+    description="A simple tool for analyzing your codebase architecture",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
     author="oha",
-    author_email="none",
+    author_email="aaronoh2015@gmail.com",
     url="https://github.com/duriantaco/treeline",
     license="MIT",
     entry_points={
