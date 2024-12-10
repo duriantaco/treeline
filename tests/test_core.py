@@ -18,8 +18,8 @@ class TestTreeGenerator(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.test_dir)
-        if os.path.exists("docs/tree.md"):
-            os.remove("docs/tree.md")
+        if os.path.exists("results/tree.md"):
+            os.remove("results/tree.md")
 
     def test_tree_structure(self):
         """Test if the tree structure is generated correctly"""
@@ -36,7 +36,7 @@ class TestTreeGenerator(unittest.TestCase):
     def test_markdown_creation(self):
         """Test if markdown file is created when flag is True"""
         generate_tree(self.test_dir, create_md=True)
-        self.assertTrue(os.path.exists("docs/tree.md"))
+        self.assertTrue(os.path.exists("results/tree.md"))
 
 
 if __name__ == "__main__":
