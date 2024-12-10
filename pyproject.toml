@@ -18,3 +18,12 @@ skip = ["docs/"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-ra -q"
+
+[tool.flake8]
+max-line-length = 150
+extend-ignore = "E266"
+per-file-ignores = [
+    "treeline/dependency_analyzer.py:E501",
+    "treeline/security_analyzer.py:E501",
+    "treeline/enhanced_analyzer.py:E501"
+]

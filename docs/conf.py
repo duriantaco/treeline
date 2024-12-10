@@ -1,9 +1,10 @@
 import os
 import sys
 
+import sphinx_rtd_theme
+
 sys.path.insert(0, os.path.abspath(".."))
 
-# Project information
 project = "Treeline"
 copyright = "2024, oha"
 author = "oha"
@@ -16,13 +17,19 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
     "sphinx.ext.autosectionlabel",
+    "sphinx_rtd_theme",
 ]
-
-templates_path = ["_templates"]
-exclude_patterns = []
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
+
+html_theme_options = {
+    "navigation_depth": 4,
+    "collapse_navigation": False,
+    "sticky_navigation": True,
+    "includehidden": True,
+    "titles_only": False,
+}
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -39,3 +46,6 @@ autodoc_typehints = "description"
 add_module_names = False
 
 nitpicky = True
+
+autosectionlabel_prefix_document = True
+autosectionlabel_maxdepth = 2
