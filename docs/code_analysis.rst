@@ -240,12 +240,7 @@ Common Issues
    - Use appropriate ignore patterns
    - Disable unnecessary features
 
-2. False Positives
-   - Customize complexity thresholds
-   - Update ignore patterns
-   - Document known exceptions
-
-3. Integration
+2. Integration
    - Use with linters and formatters
    - Integrate with IDE tools
    - Automate in build process

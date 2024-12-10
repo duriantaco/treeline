@@ -1,16 +1,12 @@
 # treeline/treeline/core.py
 import argparse
-import re
 from pathlib import Path
 from typing import Dict, List
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
-from treeline.diff_visualizer import DiffVisualizer
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
 from treeline.models.core import CodeStructure, TreeOptions
 from treeline.type_checker import ValidationError
-
-visualizer = DiffVisualizer()
 
 
 def create_default_ignore():
@@ -46,30 +42,6 @@ def should_ignore(path: Path, ignore_patterns: List[str]) -> bool:
             if pattern in path_str:
                 return True
     return False
-
-
-def clean_for_markdown(line: str) -> str:
-    """Remove ANSI colors and simplify symbols for markdown."""
-    ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-    clean_line = ansi_escape.sub("", line)
-
-    replacements = {
-        "⚡": "→",
-        "🏛️": "◆",
-        "⚠️": "!",
-        "📏": "▸",
-        "[FUNC]": "**Function**:",
-        "[CLASS]": "**Class**:",
-        "├── ": "├─ ",
-        "└── ": "└─ ",
-        "│   ": "│ ",
-        "    ": "  ",
-    }
-
-    for old, new in replacements.items():
-        clean_line = clean_line.replace(old, new)
-
-    return clean_line.rstrip()
 
 
 def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]:
@@ -133,54 +105,6 @@ def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]
                 lines.append(f"{indent}  └─ ⚠️ {smell}")
 
     return lines
-
-
-def generate_markdown_report(
-    tree_str: List[str], dep_analyzer: ModuleDependencyAnalyzer
-) -> None:
-    """Generate a markdown report with tree structure and analysis results."""
-    docs_dir = Path("results")
-    docs_dir.mkdir(exist_ok=True)
-
-    tree_path = docs_dir / "tree.md"
-
-    with open(tree_path, "w", encoding="utf-8") as f:
-        f.write("# Project Analysis Report\n\n")
-
-        f.write("## Code Structure Visualization\n\n")
-        f.write(
-            "The following diagrams show the project structure from different perspectives:\n\n"
-        )
-        f.write("### Module Dependencies\n")
-        f.write("Overview of how modules are connected:\n\n")
-        f.write(dep_analyzer.generate_mermaid_graphs())
-
-        f.write("## Directory Structure\n\n")
-        f.write("```\n")
-        clean_result = "\n".join(clean_for_markdown(line) for line in tree_str)
-        f.write(clean_result)
-        f.write("\n```\n\n")
-
-        if dep_analyzer:
-            f.write("## Code Quality Metrics\n\n")
-            for module, metrics in sorted(dep_analyzer.module_metrics.items()):
-                f.write(f"### {module}\n")
-                f.write(f"- Functions: **{metrics['functions']}**\n")
-                f.write(f"- Classes: **{metrics['classes']}**\n")
-                f.write(f"- Complexity: **{metrics['complexity']}**\n\n")
-
-            f.write("## Complexity Hotspots\n\n")
-            if dep_analyzer.complex_functions:
-                for module, func, complexity in sorted(
-                    dep_analyzer.complex_functions, key=lambda x: x[2], reverse=True
-                ):
-                    f.write(f"### {func}\n")
-                    f.write(f"- **Module**: {module}\n")
-                    f.write(f"- **Complexity**: {complexity}\n\n")
-            else:
-                f.write("*No complex functions found.*\n\n")
-
-    print(f"\nReport generated: {tree_path}")
 
 
 def generate_tree(
@@ -252,8 +176,11 @@ def generate_tree(
     except Exception as e:
         tree_str.append(f"⚠️ Fatal error: {str(e)}")
 
-    if create_md:
-        generate_markdown_report(tree_str, dep_analyzer)
+    print("\n".join(tree_str))
+    print("\n")
+
+    if create_md and dep_analyzer:
+        dep_analyzer.generate_reports(tree_str)
 
     return "\n".join(tree_str)
 
@@ -272,9 +199,6 @@ def main():
             treeline --hide-structure     # Hide code structure
             treeline --no-params          # Hide function parameters
             treeline -h                   # Show this help message
-            treeline --diff               # Compare with previous commit
-            treeline --diff HASH          # Compare with specific commit
-            treeline --diff HASH1 HASH2   # Compare between two commits
         """,
     )
 
@@ -306,38 +230,9 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.diff is not None:
-        try:
-            from treeline.diff_visualizer import DiffVisualizer
-
-            visualizer = DiffVisualizer()
-
-            if len(args.diff) == 0:
-                diff_html = visualizer.generate_structural_diff("HEAD^", "HEAD")
-            elif len(args.diff) == 1:
-                diff_html = visualizer.generate_structural_diff(args.diff[0], "HEAD")
-            elif len(args.diff) == 2:
-                diff_html = visualizer.generate_structural_diff(
-                    args.diff[0], args.diff[1]
-                )
-            else:
-                print("Error: Too many commits specified")
-                return
-
-            output_path = "code_diff.html"
-            with open(output_path, "w") as f:
-                f.write(diff_html)
-            print(f"\nVisualization generated: {output_path}")
-            return
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return
-
-    print(
-        generate_tree(
-            args.directory,
-            create_md=args.markdown,
-            hide_structure=args.hide_structure,
-            show_params=not args.no_params,
-        )
+    generate_tree(
+        args.directory,
+        create_md=args.markdown,
+        hide_structure=args.hide_structure,
+        show_params=not args.no_params,
     )

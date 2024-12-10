@@ -1,7 +1,6 @@
 import sys
 
 from .core import generate_tree
-from .diff_visualizer import DiffVisualizer
 
 
 def __call__(*args, **kwargs):
@@ -11,7 +10,7 @@ def __call__(*args, **kwargs):
 sys.modules[__name__] = type(
     "TreeLine",
     (),
-    {"__call__": staticmethod(__call__), "DiffVisualizer": DiffVisualizer},
+    {"__call__": staticmethod(__call__)},
 )()
 
-__all__ = ["generate_tree", "DiffVisualizer"]
+__all__ = ["generate_tree"]
