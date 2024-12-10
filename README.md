@@ -59,7 +59,7 @@ treeline
 treeline /path/to/dir
 ```
 ```
-# Create markdown file (tree.md)
+# Create markdown file + report in html format (tree.md)
 treeline -m
 ```
 ```
@@ -70,29 +70,8 @@ treeline -i ".pyc,.git"
 # Show help message
 treeline -h
 ```
-#### Code analysis commands
-```
-# Generate code dependency visualization
-treeline --analyze
-```
-```
-# Create diff visualization between git commits
-treeline --diff HEAD^ HEAD
-```
-```
-# Show code metrics and complexity analysis
-treeline --metrics
-```
-```
-# Export analysis to HTML report
-treeline --report
-```
 
 #### Visualization Options
-```
-# Create diff visualization between git commits
-treeline --diff HEAD^ HEAD
-```
 ```
 # Hide all code structure details
 treeline --hide-structure
@@ -100,40 +79,6 @@ treeline --hide-structure
 ```
 # Hide function parameters
 treeline --no-params
-```
-```
-# Hide code relationships
-treeline --no-relationships
-```
-```
-# Show only specific types of relationships
-treeline --show-relationships "imports,calls"
-```
-```
-# Customize visualization layout
-treeline --layout "force-directed|radial"
-```
-```
-# Filter by module types
-treeline --show-types "module,class,function"
-```
-
-#### Analysis filters
-```
-# Show only files with complexity above threshold
-treeline --min-complexity 10
-```
-```
-# Filter by specific module patterns
-treeline --module-pattern "*/models/*"
-```
-```
-# Show only modified files (with git)
-treeline --show-modified
-```
-```
-# Focus on specific relationships
-treeline --focus "imports|calls|contains"
 ```
 
 ## Configuration

@@ -102,11 +102,8 @@ Treeline can also be used from the command line:
     # Basic analysis
     treeline /path/to/project
 
-    # Create markdown report
+    # Create markdown report + html reports
     treeline -m /path/to/project
-
-    # Compare with previous commit
-    treeline --diff
 
     # Hide function parameters
     treeline --no-params

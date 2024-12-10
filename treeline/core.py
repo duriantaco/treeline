@@ -1,16 +1,12 @@
 # treeline/treeline/core.py
 import argparse
-import os
 from pathlib import Path
 from typing import Dict, List
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
-from treeline.diff_visualizer import DiffVisualizer
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
 from treeline.models.core import CodeStructure, TreeOptions
 from treeline.type_checker import ValidationError
-
-visualizer = DiffVisualizer()
 
 
 def create_default_ignore():
@@ -203,9 +199,6 @@ def main():
             treeline --hide-structure     # Hide code structure
             treeline --no-params          # Hide function parameters
             treeline -h                   # Show this help message
-            treeline --diff               # Compare with previous commit
-            treeline --diff HASH          # Compare with specific commit
-            treeline --diff HASH1 HASH2   # Compare between two commits
         """,
     )
 
@@ -236,36 +229,6 @@ def main():
         help="Compare code structure between commits. Usage: --diff [before_commit] [after_commit]",
     )
     args = parser.parse_args()
-
-    if args.diff is not None:
-        try:
-            from treeline.diff_visualizer import DiffVisualizer
-
-            visualizer = DiffVisualizer()
-
-            if len(args.diff) == 0:
-                diff_html = visualizer.generate_structural_diff("HEAD^", "HEAD")
-            elif len(args.diff) == 1:
-                diff_html = visualizer.generate_structural_diff(args.diff[0], "HEAD")
-            elif len(args.diff) == 2:
-                diff_html = visualizer.generate_structural_diff(
-                    args.diff[0], args.diff[1]
-                )
-            else:
-                print("Error: Too many commits specified")
-                return
-
-            output_path = "code_diff.html"
-            with open(output_path, "w") as f:
-                f.write(diff_html)
-            html_path = os.path.abspath(output_path)
-            print(f"\nVisualization generated: {output_path}")
-            print(f"🔍 View the diff: file://{html_path}")
-            print("💡 Click the link above or copy the link into your browser\n")
-            return
-        except Exception as e:
-            print(f"Error: {str(e)}")
-            return
 
     generate_tree(
         args.directory,
