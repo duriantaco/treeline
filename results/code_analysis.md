@@ -1,10 +1,13 @@
 # Project Analysis Report
 
+[Open Interactive Code Visualization](./code_visualization.html)
+
 ## Code Structure Visualization
 
 The following diagrams show the project structure from different perspectives:
 
 ### Module Dependencies
+
 Overview of how modules are connected:
 
 ```mermaid
@@ -44,11 +47,11 @@ graph TD
     treeline_analyzer --> treeline_type_checker
     treeline_analyzer --> treeline_models_analyzer
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
-    treeline_core --> treeline_diff_visualizer
-    treeline_core --> treeline_enhanced_analyzer
-    treeline_core --> treeline_type_checker
     treeline_core --> treeline_dependency_analyzer
     treeline_core --> treeline_models_core
+    treeline_core --> treeline_diff_visualizer
+    treeline_core --> treeline_type_checker
+    treeline_core --> treeline_enhanced_analyzer
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
@@ -129,16 +132,12 @@ graph TD
         treeline_core_create_default_ignore["⚡ create_default_ignore"]:::fnNode
         treeline_core_read_ignore_patterns["⚡ read_ignore_patterns"]:::fnNode
         treeline_core_should_ignore["⚡ should_ignore"]:::fnNode
-        treeline_core_clean_for_markdown["⚡ clean_for_markdown"]:::fnNode
         treeline_core_format_structure["⚡ format_structure"]:::fnNode
-        treeline_core_generate_markdown_report["⚡ generate_markdown_report"]:::fnNode
         treeline_core_generate_tree["⚡ generate_tree"]:::fnNode
     end
 
     treeline_core_main -.->|calls| treeline_core_generate_tree
-    treeline_core_generate_markdown_report -.->|calls| treeline_core_clean_for_markdown
     treeline_core_generate_tree -.->|calls| treeline_core_read_ignore_patterns
-    treeline_core_generate_tree -.->|calls| treeline_core_generate_markdown_report
     treeline_core_generate_tree -.->|calls| treeline_core_should_ignore
     treeline_core_main -.->|calls| treeline_core_create_default_ignore
 ```
@@ -175,8 +174,10 @@ graph TD
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_mermaid_graphs
         treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_html_visualization["⚡ generate_html_visualization"]:::fnNode
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_html_visualization
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report["⚡ generate_summary_report"]:::fnNode
-        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_summary_report
+        treeline_dependency_analyzer_ModuleDependencyAnalyzer_clean_for_markdown["⚡ clean_for_markdown"]:::fnNode
+        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_clean_for_markdown
+        treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_reports["⚡ generate_reports"]:::fnNode
+        treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_reports
     end
 
 ```
@@ -411,6 +412,7 @@ graph TD
     end
 
 ```
+
 ## Directory Structure
 
 ```
@@ -544,7 +546,9 @@ graph TD
 │ ├─ tree.md
 │ └─ tut1.ipynb
 ├─ results
-│ └─ tree.md
+│ ├─ code_analysis.html
+│ ├─ code_analysis.md
+│ └─ code_visualization.html
 ├─ tests
 │ ├─ test_core.py
 │ │   **Class**: ◆ TestTreeGenerator
@@ -699,8 +703,6 @@ graph TD
 │ │   └─ # Check if path should be ignored based on patterns
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → clean_for_markdown
-│ │   └─ # Remove ANSI colors and simplify symbols for markdown.
 │ │   **Function**: → format_structure
 │ │   └─ # Format the analysis results into a readable tree structure.
 │ │    Args:
@@ -714,12 +716,10 @@ graph TD
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → generate_markdown_report
-│ │   └─ # Generate a markdown report with tree structure and analysis results.
 │ │   **Function**: → generate_tree
 │ │   └─ # Generate tree structure with code quality and security analysis.
-│ │   └─ ! High complexity (13)
-│ │   └─ ! Too long (80 lines)
+│ │   └─ ! High complexity (14)
+│ │   └─ ! Too long (76 lines)
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
@@ -727,7 +727,7 @@ graph TD
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → main
-│ │   └─ ! Too long (86 lines)
+│ │   └─ ! Too long (85 lines)
 │ │   └─ ! Deep nesting (depth 5)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! Excessive nesting depth (> 4)
@@ -741,12 +741,12 @@ graph TD
 │ │   **Class**: ◆ ModuleDependencyAnalyzer
 │ │   └─ # Analyzes module-level dependencies and generates summary reports.
 │ │   └─ ! High complexity (95)
-│ │   └─ ! Too long (916 lines)
+│ │   └─ ! Too long (1132 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
 │ │   **Function**: → __init__
-│ │   └─ ! Too long (391 lines)
+│ │   └─ ! Too long (415 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   **Function**: → analyze_directory
 │ │   └─ # Analyze all Python files in directory.
@@ -789,10 +789,12 @@ graph TD
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → generate_summary_report
-│ │   └─ # Generate a readable markdown report with a link to the interactive visualization.
-│ │   └─ ! High complexity (17)
-│ │   └─ ! Too long (115 lines)
+│ │   **Function**: → clean_for_markdown
+│ │   └─ # Remove ANSI colors and simplify symbols for markdown.
+│ │   **Function**: → generate_reports
+│ │   └─ # Generate comprehensive HTML and markdown reports of the code analysis.
+│ │   └─ ! High complexity (15)
+│ │   └─ ! Too long (284 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
@@ -985,156 +987,3 @@ graph TD
 ├─ setup.py
 └─ tox.ini
 ```
-
-## Code Quality Metrics
-
-### docs.conf
-- Functions: **0**
-- Classes: **0**
-- Complexity: **0**
-
-### example.sample
-- Functions: **4**
-- Classes: **1**
-- Complexity: **4**
-
-### setup
-- Functions: **0**
-- Classes: **0**
-- Complexity: **0**
-
-### tests.test_core
-- Functions: **4**
-- Classes: **1**
-- Complexity: **5**
-
-### tests.test_empty_dir
-- Functions: **3**
-- Classes: **1**
-- Complexity: **4**
-
-### tests.test_nested_dir
-- Functions: **3**
-- Classes: **1**
-- Complexity: **4**
-
-### tests.test_special_char
-- Functions: **3**
-- Classes: **1**
-- Complexity: **4**
-
-### tests.test_treeline
-- Functions: **3**
-- Classes: **1**
-- Complexity: **3**
-
-### treeline.__init__
-- Functions: **1**
-- Classes: **0**
-- Complexity: **1**
-
-### treeline.__main__
-- Functions: **0**
-- Classes: **0**
-- Complexity: **0**
-
-### treeline.analyzer
-- Functions: **6**
-- Classes: **1**
-- Complexity: **34**
-
-### treeline.core
-- Functions: **9**
-- Classes: **0**
-- Complexity: **61**
-
-### treeline.dependency_analyzer
-- Functions: **11**
-- Classes: **1**
-- Complexity: **95**
-
-### treeline.diff_visualizer
-- Functions: **14**
-- Classes: **1**
-- Complexity: **35**
-
-### treeline.enhanced_analyzer
-- Functions: **31**
-- Classes: **1**
-- Complexity: **123**
-
-### treeline.models.__init__
-- Functions: **0**
-- Classes: **0**
-- Complexity: **0**
-
-### treeline.models.analyzer
-- Functions: **0**
-- Classes: **5**
-- Complexity: **0**
-
-### treeline.models.core
-- Functions: **0**
-- Classes: **3**
-- Complexity: **0**
-
-### treeline.models.dependency_analyzer
-- Functions: **0**
-- Classes: **10**
-- Complexity: **0**
-
-### treeline.models.enhanced_analyzer
-- Functions: **0**
-- Classes: **4**
-- Complexity: **0**
-
-### treeline.type_checker
-- Functions: **2**
-- Classes: **3**
-- Complexity: **25**
-
-## Complexity Hotspots
-
-### validate
-- **Module**: treeline.type_checker
-- **Complexity**: 22
-
-### generate_html_visualization
-- **Module**: treeline.dependency_analyzer
-- **Complexity**: 18
-
-### generate_module_detail_diagram
-- **Module**: treeline.dependency_analyzer
-- **Complexity**: 17
-
-### generate_summary_report
-- **Module**: treeline.dependency_analyzer
-- **Complexity**: 17
-
-### _analyze_module
-- **Module**: treeline.dependency_analyzer
-- **Complexity**: 15
-
-### format_structure
-- **Module**: treeline.enhanced_analyzer
-- **Complexity**: 15
-
-### _analyze_file_metrics
-- **Module**: treeline.enhanced_analyzer
-- **Complexity**: 13
-
-### format_structure
-- **Module**: treeline.core
-- **Complexity**: 13
-
-### generate_tree
-- **Module**: treeline.core
-- **Complexity**: 13
-
-### generate_structural_diff
-- **Module**: treeline.diff_visualizer
-- **Complexity**: 12
-
-### analyze_file
-- **Module**: treeline.analyzer
-- **Complexity**: 12

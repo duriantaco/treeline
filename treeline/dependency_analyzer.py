@@ -1,7 +1,10 @@
 import ast
 import json
+import os
+import re
 from collections import defaultdict
 from pathlib import Path
+from typing import List
 
 from treeline.models.dependency_analyzer import (
     ComplexFunction,
@@ -24,6 +27,30 @@ class ModuleDependencyAnalyzer:
         self.function_locations = defaultdict(dict)
         self.function_calls = defaultdict(list)
         self.class_info = defaultdict(dict)
+
+        self.QUALITY_METRICS = {
+            "MAX_LINE_LENGTH": 100,
+            "MAX_DOC_LENGTH": 80,
+            "MAX_CYCLOMATIC_COMPLEXITY": 10,
+            "MAX_COGNITIVE_COMPLEXITY": 15,
+            "MAX_NESTED_DEPTH": 4,
+            "MAX_FUNCTION_LINES": 50,
+            "MAX_PARAMS": 5,
+            "MAX_RETURNS": 4,
+            "MAX_ARGUMENTS_PER_LINE": 5,
+            "MIN_MAINTAINABILITY_INDEX": 20,
+            "MAX_FUNC_COGNITIVE_LOAD": 15,
+            "MIN_PUBLIC_METHODS": 1,
+            "MAX_IMPORT_STATEMENTS": 15,
+            "MAX_MODULE_DEPENDENCIES": 10,
+            "MAX_INHERITANCE_DEPTH": 3,
+            "MAX_DUPLICATED_LINES": 6,
+            "MAX_DUPLICATED_BLOCKS": 2,
+            "MAX_CLASS_LINES": 300,
+            "MAX_METHODS_PER_CLASS": 20,
+            "MAX_CLASS_COMPLEXITY": 50,
+        }
+
         self.html_template = """
         <!DOCTYPE html>
         <html>
@@ -807,126 +834,339 @@ class ModuleDependencyAnalyzer:
 
         json_data = json.dumps(graph_data)
 
-        print("Number of nodes:", len(nodes))
-        print("Sample nodes:", nodes[:3] if nodes else "No nodes")
-        print("Number of links:", len(links))
-        print("Sample links:", links[:3] if links else "No links")
-        print("Graph data:", json_data[:200] if json_data else "No data")
+        # print("Number of nodes:", len(nodes))
+        # print("Sample nodes:", nodes[:3] if nodes else "No nodes")
+        # print("Number of links:", len(links))
+        # print("Sample links:", links[:3] if links else "No links")
+        # print("Graph data:", json_data[:200] if json_data else "No data")
 
         return self.html_template.replace("GRAPH_DATA_PLACEHOLDER", json_data)
 
-    def generate_summary_report(self) -> str:
-        """Generate a readable markdown report with a link to the interactive visualization."""
-        html_content = self.generate_html_visualization()
-        viz_path = "code_visualization.html"
+    def clean_for_markdown(self, line: str) -> str:
+        """Remove ANSI colors and simplify symbols for markdown."""
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        clean_line = ansi_escape.sub("", line)
 
+        replacements = {
+            "⚡": "→",
+            "🏛️": "◆",
+            "⚠️": "!",
+            "📏": "▸",
+            "[FUNC]": "**Function**:",
+            "[CLASS]": "**Class**:",
+            "├── ": "├─ ",
+            "└── ": "└─ ",
+            "│   ": "│ ",
+            "    ": "  ",
+        }
+
+        for old, new in replacements.items():
+            clean_line = clean_line.replace(old, new)
+
+        return clean_line.rstrip()
+
+    def generate_reports(self, tree_str: List[str]) -> None:
+        """Generate comprehensive HTML and markdown reports of the code analysis."""
+        results_dir = Path("results")
+        results_dir.mkdir(exist_ok=True)
+
+        html_viz = self.generate_html_visualization()
+        viz_path = results_dir / "code_visualization.html"
         with open(viz_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
+            f.write(html_viz)
 
-        lines = ["# Code Analysis Summary Report\n"]
+        md_content = []
+        md_content.append("# Project Analysis Report\n")
 
-        lines.append(
-            f"[Click here to open Interactive Code Visualization](./{viz_path})\n"
+        md_content.append(
+            "[Open Interactive Code Visualization](./code_visualization.html)\n"
         )
 
-        lines.append("## Module Metrics\n")
-        for module, metrics in sorted(self.module_metrics.items()):
-            lines.append(f"### {module}")
-            lines.append(f"- Functions: **{metrics['functions']}**")
-            lines.append(f"- Classes: **{metrics['classes']}**")
+        md_content.append("## Code Structure Visualization\n")
+        md_content.append(
+            "The following diagrams show the project structure from different perspectives:\n"
+        )
+        md_content.append("### Module Dependencies\n")
+        md_content.append("Overview of how modules are connected:\n")
 
+        mermaid_content = self.generate_mermaid_graphs()
+        md_content.append(mermaid_content)
+
+        md_content.append("## Directory Structure\n")
+        md_content.append("```")
+        md_content.append("\n".join(self.clean_for_markdown(line) for line in tree_str))
+        md_content.append("```\n")
+
+        metrics_content = []
+        for module, metrics in sorted(self.module_metrics.items()):
+            # Start with clear module header
+            metrics_content.append(f"\n{'=' * 50}")
+            metrics_content.append(f"MODULE: {module}")
+            metrics_content.append(f"{'=' * 50}")
+
+            # Show basic metrics with clear labels
+            metrics_content.append("SUMMARY:")
+            metrics_content.append(f"  Functions: {metrics['functions']}")
+            metrics_content.append(f"  Classes: {metrics['classes']}")
+
+            # Show complexity with warning if needed
             complexity_str = str(metrics["complexity"])
             if (
                 metrics["complexity"]
                 > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]
             ):
-                complexity_str = f"<span style='color: red'>{complexity_str}</span>"
-            lines.append(f"- Complexity: **{complexity_str}**")
+                complexity_str = f"WARNING - High Complexity: {complexity_str}"
+            metrics_content.append(f"  Complexity: {complexity_str}")
 
+            # Show class information in a clearer hierarchy
             if module in self.class_info:
-                lines.append("\nClasses:")
+                metrics_content.append("\nCLASSES:")
                 for class_name, info in self.class_info[module].items():
-                    lines.append(f"\n#### 📦 {class_name}")
-                    lines.append(f"- Defined at line {info['line']}")
+                    metrics_content.append(f"\n  CLASS: {class_name}")
+                    metrics_content.append(f"  Location: Line {info['line']}")
+
                     if info["methods"]:
-                        lines.append("- Methods:")
+                        metrics_content.append("  Methods:")
                         for method_name, method_info in info["methods"].items():
-                            lines.append(
-                                f"  - ⚡ {method_name} (line {method_info['line']})"
+                            metrics_content.append(
+                                f"    • {method_name} (Line {method_info['line']})"
                             )
                             if method_info["calls"]:
-                                lines.append(
-                                    f"    Calls: {', '.join(method_info['calls'])}"
+                                metrics_content.append(
+                                    f"      Calls: {', '.join(method_info['calls'])}"
                                 )
 
-            functions_in_module = [
-                f
-                for f, loc in self.function_locations.items()
-                if loc["module"] == module and "in_class" not in loc
-            ]
-            if functions_in_module:
-                lines.append("\nFunctions:")
-                for func in functions_in_module:
-                    lines.append(f"\n#### ⚡ {func}")
-                    if func in self.function_calls:
-                        lines.append("Called by:")
-                        for call in self.function_calls[func]:
-                            lines.append(
-                                f"- {call['from_function']} in {call['from_module']} (line {call['line']})"
-                            )
+            metrics_content.append("")
 
-            lines.append("")
+        md_path = results_dir / "code_analysis.md"
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(md_content))
 
-        lines.append("## Complexity Hotspots\n")
-        if self.complex_functions:
-            sorted_hotspots = sorted(
-                self.complex_functions, key=lambda x: x[2], reverse=True
+        html_template = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Code Analysis Report</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                    line-height: 1.6;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    color: #333;
+                    background: #f8f9fa;
+                }
+                h1 { color: #2563eb; margin-bottom: 30px; }
+                h2 { color: #1d4ed8; margin-top: 40px; }
+                h3 { color: #1e40af; }
+                h4 { color: #1e3a8a; }
+
+                pre {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 8px;
+                    overflow-x: auto;
+                }
+
+                .tree-view {
+                    font-family: monospace;
+                    white-space: pre;
+                }
+
+                .mermaid {
+                    margin: 20px 0;
+                    padding: 20px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
+                .warning { color: #dc2626; }
+
+                a.viz-link {
+                    display: inline-block;
+                    margin: 20px 0;
+                    padding: 10px 20px;
+                    background: #2563eb;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 6px;
+                }
+
+                a.viz-link:hover {
+                    background: #1d4ed8;
+                }
+            </style>
+        </head>
+        <body>
+            <script>
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: 'default',
+                    securityLevel: 'loose',
+                    flowchart: {
+                        curve: 'basis',
+                        padding: 20
+                    }
+                });
+            </script>
+            REPORT_CONTENT
+        </body>
+        </html>
+        """
+
+        metrics_html = """
+        <div class="metrics-section">
+            <div class="module-grid">
+                {modules}
+            </div>
+        </div>
+        """
+
+        modules_html = []
+        for module, metrics in sorted(self.module_metrics.items()):
+            complexity_class = (
+                "warning"
+                if metrics["complexity"]
+                > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]
+                else ""
             )
-            for module, func, complexity in sorted_hotspots:
-                lines.append(f"### {func}")
-                lines.append(f"- **Module**: {module}")
-                complexity_str = str(complexity)
-                if complexity > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]:
-                    complexity_str = f"<span style='color: red'>{complexity_str}</span>"
-                lines.append(f"- **Complexity**: {complexity_str}")
-                lines.append("")
-        else:
-            lines.append("*No complex functions found.*\n")
 
-        lines.append("## Appendix: Code Quality Metrics\n")
-        lines.append(
-            "These metrics represent the target thresholds for maintaining code quality. "
-            "Values exceeding these thresholds are highlighted in red in the report above.\n"
+            module_html = f"""
+                <div class="module-card">
+                    <div class="module-name">{module}</div>
+                    <div class="module-stats">
+                        <div class="stat">Functions: {metrics['functions']}</div>
+                        <div class="stat">Classes: {metrics['classes']}</div>
+                        <div class="stat {complexity_class}">Complexity: {metrics['complexity']}</div>
+                    </div>
+            """
+
+            if module in self.class_info:
+                module_html += '<div class="classes-section">'
+                for class_name, info in self.class_info[module].items():
+                    module_html += f"""
+                        <div class="class-item">
+                            <div class="class-name">{class_name}</div>
+                            <div class="class-location">Line {info['line']}</div>
+                    """
+
+                    if info["methods"]:
+                        module_html += '<div class="methods-list">'
+                        for method_name, method_info in info["methods"].items():
+                            method_html = f'<div class="method-item">{method_name} (Line {method_info["line"]})'
+                            if method_info["calls"]:
+                                method_html += f'<div class="method-calls">Calls: {", ".join(method_info["calls"])}</div>'
+                            method_html += "</div>"
+                            module_html += method_html
+                        module_html += "</div>"
+
+                    module_html += "</div>"
+                module_html += "</div>"
+
+            module_html += "</div>"
+            modules_html.append(module_html)
+
+        additional_styles = """
+            .metrics-section {
+                margin: 2rem 0;
+            }
+            .module-grid {
+                display: grid;
+                gap: 1.5rem;
+            }
+            .module-card {
+                background: white;
+                border-radius: 8px;
+                padding: 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+            .module-name {
+                font-size: 1.2rem;
+                font-weight: 600;
+                color: #2563eb;
+                margin-bottom: 1rem;
+                padding-bottom: 0.5rem;
+                border-bottom: 2px solid #e5e7eb;
+            }
+            .module-stats {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+                gap: 1rem;
+                margin-bottom: 1rem;
+            }
+            .stat {
+                font-size: 0.9rem;
+                color: #374151;
+            }
+            .warning {
+                color: #dc2626;
+                font-weight: 500;
+            }
+            .classes-section {
+                border-top: 1px solid #e5e7eb;
+                padding-top: 1rem;
+            }
+            .class-item {
+                margin-bottom: 1.5rem;
+            }
+            .class-name {
+                font-weight: 600;
+                color: #1e40af;
+            }
+            .class-location {
+                font-size: 0.85rem;
+                color: #6b7280;
+                margin-bottom: 0.5rem;
+            }
+            .methods-list {
+                margin-left: 1.5rem;
+            }
+            .method-item {
+                margin: 0.5rem 0;
+                font-size: 0.9rem;
+            }
+            .method-calls {
+                margin-left: 1rem;
+                font-size: 0.85rem;
+                color: #6b7280;
+            }
+        """
+
+        html_template = html_template.replace(
+            "</style>", f"{additional_styles}</style>"
         )
 
-        lines.append("| Metric | Target Threshold | Description |")
-        lines.append("|--------|-----------------|-------------|")
+        final_metrics_html = metrics_html.format(modules="\n".join(modules_html))
 
-        metric_descriptions = {
-            "MAX_LINE_LENGTH": "Maximum characters per line",
-            "MAX_DOC_LENGTH": "Maximum characters per documentation line",
-            "MAX_CYCLOMATIC_COMPLEXITY": "Maximum cyclomatic complexity per function",
-            "MAX_COGNITIVE_COMPLEXITY": "Maximum cognitive complexity per function",
-            "MAX_NESTED_DEPTH": "Maximum nested block depth",
-            "MAX_FUNCTION_LINES": "Maximum lines per function",
-            "MAX_PARAMS": "Maximum parameters per function",
-            "MAX_RETURNS": "Maximum return statements per function",
-            "MAX_ARGUMENTS_PER_LINE": "Maximum arguments per line in function calls",
-            "MIN_MAINTAINABILITY_INDEX": "Minimum maintainability index",
-            "MAX_FUNC_COGNITIVE_LOAD": "Maximum cognitive load per function",
-            "MIN_PUBLIC_METHODS": "Minimum public methods per class",
-            "MAX_IMPORT_STATEMENTS": "Maximum import statements per module",
-            "MAX_MODULE_DEPENDENCIES": "Maximum module dependencies",
-            "MAX_INHERITANCE_DEPTH": "Maximum inheritance depth",
-            "MAX_DUPLICATED_LINES": "Maximum consecutive duplicated lines",
-            "MAX_DUPLICATED_BLOCKS": "Maximum duplicated code blocks",
-            "MAX_CLASS_LINES": "Maximum lines per class",
-            "MAX_METHODS_PER_CLASS": "Maximum methods per class",
-            "MAX_CLASS_COMPLEXITY": "Maximum complexity per class",
-        }
+        html_content = []
+        html_content.append("<h1>Code Analysis Report</h1>")
+        html_content.append(
+            '<a href="./code_visualization.html" class="viz-link">Open Interactive Code Visualization</a>'
+        )
 
-        for metric, value in self.QUALITY_METRICS.items():
-            description = metric_descriptions.get(metric, "")
-            lines.append(f"| {metric} | {value} | {description} |")
+        mermaid_sections = mermaid_content.split("```mermaid")
+        for section in mermaid_sections[1:]:
+            diagram = section.split("```")[0]
+            html_content.append(f'<div class="mermaid">{diagram}</div>')
 
-        return "\n".join(lines)
+        html_content.append("<h2>Directory Structure</h2>")
+        html_content.append('<pre class="tree-view">')
+        html_content.append(
+            "\n".join(self.clean_for_markdown(line) for line in tree_str)
+        )
+        html_content.append("</pre>")
+
+        html_content.append(final_metrics_html)
+
+        html_path = results_dir / "code_analysis.html"
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html_template.replace("REPORT_CONTENT", "\n".join(html_content)))
+
+        print("\n✨ Reports generated successfully!")
+        print(f"🔍 Interactive visualization: file://{os.path.abspath(viz_path)}")
+        print(f"📊 Analysis report (MD): file://{os.path.abspath(md_path)}")
+        print(f"📈 Analysis report (HTML): file://{os.path.abspath(html_path)}")
+        print("💡 Click the links or copy them into your browser\n")
