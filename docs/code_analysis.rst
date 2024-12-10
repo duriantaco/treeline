@@ -1,10 +1,14 @@
+.. _code-analysis:
+
 Code Analysis Guide
-================
+====================
 
 This guide explains how to use Treeline's code analysis features to understand your Python codebase's structure and relationships.
 
+.. _code-analysis-basics:
+
 Basic Analysis
-------------
+---------------
 
 The core of Treeline's analysis starts with the ``generate_tree`` function:
 
@@ -18,8 +22,10 @@ The core of Treeline's analysis starts with the ``generate_tree`` function:
         show_relationships=True
     )
 
+.. _code-analysis-understanding-output:
+
 Understanding Output
------------------
+---------------------
 
 Treeline's output uses specific symbols to represent different code elements:
 
@@ -38,11 +44,15 @@ Example output::
     │   │   └─ # Calculates something
     │   └── ⚠️ High complexity (15)
 
+.. _code-analysis-detailed-features:
+
 Detailed Analysis Features
------------------------
+---------------------------
+
+.. _code-analysis-function-analysis:
 
 Function Analysis
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Treeline analyzes functions for:
 
@@ -64,8 +74,10 @@ Treeline analyzes functions for:
             print(f"Function: {item['name']}")
             print(f"Metrics: {item['metrics']}")
 
+.. _code-analysis-class-analysis:
+
 Class Analysis
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 Class analysis includes:
 
@@ -85,8 +97,10 @@ Example of class analysis:
             print(f"Methods: {item['metrics']['method_count']}")
             print(f"Complexity: {item['metrics']['complexity']}")
 
+.. _code-analysis-relationship-analysis:
+
 Relationship Analysis
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 Track how code elements interact:
 
@@ -106,8 +120,10 @@ Track how code elements interact:
     function_calls = dep_analyzer.function_calls
     class_relationships = dep_analyzer.class_info
 
+.. _code-analysis-configuration:
+
 Configuration Options
-------------------
+----------------------
 
 Key analysis options:
 
@@ -121,8 +137,10 @@ Key analysis options:
         show_relationships=True   # Show relationships
     )
 
+.. _code-analysis-ignoring-files:
+
 Ignoring Files
-------------
+---------------
 
 Use ``.treeline-ignore`` to exclude files:
 
@@ -136,11 +154,15 @@ Use ``.treeline-ignore`` to exclude files:
     .DS_Store
     node_modules/
 
+.. _code-analysis-results:
+
 Analysis Results
---------------
+-----------------
+
+.. _code-analysis-working-with-results:
 
 Working with Analysis Results
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Results are returned as structured data:
 
@@ -161,8 +183,10 @@ Results are returned as structured data:
         "code_smells": []
     }
 
+.. _code-analysis-large-codebases:
+
 Handling Large Codebases
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For large projects:
 
@@ -186,8 +210,10 @@ For large projects:
 
 3. Use ignore patterns effectively
 
+.. _code-analysis-best-practices:
+
 Best Practices
-------------
+---------------
 
 1. Regular Analysis
    - Run analysis regularly during development
@@ -204,8 +230,10 @@ Best Practices
    - Track documentation coverage
    - Update docs based on relationships
 
+.. _code-analysis-common-issues:
+
 Common Issues
------------
+--------------
 
 1. Performance
    - Limit analysis scope for large projects
@@ -222,9 +250,11 @@ Common Issues
    - Integrate with IDE tools
    - Automate in build process
 
-Next Steps
----------
+.. _code-analysis-next-steps:
 
-- Learn about :ref:`quality metrics <quality_metrics>`
-- Explore :ref:`visualization options <visualization>`
-- Configure :ref:`custom rules <configuration>`
+Next Steps
+-----------
+
+- Learn about :ref:`quality_metrics <user_guide:quality-metrics>`
+- Explore :ref:`visualization <visualization:visualization>`
+- Configure :ref:`custom rules <user_guide:configuration>`

@@ -1,3 +1,56 @@
-__pycache__
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
 *.egg-info/
-*.egg-info/*
+.installed.cfg
+*.egg
+
+# venv
+venv/
+ENV/
+env/
+.env/
+
+# testing
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+
+# Sphinx documentation
+docs/_build/
+docs/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# treeline specific
+.treeline-ignore
+output/
+*.html
+!docs/**/*.html

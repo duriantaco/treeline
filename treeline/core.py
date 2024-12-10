@@ -139,7 +139,7 @@ def generate_markdown_report(
     tree_str: List[str], dep_analyzer: ModuleDependencyAnalyzer
 ) -> None:
     """Generate a markdown report with tree structure and analysis results."""
-    docs_dir = Path("docs")
+    docs_dir = Path("results")
     docs_dir.mkdir(exist_ok=True)
 
     tree_path = docs_dir / "tree.md"

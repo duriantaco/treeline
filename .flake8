@@ -1,9 +1,0 @@
-[flake8]
-max-line-length = 150
-extend-ignore = E266
-per-file-ignores =
-    # ignoring line length in dependency_analyzer.py and security analyzer cos it has complex string formatting
-    treeline/dependency_analyzer.py:E501
-    treeline/security_analyzer.py:E501
-    treeline/enhanced_analyzer.py:E501
-    treeline/dependency_analyzer.py:E501

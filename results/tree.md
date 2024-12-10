@@ -14,6 +14,7 @@ graph TD
     classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px
 
     setup["setup"]:::modNode
+    source_conf["source.conf"]:::modNode
     tests_test_special_char["tests.test_special_char"]:::modNode
     tests_test_empty_dir["tests.test_empty_dir"]:::modNode
     tests_test_core["tests.test_core"]:::modNode
@@ -40,14 +41,14 @@ graph TD
     treeline_diff_visualizer --> treeline_dependency_analyzer
     treeline_diff_visualizer --> treeline_models_dependency_analyzer
     treeline_dependency_analyzer --> treeline_models_dependency_analyzer
-    treeline_analyzer --> treeline_type_checker
     treeline_analyzer --> treeline_models_analyzer
+    treeline_analyzer --> treeline_type_checker
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
+    treeline_core --> treeline_models_core
     treeline_core --> treeline_type_checker
     treeline_core --> treeline_dependency_analyzer
-    treeline_core --> treeline_enhanced_analyzer
     treeline_core --> treeline_diff_visualizer
-    treeline_core --> treeline_models_core
+    treeline_core --> treeline_enhanced_analyzer
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
@@ -124,6 +125,7 @@ graph TD
 
     subgraph treeline_core["treeline.core"]
         direction TB
+        treeline_core_main["⚡ main"]:::fnNode
         treeline_core_create_default_ignore["⚡ create_default_ignore"]:::fnNode
         treeline_core_read_ignore_patterns["⚡ read_ignore_patterns"]:::fnNode
         treeline_core_should_ignore["⚡ should_ignore"]:::fnNode
@@ -131,7 +133,6 @@ graph TD
         treeline_core_format_structure["⚡ format_structure"]:::fnNode
         treeline_core_generate_markdown_report["⚡ generate_markdown_report"]:::fnNode
         treeline_core_generate_tree["⚡ generate_tree"]:::fnNode
-        treeline_core_main["⚡ main"]:::fnNode
     end
 
     treeline_core_main -.->|calls| treeline_core_generate_tree
@@ -414,16 +415,37 @@ graph TD
 
 ```
 
+├─ assets
+│ ├─ output.gif
+│ ├─ screenshot1.png
+│ └─ Treeline.png
 ├─ docs
 │ ├─ code_visualization.html
 │ ├─ index.html
 │ └─ tree.md
 ├─ example
+│ ├─ code_diff.html
+│ ├─ dependencies.html
+│ ├─ sample.py
+│ │   **Class**: ◆ Calculator
+│ │   └─ # A simple calculator class.
+│ │   **Function**: → main
+│ │   **Function**: → __init__
+│ │   **Function**: → add
+│ │   └─ # Add two numbers.
+│ │   **Function**: → multiply
+│ │   └─ # Multiply two numbers.
 │ ├─ tree.md
 │ └─ tut1.ipynb
 ├─ source
+│ ├─ code_analysis.rst
 │ ├─ conf.py
-│ └─ index.rst
+│ ├─ git_integration.rst
+│ ├─ index.rst
+│ ├─ installation.rst
+│ ├─ quickstart.rst
+│ ├─ user_guide.rst
+│ └─ visualization.rst
 ├─ tests
 │ ├─ test_core.py
 │ │   **Class**: ◆ TestTreeGenerator
@@ -681,8 +703,8 @@ graph TD
 │ ├─ diff_visualizer.py
 │ │   **Class**: ◆ DiffVisualizer
 │ │   └─ # Visualizes structural differences between different versions of Python code.
-│ │   └─ ! High complexity (32)
-│ │   └─ ! Too long (266 lines)
+│ │   └─ ! High complexity (35)
+│ │   └─ ! Too long (444 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   **Function**: → __init__
@@ -706,8 +728,10 @@ graph TD
 │ │   └─ # Compute the differences between two dependency graphs
 │ │   **Function**: → generate_structural_diff
 │ │   └─ # Generate a visual diff between two commits
-│ │   └─ ! Too long (101 lines)
+│ │   └─ ! High complexity (12)
+│ │   └─ ! Too long (274 lines)
 │ │   └─ ! Function exceeds 50 lines
+│ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → node_key
 │ │   **Function**: → link_key
@@ -862,6 +886,11 @@ graph TD
 
 ## Code Quality Metrics
 
+### example.sample
+- Functions: **4**
+- Classes: **1**
+- Complexity: **4**
+
 ### setup
 - Functions: **0**
 - Classes: **0**
@@ -925,7 +954,7 @@ graph TD
 ### treeline.diff_visualizer
 - Functions: **14**
 - Classes: **1**
-- Complexity: **32**
+- Complexity: **35**
 
 ### treeline.enhanced_analyzer
 - Functions: **31**
@@ -999,6 +1028,10 @@ graph TD
 ### generate_tree
 - **Module**: treeline.core
 - **Complexity**: 13
+
+### generate_structural_diff
+- **Module**: treeline.diff_visualizer
+- **Complexity**: 12
 
 ### analyze_file
 - **Module**: treeline.analyzer
