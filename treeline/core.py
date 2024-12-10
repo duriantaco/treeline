@@ -1,5 +1,6 @@
 # treeline/treeline/core.py
 import argparse
+import os
 import re
 from pathlib import Path
 from typing import Dict, List
@@ -254,6 +255,13 @@ def generate_tree(
 
     if create_md:
         generate_markdown_report(tree_str, dep_analyzer)
+        markdown_path = os.path.abspath("results/tree.md")
+        html_path = os.path.abspath("code_diff.html")
+
+        print("\n✨ Reports generated successfully!")
+        print(f"📊 Markdown report: file://{markdown_path}")
+        print(f"🔍 HTML visualization: file://{html_path}")
+        print("💡 Click the links or copy the link into your browser\n")
 
     return "\n".join(tree_str)
 
@@ -327,7 +335,10 @@ def main():
             output_path = "code_diff.html"
             with open(output_path, "w") as f:
                 f.write(diff_html)
+            html_path = os.path.abspath(output_path)
             print(f"\nVisualization generated: {output_path}")
+            print(f"🔍 View the diff: file://{html_path}")
+            print("💡 Click the link above or copy the link into your browser\n")
             return
         except Exception as e:
             print(f"Error: {str(e)}")
