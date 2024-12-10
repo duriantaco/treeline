@@ -52,14 +52,22 @@ class MethodInfo(TypeChecked):
 
 
 @dataclass
-class Node(TypeChecked):
+class Node:
     id: int
     name: str
     type: str
+    metrics: dict = None
+    code_smells: list = None
+
+    def __post_init__(self):
+        if self.metrics is None:
+            self.metrics = {}
+        if self.code_smells is None:
+            self.code_smells = []
 
 
 @dataclass
-class Link(TypeChecked):
+class Link:
     source: int
     target: int
     type: str

@@ -1,7 +1,10 @@
 import ast
 import json
+import os
+import re
 from collections import defaultdict
 from pathlib import Path
+from typing import List
 
 from treeline.models.dependency_analyzer import (
     ComplexFunction,
@@ -24,6 +27,42 @@ class ModuleDependencyAnalyzer:
         self.function_locations = defaultdict(dict)
         self.function_calls = defaultdict(list)
         self.class_info = defaultdict(dict)
+        self.call_graph = defaultdict(
+            lambda: {
+                "callers": defaultdict(int),
+                "callees": defaultdict(int),
+                "module": "",
+                "total_calls": 0,
+                "entry_point": False,
+                "terminal": False,
+                "recursive": False,
+                "call_depth": 0,
+            }
+        )
+
+        self.QUALITY_METRICS = {
+            "MAX_LINE_LENGTH": 100,
+            "MAX_DOC_LENGTH": 80,
+            "MAX_CYCLOMATIC_COMPLEXITY": 10,
+            "MAX_COGNITIVE_COMPLEXITY": 15,
+            "MAX_NESTED_DEPTH": 4,
+            "MAX_FUNCTION_LINES": 50,
+            "MAX_PARAMS": 5,
+            "MAX_RETURNS": 4,
+            "MAX_ARGUMENTS_PER_LINE": 5,
+            "MIN_MAINTAINABILITY_INDEX": 20,
+            "MAX_FUNC_COGNITIVE_LOAD": 15,
+            "MIN_PUBLIC_METHODS": 1,
+            "MAX_IMPORT_STATEMENTS": 15,
+            "MAX_MODULE_DEPENDENCIES": 10,
+            "MAX_INHERITANCE_DEPTH": 3,
+            "MAX_DUPLICATED_LINES": 6,
+            "MAX_DUPLICATED_BLOCKS": 2,
+            "MAX_CLASS_LINES": 300,
+            "MAX_METHODS_PER_CLASS": 20,
+            "MAX_CLASS_COMPLEXITY": 50,
+        }
+
         self.html_template = """
         <!DOCTYPE html>
         <html>
@@ -253,6 +292,23 @@ class ModuleDependencyAnalyzer:
 
                 node.append("circle")
                     .attr("r", d => getNodeSize(d))
+                    .style("fill", d => {
+                        if (d.metrics && (
+                            d.metrics.complexity > 10 ||
+                            d.metrics.cognitive_complexity > 15 ||
+                            (d.type === 'class' && d.metrics.complexity > 50)
+                        )) {
+                            return "#ef4444"; // Red fill for complex nodes
+                        }
+                        return "#fff";
+                    })
+                    .style("stroke", d => {
+                        if (d.type === 'module') return "#0284c7";
+                        if (d.type === 'class') return "#0891b2";
+                        return "#0d9488";
+                    })
+                    .style("stroke-width", "2px");
+
 
                 node.append("text")
                     .attr("dy", ".35em")
@@ -260,7 +316,6 @@ class ModuleDependencyAnalyzer:
                     .text(d => d.name)
                     .style("fill", "#333");
 
-                // Add hover effects
                 node.on("mouseover", function(event, d) {
                     tooltip.transition()
                         .duration(200)
@@ -270,9 +325,39 @@ class ModuleDependencyAnalyzer:
                         l.source.id === d.id || l.target.id === d.id
                     );
 
-                    let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br><br>`;
+                    let tooltipContent = `<strong>${d.name}</strong><br>Type: ${d.type}<br>`;
+
+                    // Add metrics section
+                    if (d.metrics) {
+                        tooltipContent += '<br><strong>Metrics:</strong><br>';
+                        for (let [key, value] of Object.entries(d.metrics)) {
+                            if (key === 'complexity') {
+                                tooltipContent += `Cyclomatic Complexity: ${value}`;
+                                if (value > 10) tooltipContent += ' ⚠️';
+                                tooltipContent += '<br>';
+                            }
+                            else if (key === 'cognitive_complexity') {
+                                tooltipContent += `Cognitive Complexity: ${value}`;
+                                if (value > 15) tooltipContent += ' ⚠️';
+                                tooltipContent += '<br>';
+                            }
+                            else if (key === 'lines') {
+                                tooltipContent += `Lines: ${value}<br>`;
+                            }
+                        }
+                    }
+
+                    // Add code smells section
+                    if (d.code_smells && d.code_smells.length > 0) {
+                        tooltipContent += '<br><strong>Issues:</strong><br>';
+                        d.code_smells.forEach(smell => {
+                            tooltipContent += `• ${smell}<br>`;
+                        });
+                    }
+
+                    // Add connections section
                     if (connections.length > 0) {
-                        tooltipContent += "Connections:<br>";
+                        tooltipContent += '<br><strong>Connections:</strong><br>';
                         connections.forEach(c => {
                             if (c.source.id === d.id) {
                                 tooltipContent += `→ ${c.target.name} (${c.type})<br>`;
@@ -302,6 +387,20 @@ class ModuleDependencyAnalyzer:
                     node.style("opacity", 1);
                     link.style("opacity", 0.7);
                 });
+
+                const legendContent = d3.select(".legend")
+                .append("div")
+                .style("margin-top", "16px")
+                .style("border-top", "1px solid #e5e7eb")
+                .style("padding-top", "12px");
+
+                legendContent.append("div")
+                .attr("class", "legend-item")
+                .html(`
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>Complex Node (Exceeds Complexity Threshold)</span>
+                `);
+
 
                 simulation
                     .nodes(data.nodes)
@@ -717,22 +816,60 @@ class ModuleDependencyAnalyzer:
         links = []
         node_lookup = {}
 
+        # Module nodes
         for module in all_modules:
             node_id = len(nodes)
             node_lookup[module] = node_id
-            nodes.append({"id": node_id, "name": module, "type": "module"})
+            nodes.append(
+                {
+                    "id": node_id,
+                    "name": module,
+                    "type": "module",
+                    "metrics": self.module_metrics.get(module, {}),
+                    "code_smells": [],
+                }
+            )
 
+        # Class nodes
         for module, classes in self.class_info.items():
             if module not in node_lookup:
                 node_id = len(nodes)
                 node_lookup[module] = node_id
-                nodes.append({"id": node_id, "name": module, "type": "module"})
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "name": module,
+                        "type": "module",
+                        "metrics": self.module_metrics.get(module, {}),
+                        "code_smells": [],
+                    }
+                )
 
             for class_name, info in classes.items():
                 node_id = len(nodes)
                 node_key = f"{module}.{class_name}"
                 node_lookup[node_key] = node_id
-                nodes.append({"id": node_id, "name": class_name, "type": "class"})
+
+                # Include class metrics and complexity
+                class_metrics = info.get("metrics", {})
+                class_metrics.update(
+                    {
+                        "complexity": info.get("complexity", 0),
+                        "cognitive_complexity": info.get("cognitive_complexity", 0),
+                        "lines": info.get("lines", 0),
+                    }
+                )
+
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "name": class_name,
+                        "type": "class",
+                        "metrics": class_metrics,
+                        "code_smells": info.get("code_smells", []),
+                    }
+                )
+
                 links.append(
                     {
                         "source": node_lookup[module],
@@ -741,6 +878,7 @@ class ModuleDependencyAnalyzer:
                     }
                 )
 
+        # Function nodes
         for func_name, location in self.function_locations.items():
             if "module" not in location:
                 continue
@@ -749,16 +887,42 @@ class ModuleDependencyAnalyzer:
             if module not in node_lookup:
                 node_id = len(nodes)
                 node_lookup[module] = node_id
-                nodes.append({"id": node_id, "name": module, "type": "module"})
+                nodes.append(
+                    {
+                        "id": node_id,
+                        "name": module,
+                        "type": "module",
+                        "metrics": self.module_metrics.get(module, {}),
+                        "code_smells": [],
+                    }
+                )
 
             node_id = len(nodes)
             node_key = f"{module}.{func_name}"
             node_lookup[node_key] = node_id
-            nodes.append({"id": node_id, "name": func_name, "type": "function"})
+
+            # Include function metrics
+            func_metrics = {
+                "complexity": location.get("complexity", 0),
+                "cognitive_complexity": location.get("cognitive_complexity", 0),
+                "lines": location.get("lines", 0),
+            }
+
+            nodes.append(
+                {
+                    "id": node_id,
+                    "name": func_name,
+                    "type": "function",
+                    "metrics": func_metrics,
+                    "code_smells": location.get("code_smells", []),
+                }
+            )
+
             links.append(
                 {"source": node_lookup[module], "target": node_id, "type": "contains"}
             )
 
+        # Add function call links
         for func_name, calls in self.function_calls.items():
             if func_name not in self.function_locations:
                 continue
@@ -779,6 +943,7 @@ class ModuleDependencyAnalyzer:
                         }
                     )
 
+        # Add import links
         for module, imports in self.module_imports.items():
             if module in node_lookup:
                 for imp in imports:
@@ -796,7 +961,13 @@ class ModuleDependencyAnalyzer:
 
         graph_data = {
             "nodes": [
-                {"id": node.id, "name": node.name, "type": node.type}
+                {
+                    "id": node.id,
+                    "name": node.name,
+                    "type": node.type,
+                    "metrics": node.metrics,
+                    "code_smells": node.code_smells,
+                }
                 for node in validated_nodes
             ],
             "links": [
@@ -806,34 +977,66 @@ class ModuleDependencyAnalyzer:
         }
 
         json_data = json.dumps(graph_data)
-
-        print("Number of nodes:", len(nodes))
-        print("Sample nodes:", nodes[:3] if nodes else "No nodes")
-        print("Number of links:", len(links))
-        print("Sample links:", links[:3] if links else "No links")
-        print("Graph data:", json_data[:200] if json_data else "No data")
-
         return self.html_template.replace("GRAPH_DATA_PLACEHOLDER", json_data)
 
-    def generate_summary_report(self) -> str:
-        """Generate a readable markdown report with a link to the interactive visualization."""
-        html_content = self.generate_html_visualization()
-        viz_path = "code_visualization.html"
+    def clean_for_markdown(self, line: str) -> str:
+        """Remove ANSI colors and simplify symbols for markdown."""
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        clean_line = ansi_escape.sub("", line)
 
+        replacements = {
+            "⚡": "→",
+            "🏛️": "◆",
+            "⚠️": "!",
+            "📏": "▸",
+            "[FUNC]": "**Function**:",
+            "[CLASS]": "**Class**:",
+            "├── ": "├─ ",
+            "└── ": "└─ ",
+            "│   ": "│ ",
+            "    ": "  ",
+        }
+
+        for old, new in replacements.items():
+            clean_line = clean_line.replace(old, new)
+
+        return clean_line.rstrip()
+
+    def generate_reports(self, tree_str: List[str]) -> None:
+        """Generate comprehensive HTML and markdown reports of the code analysis."""
+        results_dir = Path("results")
+        results_dir.mkdir(exist_ok=True)
+
+        html_viz = self.generate_html_visualization()
+        viz_path = results_dir / "code_visualization.html"
         with open(viz_path, "w", encoding="utf-8") as f:
-            f.write(html_content)
+            f.write(html_viz)
 
-        lines = ["# Code Analysis Summary Report\n"]
+        md_content = []
+        md_content.append("# Project Analysis Report\n")
 
-        lines.append(
-            f"[Click here to open Interactive Code Visualization](./{viz_path})\n"
+        md_content.append(
+            "[Open Interactive Code Visualization](./code_visualization.html)\n"
         )
 
-        lines.append("## Module Metrics\n")
+        md_content.append("## Code Structure Visualization\n")
+        md_content.append(
+            "The following diagrams show the project structure from different perspectives:\n\n"
+        )
+        md_content.append("### Module Dependencies\n")
+        md_content.append("Overview of how modules are connected:\n\n")
+        md_content.append(self.generate_mermaid_graphs())
+
+        md_content.append("## Directory Structure\n")
+        md_content.append("```")
+        md_content.append("\n".join(self.clean_for_markdown(line) for line in tree_str))
+        md_content.append("```\n")
+
+        md_content.append("## Code Quality Metrics\n")
         for module, metrics in sorted(self.module_metrics.items()):
-            lines.append(f"### {module}")
-            lines.append(f"- Functions: **{metrics['functions']}**")
-            lines.append(f"- Classes: **{metrics['classes']}**")
+            md_content.append(f"### {module}")
+            md_content.append(f"- Functions: **{metrics['functions']}**")
+            md_content.append(f"- Classes: **{metrics['classes']}**")
 
             complexity_str = str(metrics["complexity"])
             if (
@@ -841,92 +1044,187 @@ class ModuleDependencyAnalyzer:
                 > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]
             ):
                 complexity_str = f"<span style='color: red'>{complexity_str}</span>"
-            lines.append(f"- Complexity: **{complexity_str}**")
+            md_content.append(f"- Complexity: **{complexity_str}**\n")
 
+            # Add class information
             if module in self.class_info:
-                lines.append("\nClasses:")
+                md_content.append("Classes:")
                 for class_name, info in self.class_info[module].items():
-                    lines.append(f"\n#### 📦 {class_name}")
-                    lines.append(f"- Defined at line {info['line']}")
+                    md_content.append(f"\n#### 📦 {class_name}")
+                    md_content.append(f"- Defined at line {info['line']}")
                     if info["methods"]:
-                        lines.append("- Methods:")
+                        md_content.append("- Methods:")
                         for method_name, method_info in info["methods"].items():
-                            lines.append(
+                            md_content.append(
                                 f"  - ⚡ {method_name} (line {method_info['line']})"
                             )
                             if method_info["calls"]:
-                                lines.append(
+                                md_content.append(
                                     f"    Calls: {', '.join(method_info['calls'])}"
                                 )
 
-            functions_in_module = [
-                f
-                for f, loc in self.function_locations.items()
-                if loc["module"] == module and "in_class" not in loc
-            ]
-            if functions_in_module:
-                lines.append("\nFunctions:")
-                for func in functions_in_module:
-                    lines.append(f"\n#### ⚡ {func}")
-                    if func in self.function_calls:
-                        lines.append("Called by:")
-                        for call in self.function_calls[func]:
-                            lines.append(
-                                f"- {call['from_function']} in {call['from_module']} (line {call['line']})"
-                            )
-
-            lines.append("")
-
-        lines.append("## Complexity Hotspots\n")
+        md_content.append("\n## Complexity Hotspots\n")
         if self.complex_functions:
-            sorted_hotspots = sorted(
+            for module, func, complexity in sorted(
                 self.complex_functions, key=lambda x: x[2], reverse=True
-            )
-            for module, func, complexity in sorted_hotspots:
-                lines.append(f"### {func}")
-                lines.append(f"- **Module**: {module}")
+            ):
+                md_content.append(f"### {func}")
+                md_content.append(f"- **Module**: {module}")
                 complexity_str = str(complexity)
                 if complexity > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]:
                     complexity_str = f"<span style='color: red'>{complexity_str}</span>"
-                lines.append(f"- **Complexity**: {complexity_str}")
-                lines.append("")
+                md_content.append(f"- **Complexity**: {complexity_str}\n")
         else:
-            lines.append("*No complex functions found.*\n")
+            md_content.append("*No complex functions found.*\n")
 
-        lines.append("## Appendix: Code Quality Metrics\n")
-        lines.append(
-            "These metrics represent the target thresholds for maintaining code quality. "
-            "Values exceeding these thresholds are highlighted in red in the report above.\n"
+        md_path = results_dir / "code_analysis.md"
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(md_content))
+
+        html_template = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Code Analysis Report</title>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+            <style>
+                body {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                    line-height: 1.6;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    color: #333;
+                    background: #f8f9fa;
+                }
+                h1 { color: #2563eb; margin-bottom: 30px; }
+                h2 { color: #1d4ed8; margin-top: 40px; }
+                h3 { color: #1e40af; }
+                h4 { color: #1e3a8a; }
+
+                .section {
+                    margin: 40px 0;
+                    padding: 20px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                }
+
+                .mermaid {
+                margin: 20px 0;
+                padding: 20px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
+                pre {
+                    background: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 8px;
+                    overflow-x: auto;
+                }
+
+                .tree-view {
+                    font-family: monospace;
+                    white-space: pre;
+                }
+
+                .mermaid {
+                    margin: 20px 0;
+                    padding: 20px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
+                a {
+                    color: #2563eb;
+                    text-decoration: none;
+                }
+
+                a:hover {
+                    text-decoration: underline;
+                }
+
+                .warning { color: #dc2626; }
+
+                ul {
+                    list-style-type: none;
+                    padding-left: 20px;
+                }
+
+                li {
+                    margin: 8px 0;
+                }
+
+                .viz-link {
+                    display: inline-block;
+                    margin: 20px 0;
+                    padding: 10px 20px;
+                    background: #2563eb;
+                    color: white !important;
+                    border-radius: 6px;
+                    text-decoration: none !important;
+                }
+
+                .viz-link:hover {
+                    background: #1d4ed8;
+                }
+            </style>
+        </head>
+        <body>
+            <script>
+                mermaid.initialize({
+                    startOnLoad: true,
+                    theme: 'default',
+                    securityLevel: 'loose',
+                    flowchart: {
+                        curve: 'basis',
+                        padding: 20
+                    },
+                });
+            </script>
+            REPORT_CONTENT
+        </body>
+        </html>
+        """
+
+        html_content = "\n".join(md_content)
+        for i in range(6, 0, -1):
+            pattern = f"({'#' * i})\\s+(.+)"
+            html_content = re.sub(
+                pattern, f"<h{i}>\\2</h{i}>", html_content, flags=re.MULTILINE
+            )
+
+        html_content = re.sub(
+            r"^-\s+(.+)", r"<li>\1</li>", html_content, flags=re.MULTILINE
         )
 
-        lines.append("| Metric | Target Threshold | Description |")
-        lines.append("|--------|-----------------|-------------|")
+        html_content = re.sub(
+            r"```\n(.*?)\n```",
+            r"<pre><code>\1</code></pre>",
+            html_content,
+            flags=re.DOTALL,
+        )
 
-        metric_descriptions = {
-            "MAX_LINE_LENGTH": "Maximum characters per line",
-            "MAX_DOC_LENGTH": "Maximum characters per documentation line",
-            "MAX_CYCLOMATIC_COMPLEXITY": "Maximum cyclomatic complexity per function",
-            "MAX_COGNITIVE_COMPLEXITY": "Maximum cognitive complexity per function",
-            "MAX_NESTED_DEPTH": "Maximum nested block depth",
-            "MAX_FUNCTION_LINES": "Maximum lines per function",
-            "MAX_PARAMS": "Maximum parameters per function",
-            "MAX_RETURNS": "Maximum return statements per function",
-            "MAX_ARGUMENTS_PER_LINE": "Maximum arguments per line in function calls",
-            "MIN_MAINTAINABILITY_INDEX": "Minimum maintainability index",
-            "MAX_FUNC_COGNITIVE_LOAD": "Maximum cognitive load per function",
-            "MIN_PUBLIC_METHODS": "Minimum public methods per class",
-            "MAX_IMPORT_STATEMENTS": "Maximum import statements per module",
-            "MAX_MODULE_DEPENDENCIES": "Maximum module dependencies",
-            "MAX_INHERITANCE_DEPTH": "Maximum inheritance depth",
-            "MAX_DUPLICATED_LINES": "Maximum consecutive duplicated lines",
-            "MAX_DUPLICATED_BLOCKS": "Maximum duplicated code blocks",
-            "MAX_CLASS_LINES": "Maximum lines per class",
-            "MAX_METHODS_PER_CLASS": "Maximum methods per class",
-            "MAX_CLASS_COMPLEXITY": "Maximum complexity per class",
-        }
+        html_content = re.sub(
+            r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', html_content
+        )
 
-        for metric, value in self.QUALITY_METRICS.items():
-            description = metric_descriptions.get(metric, "")
-            lines.append(f"| {metric} | {value} | {description} |")
+        html_content = re.sub(r"\*\*([^\*]+)\*\*", r"<strong>\1</strong>", html_content)
+        html_content = re.sub(r"\*([^\*]+)\*", r"<em>\1</em>", html_content)
 
-        return "\n".join(lines)
+        html_content = re.sub(
+            r"(<li>.*?</li>\n)+", r"<ul>\g<0></ul>", html_content, flags=re.DOTALL
+        )
+
+        html_path = results_dir / "code_analysis.html"
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(html_template.replace("REPORT_CONTENT", html_content))
+
+        print("\n✨ Reports generated successfully!")
+        print(f"🔍 Interactive visualization: file://{os.path.abspath(viz_path)}")
+        print(f"📊 Analysis report (MD): file://{os.path.abspath(md_path)}")
+        print(f"📈 Analysis report (HTML): file://{os.path.abspath(html_path)}")
+        print("💡 Click the links or copy them into your browser\n")
