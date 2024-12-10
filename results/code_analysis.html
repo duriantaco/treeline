@@ -19,6 +19,22 @@
                 h3 { color: #1e40af; }
                 h4 { color: #1e3a8a; }
 
+                .section {
+                    margin: 40px 0;
+                    padding: 20px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                }
+
+                .mermaid {
+                margin: 20px 0;
+                padding: 20px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                }
+
                 pre {
                     background: #f8f9fa;
                     padding: 15px;
@@ -39,86 +55,40 @@
                     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
 
+                a {
+                    color: #2563eb;
+                    text-decoration: none;
+                }
+
+                a:hover {
+                    text-decoration: underline;
+                }
+
                 .warning { color: #dc2626; }
 
-                a.viz-link {
+                ul {
+                    list-style-type: none;
+                    padding-left: 20px;
+                }
+
+                li {
+                    margin: 8px 0;
+                }
+
+                .viz-link {
                     display: inline-block;
                     margin: 20px 0;
                     padding: 10px 20px;
                     background: #2563eb;
-                    color: white;
-                    text-decoration: none;
+                    color: white !important;
                     border-radius: 6px;
+                    text-decoration: none !important;
                 }
 
-                a.viz-link:hover {
+                .viz-link:hover {
                     background: #1d4ed8;
                 }
-
-            .metrics-section {
-                margin: 2rem 0;
-            }
-            .module-grid {
-                display: grid;
-                gap: 1.5rem;
-            }
-            .module-card {
-                background: white;
-                border-radius: 8px;
-                padding: 1.5rem;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            }
-            .module-name {
-                font-size: 1.2rem;
-                font-weight: 600;
-                color: #2563eb;
-                margin-bottom: 1rem;
-                padding-bottom: 0.5rem;
-                border-bottom: 2px solid #e5e7eb;
-            }
-            .module-stats {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-                gap: 1rem;
-                margin-bottom: 1rem;
-            }
-            .stat {
-                font-size: 0.9rem;
-                color: #374151;
-            }
-            .warning {
-                color: #dc2626;
-                font-weight: 500;
-            }
-            .classes-section {
-                border-top: 1px solid #e5e7eb;
-                padding-top: 1rem;
-            }
-            .class-item {
-                margin-bottom: 1.5rem;
-            }
-            .class-name {
-                font-weight: 600;
-                color: #1e40af;
-            }
-            .class-location {
-                font-size: 0.85rem;
-                color: #6b7280;
-                margin-bottom: 0.5rem;
-            }
-            .methods-list {
-                margin-left: 1.5rem;
-            }
-            .method-item {
-                margin: 0.5rem 0;
-                font-size: 0.9rem;
-            }
-            .method-calls {
-                margin-left: 1rem;
-                font-size: 0.85rem;
-                color: #6b7280;
-            }
-        </style>
+            </style>
         </head>
         <body>
             <script>
@@ -129,12 +99,24 @@
                     flowchart: {
                         curve: 'basis',
                         padding: 20
-                    }
+                    },
                 });
             </script>
-            <h1>Code Analysis Report</h1>
-<a href="./code_visualization.html" class="viz-link">Open Interactive Code Visualization</a>
-<div class="mermaid">
+            <h1>Project Analysis Report</h1>
+
+<a href="./code_visualization.html">Open Interactive Code Visualization</a>
+
+<h2>Code Structure Visualization</h2>
+
+The following diagrams show the project structure from different perspectives:
+
+
+<h3>Module Dependencies</h3>
+
+Overview of how modules are connected:
+
+
+```mermaid
 graph TD
 
     %% Styling
@@ -147,7 +129,6 @@ graph TD
     tests_test_treeline["tests.test_treeline"]:::modNode
     tests_test_nested_dir["tests.test_nested_dir"]:::modNode
     treeline_type_checker["treeline.type_checker"]:::modNode
-    treeline_diff_visualizer["treeline.diff_visualizer"]:::modNode
     treeline_dependency_analyzer["treeline.dependency_analyzer"]:::modNode
     treeline_analyzer["treeline.analyzer"]:::modNode
     treeline___init__["treeline.__init__"]:::modNode
@@ -165,23 +146,21 @@ graph TD
     tests_test_empty_dir --> treeline_core
     tests_test_core --> treeline_core
     tests_test_nested_dir --> treeline_core
-    treeline_diff_visualizer --> treeline_dependency_analyzer
-    treeline_diff_visualizer --> treeline_models_dependency_analyzer
     treeline_dependency_analyzer --> treeline_models_dependency_analyzer
-    treeline_analyzer --> treeline_type_checker
     treeline_analyzer --> treeline_models_analyzer
+    treeline_analyzer --> treeline_type_checker
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
-    treeline_core --> treeline_dependency_analyzer
-    treeline_core --> treeline_models_core
-    treeline_core --> treeline_diff_visualizer
-    treeline_core --> treeline_type_checker
     treeline_core --> treeline_enhanced_analyzer
+    treeline_core --> treeline_models_core
+    treeline_core --> treeline_type_checker
+    treeline_core --> treeline_dependency_analyzer
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
     treeline_models_core --> treeline_type_checker
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.__init__</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -193,8 +172,9 @@ graph TD
         treeline___init_____call__["⚡ __call__"]:::fnNode
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.__main__</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -205,8 +185,9 @@ graph TD
         direction TB
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.analyzer</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -230,8 +211,9 @@ graph TD
         treeline_analyzer_CodeAnalyzer --> treeline_analyzer_CodeAnalyzer_format_structure
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.core</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -252,8 +234,9 @@ graph TD
     treeline_core_generate_tree -.->|calls| treeline_core_read_ignore_patterns
     treeline_core_generate_tree -.->|calls| treeline_core_should_ignore
     treeline_core_main -.->|calls| treeline_core_create_default_ignore
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.dependency_analyzer</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -289,45 +272,9 @@ graph TD
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_reports
     end
 
-</div>
-<div class="mermaid">
-graph TD
-
-    %% Styling
-    classDef fnNode fill:#e4d1d1,stroke:#333
-    classDef clsNode fill:#d1e0e4,stroke:#333
-
-    subgraph treeline_diff_visualizer["treeline.diff_visualizer"]
-        direction TB
-        treeline_diff_visualizer_DiffVisualizer["📦 DiffVisualizer"]:::clsNode
-        treeline_diff_visualizer_DiffVisualizer___init__["⚡ __init__"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer___init__
-        treeline_diff_visualizer_DiffVisualizer__serialize_graph_data["⚡ _serialize_graph_data"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_graph_data
-        treeline_diff_visualizer_DiffVisualizer__serialize_node["⚡ _serialize_node"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_node
-        treeline_diff_visualizer_DiffVisualizer__serialize_link["⚡ _serialize_link"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_link
-        treeline_diff_visualizer_DiffVisualizer__node_was_modified_serial["⚡ _node_was_modified_serial"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__node_was_modified_serial
-        treeline_diff_visualizer_DiffVisualizer__get_node_changes_serial["⚡ _get_node_changes_serial"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__get_node_changes_serial
-        treeline_diff_visualizer_DiffVisualizer__run_git_command["⚡ _run_git_command"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__run_git_command
-        treeline_diff_visualizer_DiffVisualizer__is_git_repo["⚡ _is_git_repo"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__is_git_repo
-        treeline_diff_visualizer_DiffVisualizer__commit_exists["⚡ _commit_exists"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__commit_exists
-        treeline_diff_visualizer_DiffVisualizer__analyze_commit["⚡ _analyze_commit"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__analyze_commit
-        treeline_diff_visualizer_DiffVisualizer__compute_changes["⚡ _compute_changes"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__compute_changes
-        treeline_diff_visualizer_DiffVisualizer_generate_structural_diff["⚡ generate_structural_diff"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer_generate_structural_diff
-    end
-
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.enhanced_analyzer</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -395,8 +342,9 @@ graph TD
         treeline_enhanced_analyzer_EnhancedCodeAnalyzer --> treeline_enhanced_analyzer_EnhancedCodeAnalyzer__format_issues_section
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.models.__init__</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -407,8 +355,9 @@ graph TD
         direction TB
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.models.analyzer</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -424,8 +373,9 @@ graph TD
         treeline_models_analyzer_AnalyzerConfig["📦 AnalyzerConfig"]:::clsNode
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.models.core</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -439,8 +389,9 @@ graph TD
         treeline_models_core_ModuleMetrics["📦 ModuleMetrics"]:::clsNode
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.models.dependency_analyzer</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -461,8 +412,9 @@ graph TD
         treeline_models_dependency_analyzer_GraphData["📦 GraphData"]:::clsNode
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.models.enhanced_analyzer</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -477,8 +429,9 @@ graph TD
         treeline_models_enhanced_analyzer_QualityIssue["📦 QualityIssue"]:::clsNode
     end
 
-</div>
-<div class="mermaid">
+<pre><code>
+<h3>treeline.type_checker</h3>
+</code></pre>mermaid
 graph TD
 
     %% Styling
@@ -496,12 +449,11 @@ graph TD
         treeline_type_checker_ValidationError["📦 ValidationError"]:::clsNode
     end
 
-</div>
+<pre><code>
 <h2>Directory Structure</h2>
-<pre class="tree-view">
+</code></pre>
 
 ├─ assets
-│ ├─ output.gif
 │ ├─ screenshot1.png
 │ └─ Treeline.png
 ├─ docs
@@ -615,17 +567,15 @@ graph TD
 │ ├─ user_guide.rst
 │ └─ visualization.rst
 ├─ example
-│ ├─ code_diff.html
-│ ├─ dependencies.html
 │ ├─ sample.py
-│ │   **Class**: ◆ Calculator
-│ │   └─ # A simple calculator class.
-│ │   **Function**: → main
-│ │   **Function**: → __init__
-│ │   **Function**: → add
-│ │   └─ # Add two numbers.
-│ │   **Function**: → multiply
-│ │   └─ # Multiply two numbers.
+│ │   <strong>Class</strong>: ◆ Calculator
+│ │   └─ <h1>A simple calculator class.</h1>
+│ │   <strong>Function</strong>: → main
+│ │   <strong>Function</strong>: → __init__
+│ │   <strong>Function</strong>: → add
+│ │   └─ <h1>Add two numbers.</h1>
+│ │   <strong>Function</strong>: → multiply
+│ │   └─ <h1>Multiply two numbers.</h1>
 │ ├─ tree.md
 │ └─ tut1.ipynb
 ├─ results
@@ -634,133 +584,133 @@ graph TD
 │ └─ code_visualization.html
 ├─ tests
 │ ├─ test_core.py
-│ │   **Class**: ◆ TestTreeGenerator
+│ │   <strong>Class</strong>: ◆ TestTreeGenerator
 │ │   └─ ! Missing class docstring
-│ │   **Function**: → setUp
-│ │   **Function**: → tearDown
-│ │   **Function**: → test_tree_structure
-│ │   └─ # Test if the tree structure is generated correctly
-│ │   **Function**: → test_markdown_creation
-│ │   └─ # Test if markdown file is created when flag is True
+│ │   <strong>Function</strong>: → setUp
+│ │   <strong>Function</strong>: → tearDown
+│ │   <strong>Function</strong>: → test_tree_structure
+│ │   └─ <h1>Test if the tree structure is generated correctly</h1>
+│ │   <strong>Function</strong>: → test_markdown_creation
+│ │   └─ <h1>Test if markdown file is created when flag is True</h1>
 │ ├─ test_empty_dir.py
-│ │   **Class**: ◆ TestEmptyDirectory
+│ │   <strong>Class</strong>: ◆ TestEmptyDirectory
 │ │   └─ ! Missing class docstring
-│ │   **Function**: → setUp
-│ │   └─ # Set up test directory
-│ │   **Function**: → tearDown
-│ │   └─ # Clean up test directory
-│ │   **Function**: → test_empty_directory
-│ │   └─ # Test handling of empty directory
+│ │   <strong>Function</strong>: → setUp
+│ │   └─ <h1>Set up test directory</h1>
+│ │   <strong>Function</strong>: → tearDown
+│ │   └─ <h1>Clean up test directory</h1>
+│ │   <strong>Function</strong>: → test_empty_directory
+│ │   └─ <h1>Test handling of empty directory</h1>
 │ ├─ test_nested_dir.py
-│ │   **Class**: ◆ TestNestedDirectories
+│ │   <strong>Class</strong>: ◆ TestNestedDirectories
 │ │   └─ ! Missing class docstring
-│ │   **Function**: → setUp
-│ │   └─ # Set up test directory
-│ │   **Function**: → tearDown
-│ │   └─ # Clean up test directory
-│ │   **Function**: → test_nested_directories
-│ │   └─ # Test handling of nested directories
+│ │   <strong>Function</strong>: → setUp
+│ │   └─ <h1>Set up test directory</h1>
+│ │   <strong>Function</strong>: → tearDown
+│ │   └─ <h1>Clean up test directory</h1>
+│ │   <strong>Function</strong>: → test_nested_directories
+│ │   └─ <h1>Test handling of nested directories</h1>
 │ ├─ test_special_char.py
-│ │   **Class**: ◆ TestSpecialCharacters
+│ │   <strong>Class</strong>: ◆ TestSpecialCharacters
 │ │   └─ ! Missing class docstring
-│ │   **Function**: → setUp
-│ │   └─ # Set up test directory
-│ │   **Function**: → tearDown
-│ │   └─ # Clean up test directory
-│ │   **Function**: → test_special_characters
-│ │   └─ # Test handling of special characters in names
+│ │   <strong>Function</strong>: → setUp
+│ │   └─ <h1>Set up test directory</h1>
+│ │   <strong>Function</strong>: → tearDown
+│ │   └─ <h1>Clean up test directory</h1>
+│ │   <strong>Function</strong>: → test_special_characters
+│ │   └─ <h1>Test handling of special characters in names</h1>
 │ └─ test_treeline.py
-│     **Class**: ◆ TestTreeLine
+│     <strong>Class</strong>: ◆ TestTreeLine
 │     └─ ! Missing class docstring
-│     **Function**: → setUp
-│     **Function**: → tearDown
-│     **Function**: → test_basic_tree
-│     └─ # Test if tree structure is generated correctly
+│     <strong>Function</strong>: → setUp
+│     <strong>Function</strong>: → tearDown
+│     <strong>Function</strong>: → test_basic_tree
+│     └─ <h1>Test if tree structure is generated correctly</h1>
 ├─ treeline
 │ ├─ models
 │ │ ├─ __init__.py
 │ │ ├─ analyzer.py
-│ │ │   **Class**: ◆ FunctionCall
+│ │ │   <strong>Class</strong>: ◆ FunctionCall
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ CodeStructure
+│ │ │   <strong>Class</strong>: ◆ CodeStructure
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ FunctionNode
+│ │ │   <strong>Class</strong>: ◆ FunctionNode
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ ClassNode
+│ │ │   <strong>Class</strong>: ◆ ClassNode
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ AnalyzerConfig
+│ │ │   <strong>Class</strong>: ◆ AnalyzerConfig
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
 │ │ ├─ core.py
-│ │ │   **Class**: ◆ CodeStructure
+│ │ │   <strong>Class</strong>: ◆ CodeStructure
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ TreeOptions
+│ │ │   <strong>Class</strong>: ◆ TreeOptions
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ ModuleMetrics
+│ │ │   <strong>Class</strong>: ◆ ModuleMetrics
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
 │ │ ├─ dependency_analyzer.py
-│ │ │   **Class**: ◆ FunctionLocation
+│ │ │   <strong>Class</strong>: ◆ FunctionLocation
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ FunctionCallInfo
+│ │ │   <strong>Class</strong>: ◆ FunctionCallInfo
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ ClassMethod
+│ │ │   <strong>Class</strong>: ◆ ClassMethod
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ ClassInfo
+│ │ │   <strong>Class</strong>: ◆ ClassInfo
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ ModuleMetrics
+│ │ │   <strong>Class</strong>: ◆ ModuleMetrics
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ ComplexFunction
+│ │ │   <strong>Class</strong>: ◆ ComplexFunction
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ MethodInfo
+│ │ │   <strong>Class</strong>: ◆ MethodInfo
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ Node
+│ │ │   <strong>Class</strong>: ◆ Node
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ Link
+│ │ │   <strong>Class</strong>: ◆ Link
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
-│ │ │   **Class**: ◆ GraphData
+│ │ │   <strong>Class</strong>: ◆ GraphData
 │ │ │   └─ ! Missing class docstring
 │ │ │   └─ ! Too few public method (< 1, SOLID-ISP)
 │ │ └─ enhanced_analyzer.py
-│ │     **Class**: ◆ FunctionMetrics
+│ │     <strong>Class</strong>: ◆ FunctionMetrics
 │ │     └─ ! Missing class docstring
 │ │     └─ ! Too few public method (< 1, SOLID-ISP)
-│ │     **Class**: ◆ ClassMetrics
+│ │     <strong>Class</strong>: ◆ ClassMetrics
 │ │     └─ ! Missing class docstring
 │ │     └─ ! Too few public method (< 1, SOLID-ISP)
-│ │     **Class**: ◆ CodeDuplication
+│ │     <strong>Class</strong>: ◆ CodeDuplication
 │ │     └─ ! Missing class docstring
 │ │     └─ ! Too few public method (< 1, SOLID-ISP)
-│ │     **Class**: ◆ QualityIssue
+│ │     <strong>Class</strong>: ◆ QualityIssue
 │ │     └─ ! Missing class docstring
 │ │     └─ ! Too few public method (< 1, SOLID-ISP)
 │ ├─ __init__.py
-│ │   **Function**: → __call__
+│ │   <strong>Function</strong>: → __call__
 │ ├─ __main__.py
 │ ├─ analyzer.py
-│ │   **Class**: ◆ CodeAnalyzer
-│ │   └─ # Simple analyzer for extracting functions and classes from Python files.
+│ │   <strong>Class</strong>: ◆ CodeAnalyzer
+│ │   └─ <h1>Simple analyzer for extracting functions and classes from Python files.</h1>
 │ │   └─ ! High complexity (34)
 │ │   └─ ! Too long (207 lines)
 │ │   └─ ! Class too long
-│ │   **Function**: → __init__
-│ │   **Function**: → analyze_file
-│ │   └─ # Extracts functions and classes with optional params and relationships.
+│ │   <strong>Function</strong>: → __init__
+│ │   <strong>Function</strong>: → analyze_file
+│ │   └─ <h1>Extracts functions and classes with optional params and relationships.</h1>
 │ │   └─ ! High complexity (12)
 │ │   └─ ! Too long (99 lines)
 │ │   └─ ! Deep nesting (depth 7)
@@ -769,25 +719,25 @@ graph TD
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _get_function_params
-│ │   └─ # Extract function parameters with type hints.
-│ │   **Function**: → _find_function_calls
-│ │   **Function**: → get_symbol
-│ │   └─ # Maps item types to their display symbols.
-│ │   **Function**: → format_structure
-│ │   └─ # Formats the code structure into displayable lines with colors and prefixes.
+│ │   <strong>Function</strong>: → _get_function_params
+│ │   └─ <h1>Extract function parameters with type hints.</h1>
+│ │   <strong>Function</strong>: → _find_function_calls
+│ │   <strong>Function</strong>: → get_symbol
+│ │   └─ <h1>Maps item types to their display symbols.</h1>
+│ │   <strong>Function</strong>: → format_structure
+│ │   └─ <h1>Formats the code structure into displayable lines with colors and prefixes.</h1>
 │ │   └─ ! High cognitive load (> 7 items)
 │ ├─ core.py
-│ │   **Function**: → create_default_ignore
-│ │   └─ # Create default .treeline-ignore if it doesn't exist
-│ │   **Function**: → read_ignore_patterns
-│ │   └─ # Read patterns from .treeline-ignore file
-│ │   **Function**: → should_ignore
-│ │   └─ # Check if path should be ignored based on patterns
+│ │   <strong>Function</strong>: → create_default_ignore
+│ │   └─ <h1>Create default .treeline-ignore if it doesn't exist</h1>
+│ │   <strong>Function</strong>: → read_ignore_patterns
+│ │   └─ <h1>Read patterns from .treeline-ignore file</h1>
+│ │   <strong>Function</strong>: → should_ignore
+│ │   └─ <h1>Check if path should be ignored based on patterns</h1>
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → format_structure
-│ │   └─ # Format the analysis results into a readable tree structure.
+│ │   <strong>Function</strong>: → format_structure
+│ │   └─ <h1>Format the analysis results into a readable tree structure.</h1>
 │ │    Args:
 │ │    structure: List of analysis results
 │ │    indent: String to use for indentation
@@ -799,8 +749,8 @@ graph TD
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → generate_tree
-│ │   └─ # Generate tree structure with code quality and security analysis.
+│ │   <strong>Function</strong>: → generate_tree
+│ │   └─ <h1>Generate tree structure with code quality and security analysis.</h1>
 │ │   └─ ! High complexity (14)
 │ │   └─ ! Too long (76 lines)
 │ │   └─ ! Deep nesting (depth 7)
@@ -809,32 +759,30 @@ graph TD
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → main
-│ │   └─ ! Too long (85 lines)
-│ │   └─ ! Deep nesting (depth 5)
+│ │   <strong>Function</strong>: → main
+│ │   └─ ! Too long (51 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! Excessive nesting depth (> 4)
-│ │   **Function**: → add_directory
+│ │   <strong>Function</strong>: → add_directory
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ ├─ default_ignore
 │ ├─ dependency_analyzer.py
-│ │   **Class**: ◆ ModuleDependencyAnalyzer
-│ │   └─ # Analyzes module-level dependencies and generates summary reports.
-│ │   └─ ! High complexity (95)
-│ │   └─ ! Too long (1132 lines)
+│ │   <strong>Class</strong>: ◆ ModuleDependencyAnalyzer
+│ │   └─ <h1>Analyzes module-level dependencies and generates summary reports.</h1>
+│ │   └─ ! High complexity (92)
+│ │   └─ ! Too long (1091 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
-│ │   **Function**: → __init__
+│ │   <strong>Function</strong>: → __init__
 │ │   └─ ! Too long (415 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   **Function**: → analyze_directory
-│ │   └─ # Analyze all Python files in directory.
-│ │   **Function**: → _analyze_module
-│ │   └─ # Analyze a single module's contents and relationships.
+│ │   <strong>Function</strong>: → analyze_directory
+│ │   └─ <h1>Analyze all Python files in directory.</h1>
+│ │   <strong>Function</strong>: → _analyze_module
+│ │   └─ <h1>Analyze a single module's contents and relationships.</h1>
 │ │   └─ ! High complexity (15)
 │ │   └─ ! Too long (52 lines)
 │ │   └─ ! Deep nesting (depth 7)
@@ -843,17 +791,17 @@ graph TD
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _analyze_imports
-│ │   └─ # Collect import information from AST.
+│ │   <strong>Function</strong>: → _analyze_imports
+│ │   └─ <h1>Collect import information from AST.</h1>
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _collect_metrics
-│ │   └─ # Collect code metrics for the module.
-│ │   **Function**: → _calculate_complexity
-│ │   └─ # Calculate cyclomatic complexity.
-│ │   **Function**: → generate_module_overview_diagram
-│ │   └─ # Generate a Mermaid diagram showing modules and their relationships.
-│ │   **Function**: → generate_module_detail_diagram
-│ │   └─ # Generate a Mermaid diagram showing functions and classes in a module.
+│ │   <strong>Function</strong>: → _collect_metrics
+│ │   └─ <h1>Collect code metrics for the module.</h1>
+│ │   <strong>Function</strong>: → _calculate_complexity
+│ │   └─ <h1>Calculate cyclomatic complexity.</h1>
+│ │   <strong>Function</strong>: → generate_module_overview_diagram
+│ │   └─ <h1>Generate a Mermaid diagram showing modules and their relationships.</h1>
+│ │   <strong>Function</strong>: → generate_module_detail_diagram
+│ │   └─ <h1>Generate a Mermaid diagram showing functions and classes in a module.</h1>
 │ │   └─ ! High complexity (17)
 │ │   └─ ! Too long (59 lines)
 │ │   └─ ! Deep nesting (depth 5)
@@ -862,66 +810,31 @@ graph TD
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → generate_mermaid_graphs
-│ │   └─ # Generate a markdown report with multiple focused Mermaid graphs.
-│ │   **Function**: → generate_html_visualization
-│ │   └─ # Generate an interactive HTML visualization using D3.js
+│ │   <strong>Function</strong>: → generate_mermaid_graphs
+│ │   └─ <h1>Generate a markdown report with multiple focused Mermaid graphs.</h1>
+│ │   <strong>Function</strong>: → generate_html_visualization
+│ │   └─ <h1>Generate an interactive HTML visualization using D3.js</h1>
 │ │   └─ ! High complexity (18)
 │ │   └─ ! Too long (112 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → clean_for_markdown
-│ │   └─ # Remove ANSI colors and simplify symbols for markdown.
-│ │   **Function**: → generate_reports
-│ │   └─ # Generate comprehensive HTML and markdown reports of the code analysis.
-│ │   └─ ! High complexity (15)
-│ │   └─ ! Too long (284 lines)
+│ │   <strong>Function</strong>: → clean_for_markdown
+│ │   └─ <h1>Remove ANSI colors and simplify symbols for markdown.</h1>
+│ │   <strong>Function</strong>: → generate_reports
+│ │   └─ <h1>Generate comprehensive HTML and markdown reports of the code analysis.</h1>
+│ │   └─ ! High complexity (12)
+│ │   └─ ! Too long (243 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
-│ ├─ diff_visualizer.py
-│ │   **Class**: ◆ DiffVisualizer
-│ │   └─ # Visualizes structural differences between different versions of Python code.
-│ │   └─ ! High complexity (35)
-│ │   └─ ! Too long (444 lines)
-│ │   └─ ! Class too long
-│ │   └─ ! Too many methods
-│ │   **Function**: → __init__
-│ │   **Function**: → _serialize_graph_data
-│ │   └─ # Convert a GraphData object to a serializable dictionary
-│ │   **Function**: → _serialize_node
-│ │   └─ # Convert a Node object to a serializable dictionary
-│ │   **Function**: → _serialize_link
-│ │   └─ # Convert a link dictionary to a serializable format
-│ │   **Function**: → _node_was_modified_serial
-│ │   └─ # Check if a serialized node's important properties changed
-│ │   **Function**: → _get_node_changes_serial
-│ │   └─ # Get detailed changes for modified serialized nodes
-│ │   **Function**: → _run_git_command
-│ │   └─ # Run a git command with error handling
-│ │   **Function**: → _is_git_repo
-│ │   **Function**: → _commit_exists
-│ │   **Function**: → _analyze_commit
-│ │   └─ # Analyze a specific commit and return serializable data
-│ │   **Function**: → _compute_changes
-│ │   └─ # Compute the differences between two dependency graphs
-│ │   **Function**: → generate_structural_diff
-│ │   └─ # Generate a visual diff between two commits
-│ │   └─ ! High complexity (12)
-│ │   └─ ! Too long (274 lines)
-│ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity(> 10)
-│ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → node_key
-│ │   **Function**: → link_key
 │ ├─ enhanced_analyzer.py
-│ │   **Class**: ◆ EnhancedCodeAnalyzer
-│ │   └─ # Enhanced analyzer for code quality and maintainability metrics.
+│ │   <strong>Class</strong>: ◆ EnhancedCodeAnalyzer
+│ │   └─ <h1>Enhanced analyzer for code quality and maintainability metrics.</h1>
 │ │    This analyzer implements industry-standard code quality checks and metrics
 │ │    following Clean Code principles, SOLID principles, and PEP 8 standards.
 │ │   └─ ! High complexity (123)
@@ -929,36 +842,36 @@ graph TD
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
-│ │   **Function**: → __init__
-│ │   └─ # Initialize the code analyzer.
+│ │   <strong>Function</strong>: → __init__
+│ │   └─ <h1>Initialize the code analyzer.</h1>
 │ │    Args:
 │ │    show_params: Whether to show function parameters in analysis
-│ │   **Function**: → analyze_file
-│ │   └─ # Analyze a Python file for code quality metrics.
+│ │   <strong>Function</strong>: → analyze_file
+│ │   └─ <h1>Analyze a Python file for code quality metrics.</h1>
 │ │    Args:
 │ │    file_path: Path to the Python file to analyze
 │ │    Returns:
 │ │    List of analysis results for each code element
-│ │   **Function**: → _calculate_maintainability_index
-│ │   └─ # Calculate Maintainability Index (MI) following Microsoft's formula.
-│ │    MI = max(0, (171 - 5.2 * ln(HV) - 0.23 * CC - 16.2 * ln(LOC)) * 100 / 171)
+│ │   <strong>Function</strong>: → _calculate_maintainability_index
+│ │   └─ <h1>Calculate Maintainability Index (MI) following Microsoft's formula.</h1>
+│ │    MI = max(0, (171 - 5.2 <em> ln(HV) - 0.23 </em> CC - 16.2 <em> ln(LOC)) </em> 100 / 171)
 │ │    where:
 │ │    - HV = Halstead Volume
 │ │    - CC = Cyclomatic Complexity
 │ │    - LOC = Lines of Code
-│ │   **Function**: → _calculate_cognitive_load
-│ │   └─ # Counts control structures and parameters as cognitive items.
-│ │   **Function**: → _check_function_metrics
-│ │   └─ # Check function metrics against quality thresholds.
+│ │   <strong>Function</strong>: → _calculate_cognitive_load
+│ │   └─ <h1>Counts control structures and parameters as cognitive items.</h1>
+│ │   <strong>Function</strong>: → _check_function_metrics
+│ │   └─ <h1>Check function metrics against quality thresholds.</h1>
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _calculate_cyclomatic_complexity
-│ │   └─ # Calculate McCabe's cyclomatic complexity.
+│ │   <strong>Function</strong>: → _calculate_cyclomatic_complexity
+│ │   └─ <h1>Calculate McCabe's cyclomatic complexity.</h1>
 │ │    Based on McCabe, 1976 and implementation in Radon/SonarQube.
-│ │   **Function**: → _calculate_cognitive_complexity
-│ │   └─ # Calculate cognitive complexity based on SonarQube's metric.
+│ │   <strong>Function</strong>: → _calculate_cognitive_complexity
+│ │   └─ <h1>Calculate cognitive complexity based on SonarQube's metric.</h1>
 │ │    Implements SonarSource's cognitive complexity calculation.
-│ │   **Function**: → _analyze_file_metrics
-│ │   └─ # Analyze file-level metrics including style, duplication, imports, and documentation.
+│ │   <strong>Function</strong>: → _analyze_file_metrics
+│ │   └─ <h1>Analyze file-level metrics including style, duplication, imports, and documentation.</h1>
 │ │    Args:
 │ │    content: File content as string
 │ │    file_path: Path to the file being analyzed
@@ -968,72 +881,72 @@ graph TD
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _read_file
-│ │   └─ # Read and return file content safely.
-│ │   **Function**: → _parse_content
-│ │   └─ # Parse Python content into AST safely.
-│ │   **Function**: → _analyze_code_elements
-│ │   └─ # Analyze individual code elements in the AST.
-│ │   **Function**: → _analyze_class
-│ │   └─ # Analyze a class's quality metrics.
-│ │   **Function**: → _check_class_metrics
-│ │   └─ # Check class metrics against quality thresholds.
+│ │   <strong>Function</strong>: → _read_file
+│ │   └─ <h1>Read and return file content safely.</h1>
+│ │   <strong>Function</strong>: → _parse_content
+│ │   └─ <h1>Parse Python content into AST safely.</h1>
+│ │   <strong>Function</strong>: → _analyze_code_elements
+│ │   └─ <h1>Analyze individual code elements in the AST.</h1>
+│ │   <strong>Function</strong>: → _analyze_class
+│ │   └─ <h1>Analyze a class's quality metrics.</h1>
+│ │   <strong>Function</strong>: → _check_class_metrics
+│ │   └─ <h1>Check class metrics against quality thresholds.</h1>
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → format_structure
-│ │   └─ # Format the analysis results into a tree structure.
+│ │   <strong>Function</strong>: → format_structure
+│ │   └─ <h1>Format the analysis results into a tree structure.</h1>
 │ │   └─ ! High complexity (15)
 │ │   └─ ! Too long (56 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → _format_metrics_section
-│ │   └─ # Format the metrics section of the report.
-│ │   **Function**: → _analyze_function
-│ │   └─ # Analyze a function's quality metrics.
-│ │   **Function**: → _calculate_class_metrics
-│ │   **Function**: → _calculate_function_metrics
-│ │   **Function**: → _calculate_complexity
-│ │   └─ # Calculate cyclomatic complexity of code.
-│ │   **Function**: → _calculate_nested_depth
-│ │   └─ # Calculate maximum nesting depth in code.
-│ │   **Function**: → _analyze_code_duplication
-│ │   └─ # Analyze code for duplication using line-based comparison.
-│ │   **Function**: → _analyze_imports
-│ │   └─ # Analyze import statements and module dependencies.
-│ │   **Function**: → _analyze_inheritance
-│ │   └─ # Analyze class inheritance depth and hierarchy.
-│ │   **Function**: → _add_issue
-│ │   └─ # Add a quality issue to the collection.
+│ │   <strong>Function</strong>: → _format_metrics_section
+│ │   └─ <h1>Format the metrics section of the report.</h1>
+│ │   <strong>Function</strong>: → _analyze_function
+│ │   └─ <h1>Analyze a function's quality metrics.</h1>
+│ │   <strong>Function</strong>: → _calculate_class_metrics
+│ │   <strong>Function</strong>: → _calculate_function_metrics
+│ │   <strong>Function</strong>: → _calculate_complexity
+│ │   └─ <h1>Calculate cyclomatic complexity of code.</h1>
+│ │   <strong>Function</strong>: → _calculate_nested_depth
+│ │   └─ <h1>Calculate maximum nesting depth in code.</h1>
+│ │   <strong>Function</strong>: → _analyze_code_duplication
+│ │   └─ <h1>Analyze code for duplication using line-based comparison.</h1>
+│ │   <strong>Function</strong>: → _analyze_imports
+│ │   └─ <h1>Analyze import statements and module dependencies.</h1>
+│ │   <strong>Function</strong>: → _analyze_inheritance
+│ │   └─ <h1>Analyze class inheritance depth and hierarchy.</h1>
+│ │   <strong>Function</strong>: → _add_issue
+│ │   └─ <h1>Add a quality issue to the collection.</h1>
 │ │    Args:
 │ │    category: The category of the issue
 │ │    description: Description of the issue
 │ │    file_path: Optional path to the file where the issue was found
 │ │    line: Optional line number where the issue was found
-│ │   **Function**: → generate_report
-│ │   └─ # Generate a formatted quality report.
-│ │   **Function**: → _format_report_sections
-│ │   └─ # Format and combine report sections.
-│ │   **Function**: → _format_overview_section
-│ │   └─ # Format the report overview section.
-│ │   **Function**: → _format_issues_section
-│ │   └─ # Format the quality issues section.
-│ │   **Function**: → walk_cognitive
-│ │   **Function**: → get_depth
-│ │   **Function**: → get_inheritance_depth
+│ │   <strong>Function</strong>: → generate_report
+│ │   └─ <h1>Generate a formatted quality report.</h1>
+│ │   <strong>Function</strong>: → _format_report_sections
+│ │   └─ <h1>Format and combine report sections.</h1>
+│ │   <strong>Function</strong>: → _format_overview_section
+│ │   └─ <h1>Format the report overview section.</h1>
+│ │   <strong>Function</strong>: → _format_issues_section
+│ │   └─ <h1>Format the quality issues section.</h1>
+│ │   <strong>Function</strong>: → walk_cognitive
+│ │   <strong>Function</strong>: → get_depth
+│ │   <strong>Function</strong>: → get_inheritance_depth
 │ └─ type_checker.py
-│     **Class**: ◆ TypeValidator
+│     <strong>Class</strong>: ◆ TypeValidator
 │     └─ ! High complexity (22)
 │     └─ ! Too long (62 lines)
 │     └─ ! Missing class docstring
-│     **Class**: ◆ TypeChecked
-│     └─ # Base class for type-checked dataclasses
+│     <strong>Class</strong>: ◆ TypeChecked
+│     └─ <h1>Base class for type-checked dataclasses</h1>
 │     └─ ! Too few public method (< 1, SOLID-ISP)
-│     **Class**: ◆ ValidationError
-│     └─ # Raised when type validation fails
+│     <strong>Class</strong>: ◆ ValidationError
+│     └─ <h1>Raised when type validation fails</h1>
 │     └─ ! Too few public method (< 1, SOLID-ISP)
-│     **Function**: → validate
-│     └─ # Validates that a value matches the expected type, with support for generics.
+│     <strong>Function</strong>: → validate
+│     └─ <h1>Validates that a value matches the expected type, with support for generics.</h1>
 │      Args:
 │      value: The value to validate
 │      expected_type: The expected type (can be a generic type)
@@ -1047,8 +960,8 @@ graph TD
 │     └─ ! High cognitive complexity (> 15)
 │     └─ ! Excessive nesting depth (> 4)
 │     └─ ! High cognitive load (> 7 items)
-│     **Function**: → __post_init__
-│     └─ # Validate types after initialization
+│     <strong>Function</strong>: → __post_init__
+│     └─ <h1>Validate types after initialization</h1>
 ├─ treeline.egg-info
 │ ├─ dependency_links.txt
 │ ├─ entry_points.txt
@@ -1061,7 +974,6 @@ graph TD
 ├─ .pre-commit-config.yaml
 ├─ .readthedocs.yaml
 ├─ .treeline-ignore
-├─ code_diff.html
 ├─ docker-compose.yaml
 ├─ dockerfile
 ├─ License
@@ -1069,341 +981,390 @@ graph TD
 ├─ README.md
 ├─ setup.py
 └─ tox.ini
-</pre>
+```
 
-        <div class="metrics-section">
-            <div class="module-grid">
+<h2>Code Quality Metrics</h2>
 
-                <div class="module-card">
-                    <div class="module-name">docs.conf</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 0</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            </div>
+<h3>docs.conf</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>0</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+<h3>example.sample</h3>
+<ul><li>Functions: <strong>4</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong>4</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">example.sample</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 4</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat ">Complexity: 4</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">Calculator</div>
-                            <div class="class-location">Line 1</div>
-                    <div class="methods-list"><div class="method-item">__init__ (Line 4)</div><div class="method-item">add (Line 7)</div><div class="method-item">multiply (Line 11)</div></div></div></div></div>
+<h4>📦 Calculator</h4>
+<ul><li>Defined at line 1</li>
+<li>Methods:</li>
+</ul>  - ⚡ __init__ (line 4)
+  - ⚡ add (line 7)
+  - ⚡ multiply (line 11)
+<h3>setup</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>0</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+<h3>tests.test_core</h3>
+<ul><li>Functions: <strong>4</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong>5</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">setup</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 0</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            </div>
+<h4>📦 TestTreeGenerator</h4>
+<ul><li>Defined at line 10</li>
+<li>Methods:</li>
+</ul>  - ⚡ setUp (line 11)
+    Calls: Path, Path
+  - ⚡ tearDown (line 19)
+  - ⚡ test_tree_structure (line 24)
+    Calls: generate_tree
+  - ⚡ test_markdown_creation (line 36)
+    Calls: generate_tree
+<h3>tests.test_empty_dir</h3>
+<ul><li>Functions: <strong>3</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong>4</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">tests.test_core</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 4</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat ">Complexity: 5</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">TestTreeGenerator</div>
-                            <div class="class-location">Line 10</div>
-                    <div class="methods-list"><div class="method-item">setUp (Line 11)<div class="method-calls">Calls: Path, Path</div></div><div class="method-item">tearDown (Line 19)</div><div class="method-item">test_tree_structure (Line 24)<div class="method-calls">Calls: generate_tree</div></div><div class="method-item">test_markdown_creation (Line 36)<div class="method-calls">Calls: generate_tree</div></div></div></div></div></div>
+<h4>📦 TestEmptyDirectory</h4>
+<ul><li>Defined at line 8</li>
+<li>Methods:</li>
+</ul>  - ⚡ setUp (line 9)
+  - ⚡ tearDown (line 14)
+  - ⚡ test_empty_directory (line 19)
+    Calls: generate_tree
+<h3>tests.test_nested_dir</h3>
+<ul><li>Functions: <strong>3</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong>4</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">tests.test_empty_dir</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 3</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat ">Complexity: 4</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">TestEmptyDirectory</div>
-                            <div class="class-location">Line 8</div>
-                    <div class="methods-list"><div class="method-item">setUp (Line 9)</div><div class="method-item">tearDown (Line 14)</div><div class="method-item">test_empty_directory (Line 19)<div class="method-calls">Calls: generate_tree</div></div></div></div></div></div>
+<h4>📦 TestNestedDirectories</h4>
+<ul><li>Defined at line 8</li>
+<li>Methods:</li>
+</ul>  - ⚡ setUp (line 9)
+  - ⚡ tearDown (line 14)
+  - ⚡ test_nested_directories (line 21)
+    Calls: generate_tree, Path
+<h3>tests.test_special_char</h3>
+<ul><li>Functions: <strong>3</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong>4</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">tests.test_nested_dir</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 3</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat ">Complexity: 4</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">TestNestedDirectories</div>
-                            <div class="class-location">Line 8</div>
-                    <div class="methods-list"><div class="method-item">setUp (Line 9)</div><div class="method-item">tearDown (Line 14)</div><div class="method-item">test_nested_directories (Line 21)<div class="method-calls">Calls: generate_tree, Path</div></div></div></div></div></div>
+<h4>📦 TestSpecialCharacters</h4>
+<ul><li>Defined at line 8</li>
+<li>Methods:</li>
+</ul>  - ⚡ setUp (line 9)
+  - ⚡ tearDown (line 14)
+  - ⚡ test_special_characters (line 21)
+    Calls: generate_tree, Path
+<h3>tests.test_treeline</h3>
+<ul><li>Functions: <strong>3</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong>3</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">tests.test_special_char</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 3</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat ">Complexity: 4</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">TestSpecialCharacters</div>
-                            <div class="class-location">Line 8</div>
-                    <div class="methods-list"><div class="method-item">setUp (Line 9)</div><div class="method-item">tearDown (Line 14)</div><div class="method-item">test_special_characters (Line 21)<div class="method-calls">Calls: generate_tree, Path</div></div></div></div></div></div>
+<h4>📦 TestTreeLine</h4>
+<ul><li>Defined at line 9</li>
+<li>Methods:</li>
+</ul>  - ⚡ setUp (line 10)
+    Calls: open, open
+  - ⚡ tearDown (line 18)
+  - ⚡ test_basic_tree (line 21)
+    Calls: treeline, str
+<h3>treeline.__init__</h3>
+<ul><li>Functions: <strong>1</strong></li>
+<li>Classes: <strong>0</strong></li>
+<li>Complexity: <strong>1</strong></li>
+</ul>
+<h3>treeline.__main__</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>0</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+<h3>treeline.analyzer</h3>
+<ul><li>Functions: <strong>6</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong><span style='color: red'>34</span></strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">tests.test_treeline</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 3</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat ">Complexity: 3</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">TestTreeLine</div>
-                            <div class="class-location">Line 9</div>
-                    <div class="methods-list"><div class="method-item">setUp (Line 10)<div class="method-calls">Calls: open, open</div></div><div class="method-item">tearDown (Line 18)</div><div class="method-item">test_basic_tree (Line 21)<div class="method-calls">Calls: treeline, str</div></div></div></div></div></div>
+<h4>📦 CodeAnalyzer</h4>
+<ul><li>Defined at line 10</li>
+<li>Methods:</li>
+</ul>  - ⚡ __init__ (line 23)
+    Calls: defaultdict
+  - ⚡ analyze_file (line 28)
+    Calls: open, CodeStructure, isinstance, CodeStructure, isinstance, print, CodeStructure, str, isinstance
+  - ⚡ _get_function_params (line 128)
+    Calls: hasattr, hasattr, hasattr
+  - ⚡ _find_function_calls (line 150)
+    Calls: set, isinstance, isinstance, FunctionCall, print
+  - ⚡ get_symbol (line 162)
+  - ⚡ format_structure (line 167)
+<h3>treeline.core</h3>
+<ul><li>Functions: <strong>7</strong></li>
+<li>Classes: <strong>0</strong></li>
+<li>Complexity: <strong><span style='color: red'>50</span></strong></li>
+</ul>
+<h3>treeline.dependency_analyzer</h3>
+<ul><li>Functions: <strong>12</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong><span style='color: red'>92</span></strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.__init__</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 1</div>
-                        <div class="stat">Classes: 0</div>
-                        <div class="stat ">Complexity: 1</div>
-                    </div>
-            </div>
+<h4>📦 ModuleDependencyAnalyzer</h4>
+<ul><li>Defined at line 20</li>
+<li>Methods:</li>
+</ul>  - ⚡ __init__ (line 23)
+    Calls: defaultdict, defaultdict, defaultdict, defaultdict, defaultdict
+  - ⚡ analyze_directory (line 439)
+    Calls: open, str, print, str
+  - ⚡ _analyze_module (line 457)
+    Calls: isinstance, setattr, getattr, isinstance, isinstance, FunctionLocation, isinstance, isinstance, isinstance, FunctionCallInfo, MethodInfo, isinstance, isinstance
+  - ⚡ _analyze_imports (line 510)
+    Calls: isinstance, isinstance
+  - ⚡ _collect_metrics (line 520)
+    Calls: ModuleMetrics, isinstance, isinstance, len, len, ComplexFunction
+  - ⚡ _calculate_complexity (line 550)
+    Calls: isinstance, isinstance, len
+  - ⚡ generate_module_overview_diagram (line 560)
+    Calls: set
+  - ⚡ generate_module_detail_diagram (line 586)
+    Calls: set
+  - ⚡ generate_mermaid_graphs (line 646)
+    Calls: sorted
+  - ⚡ generate_html_visualization (line 732)
+    Calls: set, len, len, Node, Link, len, len, len
+  - ⚡ clean_for_markdown (line 845)
+  - ⚡ generate_reports (line 868)
+    Calls: Path, sorted, range, print, print, print, print, print, open, str, sorted, open, open, str
+<h3>treeline.enhanced_analyzer</h3>
+<ul><li>Functions: <strong>31</strong></li>
+<li>Classes: <strong>1</strong></li>
+<li>Complexity: <strong><span style='color: red'>123</span></strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.__main__</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 0</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            </div>
+<h4>📦 EnhancedCodeAnalyzer</h4>
+<ul><li>Defined at line 13</li>
+<li>Methods:</li>
+</ul>  - ⚡ __init__ (line 44)
+    Calls: defaultdict, defaultdict
+  - ⚡ analyze_file (line 55)
+  - ⚡ _calculate_maintainability_index (line 76)
+    Calls: len, len, max, isinstance, isinstance, len, set
+  - ⚡ _calculate_cognitive_load (line 110)
+    Calls: sum, len, isinstance
+  - ⚡ _check_function_metrics (line 122)
+  - ⚡ _calculate_cyclomatic_complexity (line 171)
+    Calls: isinstance, isinstance, len
+  - ⚡ _calculate_cognitive_complexity (line 185)
+    Calls: walk_cognitive, isinstance, walk_cognitive, isinstance, walk_cognitive, len
+  - ⚡ _analyze_file_metrics (line 208)
+    Calls: enumerate, isinstance, len, str, str, str, str, len, len, str, str, len
+  - ⚡ _read_file (line 275)
+    Calls: open, str
+  - ⚡ _parse_content (line 284)
+    Calls: str
+  - ⚡ _analyze_code_elements (line 292)
+    Calls: isinstance, isinstance
+  - ⚡ _analyze_class (line 304)
+  - ⚡ _check_class_metrics (line 317)
+  - ⚡ format_structure (line 367)
+    Calls: isinstance
+  - ⚡ _format_metrics_section (line 424)
+    Calls: isinstance
+  - ⚡ _analyze_function (line 443)
+  - ⚡ _calculate_class_metrics (line 456)
+    Calls: ClassMetrics, isinstance, len, sum, bool, len, len, len
+  - ⚡ _calculate_function_metrics (line 473)
+    Calls: FunctionMetrics, len, len, bool, len, isinstance
+  - ⚡ _calculate_complexity (line 488)
+    Calls: isinstance, isinstance, len
+  - ⚡ _calculate_nested_depth (line 498)
+    Calls: get_depth, isinstance, get_depth, max, max, get_depth
+  - ⚡ _analyze_code_duplication (line 513)
+    Calls: set, range, len, range, len, len, len, len, len, range, range
+  - ⚡ _analyze_imports (line 540)
+    Calls: set, isinstance, len, isinstance
+  - ⚡ _analyze_inheritance (line 557)
+    Calls: get_inheritance_depth, isinstance, max
+  - ⚡ _add_issue (line 570)
+    Calls: QualityIssue
+  - ⚡ generate_report (line 585)
+  - ⚡ _format_report_sections (line 595)
+  - ⚡ _format_overview_section (line 599)
+  - ⚡ _format_issues_section (line 606)
+<h3>treeline.models.__init__</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>0</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+<h3>treeline.models.analyzer</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>5</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.analyzer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 6</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat warning">Complexity: 34</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">CodeAnalyzer</div>
-                            <div class="class-location">Line 10</div>
-                    <div class="methods-list"><div class="method-item">__init__ (Line 23)<div class="method-calls">Calls: defaultdict</div></div><div class="method-item">analyze_file (Line 28)<div class="method-calls">Calls: open, CodeStructure, isinstance, CodeStructure, isinstance, print, CodeStructure, str, isinstance</div></div><div class="method-item">_get_function_params (Line 128)<div class="method-calls">Calls: hasattr, hasattr, hasattr</div></div><div class="method-item">_find_function_calls (Line 150)<div class="method-calls">Calls: set, isinstance, isinstance, FunctionCall, print</div></div><div class="method-item">get_symbol (Line 162)</div><div class="method-item">format_structure (Line 167)</div></div></div></div></div>
+<h4>📦 FunctionCall</h4>
+<ul><li>Defined at line 8</li>
+</ul>
+<h4>📦 CodeStructure</h4>
+<ul><li>Defined at line 14</li>
+</ul>
+<h4>📦 FunctionNode</h4>
+<ul><li>Defined at line 23</li>
+</ul>
+<h4>📦 ClassNode</h4>
+<ul><li>Defined at line 32</li>
+</ul>
+<h4>📦 AnalyzerConfig</h4>
+<ul><li>Defined at line 41</li>
+</ul><h3>treeline.models.core</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>3</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.core</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 7</div>
-                        <div class="stat">Classes: 0</div>
-                        <div class="stat warning">Complexity: 55</div>
-                    </div>
-            </div>
+<h4>📦 CodeStructure</h4>
+<ul><li>Defined at line 9</li>
+</ul>
+<h4>📦 TreeOptions</h4>
+<ul><li>Defined at line 18</li>
+</ul>
+<h4>📦 ModuleMetrics</h4>
+<ul><li>Defined at line 27</li>
+</ul><h3>treeline.models.dependency_analyzer</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>10</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.dependency_analyzer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 12</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat warning">Complexity: 95</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">ModuleDependencyAnalyzer</div>
-                            <div class="class-location">Line 19</div>
-                    <div class="methods-list"><div class="method-item">__init__ (Line 22)<div class="method-calls">Calls: defaultdict, defaultdict, defaultdict, defaultdict, defaultdict</div></div><div class="method-item">analyze_directory (Line 438)<div class="method-calls">Calls: open, str, print, str</div></div><div class="method-item">_analyze_module (Line 456)<div class="method-calls">Calls: isinstance, setattr, getattr, isinstance, isinstance, FunctionLocation, isinstance, isinstance, isinstance, FunctionCallInfo, MethodInfo, isinstance, isinstance</div></div><div class="method-item">_analyze_imports (Line 509)<div class="method-calls">Calls: isinstance, isinstance</div></div><div class="method-item">_collect_metrics (Line 519)<div class="method-calls">Calls: ModuleMetrics, isinstance, isinstance, len, len, ComplexFunction</div></div><div class="method-item">_calculate_complexity (Line 549)<div class="method-calls">Calls: isinstance, isinstance, len</div></div><div class="method-item">generate_module_overview_diagram (Line 559)<div class="method-calls">Calls: set</div></div><div class="method-item">generate_module_detail_diagram (Line 585)<div class="method-calls">Calls: set</div></div><div class="method-item">generate_mermaid_graphs (Line 645)<div class="method-calls">Calls: sorted</div></div><div class="method-item">generate_html_visualization (Line 731)<div class="method-calls">Calls: set, len, len, Node, Link, len, len, len</div></div><div class="method-item">clean_for_markdown (Line 844)</div><div class="method-item">generate_reports (Line 867)<div class="method-calls">Calls: Path, sorted, sorted, print, print, print, print, print, open, str, open, open</div></div></div></div></div></div>
+<h4>📦 FunctionLocation</h4>
+<ul><li>Defined at line 7</li>
+</ul>
+<h4>📦 FunctionCallInfo</h4>
+<ul><li>Defined at line 14</li>
+</ul>
+<h4>📦 ClassMethod</h4>
+<ul><li>Defined at line 21</li>
+</ul>
+<h4>📦 ClassInfo</h4>
+<ul><li>Defined at line 27</li>
+</ul>
+<h4>📦 ModuleMetrics</h4>
+<ul><li>Defined at line 35</li>
+</ul>
+<h4>📦 ComplexFunction</h4>
+<ul><li>Defined at line 42</li>
+</ul>
+<h4>📦 MethodInfo</h4>
+<ul><li>Defined at line 49</li>
+</ul>
+<h4>📦 Node</h4>
+<ul><li>Defined at line 55</li>
+</ul>
+<h4>📦 Link</h4>
+<ul><li>Defined at line 62</li>
+</ul>
+<h4>📦 GraphData</h4>
+<ul><li>Defined at line 69</li>
+</ul><h3>treeline.models.enhanced_analyzer</h3>
+<ul><li>Functions: <strong>0</strong></li>
+<li>Classes: <strong>4</strong></li>
+<li>Complexity: <strong>0</strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.diff_visualizer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 14</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat warning">Complexity: 35</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">DiffVisualizer</div>
-                            <div class="class-location">Line 11</div>
-                    <div class="methods-list"><div class="method-item">__init__ (Line 14)<div class="method-calls">Calls: Path, ModuleDependencyAnalyzer</div></div><div class="method-item">_serialize_graph_data (Line 18)</div><div class="method-item">_serialize_node (Line 25)<div class="method-calls">Calls: str, str, str, getattr, getattr</div></div><div class="method-item">_serialize_link (Line 35)<div class="method-calls">Calls: str, isinstance, str, str, isinstance, str, str</div></div><div class="method-item">_node_was_modified_serial (Line 52)</div><div class="method-item">_get_node_changes_serial (Line 60)</div><div class="method-item">_run_git_command (Line 68)<div class="method-calls">Calls: print, print, print, RuntimeError, print, RuntimeError, print, RuntimeError, list, str, str</div></div><div class="method-item">_is_git_repo (Line 93)</div><div class="method-item">_commit_exists (Line 100)</div><div class="method-item">_analyze_commit (Line 107)<div class="method-calls">Calls: ValueError, TemporaryDirectory, Path, str, str</div></div><div class="method-item">_compute_changes (Line 137)<div class="method-calls">Calls: node_key, node_key, link_key, link_key, node_key, link_key, node_key, link_key</div></div><div class="method-item">generate_structural_diff (Line 181)<div class="method-calls">Calls: print, print, ValueError, any, any, print, print, print, len, list, str, str</div></div></div></div></div></div>
+<h4>📦 FunctionMetrics</h4>
+<ul><li>Defined at line 8</li>
+</ul>
+<h4>📦 ClassMetrics</h4>
+<ul><li>Defined at line 22</li>
+</ul>
+<h4>📦 CodeDuplication</h4>
+<ul><li>Defined at line 35</li>
+</ul>
+<h4>📦 QualityIssue</h4>
+<ul><li>Defined at line 41</li>
+</ul><h3>treeline.type_checker</h3>
+<ul><li>Functions: <strong>2</strong></li>
+<li>Classes: <strong>3</strong></li>
+<li>Complexity: <strong><span style='color: red'>25</span></strong></li>
+</ul>
+Classes:
 
-                <div class="module-card">
-                    <div class="module-name">treeline.enhanced_analyzer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 31</div>
-                        <div class="stat">Classes: 1</div>
-                        <div class="stat warning">Complexity: 123</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">EnhancedCodeAnalyzer</div>
-                            <div class="class-location">Line 13</div>
-                    <div class="methods-list"><div class="method-item">__init__ (Line 44)<div class="method-calls">Calls: defaultdict, defaultdict</div></div><div class="method-item">analyze_file (Line 55)</div><div class="method-item">_calculate_maintainability_index (Line 76)<div class="method-calls">Calls: len, len, max, isinstance, isinstance, len, set</div></div><div class="method-item">_calculate_cognitive_load (Line 110)<div class="method-calls">Calls: sum, len, isinstance</div></div><div class="method-item">_check_function_metrics (Line 122)</div><div class="method-item">_calculate_cyclomatic_complexity (Line 171)<div class="method-calls">Calls: isinstance, isinstance, len</div></div><div class="method-item">_calculate_cognitive_complexity (Line 185)<div class="method-calls">Calls: walk_cognitive, isinstance, walk_cognitive, isinstance, walk_cognitive, len</div></div><div class="method-item">_analyze_file_metrics (Line 208)<div class="method-calls">Calls: enumerate, isinstance, len, str, str, str, str, len, len, str, str, len</div></div><div class="method-item">_read_file (Line 275)<div class="method-calls">Calls: open, str</div></div><div class="method-item">_parse_content (Line 284)<div class="method-calls">Calls: str</div></div><div class="method-item">_analyze_code_elements (Line 292)<div class="method-calls">Calls: isinstance, isinstance</div></div><div class="method-item">_analyze_class (Line 304)</div><div class="method-item">_check_class_metrics (Line 317)</div><div class="method-item">format_structure (Line 367)<div class="method-calls">Calls: isinstance</div></div><div class="method-item">_format_metrics_section (Line 424)<div class="method-calls">Calls: isinstance</div></div><div class="method-item">_analyze_function (Line 443)</div><div class="method-item">_calculate_class_metrics (Line 456)<div class="method-calls">Calls: ClassMetrics, isinstance, len, sum, bool, len, len, len</div></div><div class="method-item">_calculate_function_metrics (Line 473)<div class="method-calls">Calls: FunctionMetrics, len, len, bool, len, isinstance</div></div><div class="method-item">_calculate_complexity (Line 488)<div class="method-calls">Calls: isinstance, isinstance, len</div></div><div class="method-item">_calculate_nested_depth (Line 498)<div class="method-calls">Calls: get_depth, isinstance, get_depth, max, max, get_depth</div></div><div class="method-item">_analyze_code_duplication (Line 513)<div class="method-calls">Calls: set, range, len, range, len, len, len, len, len, range, range</div></div><div class="method-item">_analyze_imports (Line 540)<div class="method-calls">Calls: set, isinstance, len, isinstance</div></div><div class="method-item">_analyze_inheritance (Line 557)<div class="method-calls">Calls: get_inheritance_depth, isinstance, max</div></div><div class="method-item">_add_issue (Line 570)<div class="method-calls">Calls: QualityIssue</div></div><div class="method-item">generate_report (Line 585)</div><div class="method-item">_format_report_sections (Line 595)</div><div class="method-item">_format_overview_section (Line 599)</div><div class="method-item">_format_issues_section (Line 606)</div></div></div></div></div>
+<h4>📦 TypeValidator</h4>
+<ul><li>Defined at line 5</li>
+<li>Methods:</li>
+</ul>  - ⚡ validate (line 7)
+    Calls: get_origin, get_args, TypeError, get_args, get_origin, type, isinstance, TypeError, len, type, isinstance, TypeError, isinstance, TypeError, zip, isinstance, TypeError, len, len, TypeError, type, type, isinstance, TypeError, type, type, len, len, type
 
-                <div class="module-card">
-                    <div class="module-name">treeline.models.__init__</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 0</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            </div>
+<h4>📦 TypeChecked</h4>
+<ul><li>Defined at line 70</li>
+<li>Methods:</li>
+</ul>  - ⚡ __post_init__ (line 73)
+    Calls: getattr, TypeError, str
 
-                <div class="module-card">
-                    <div class="module-name">treeline.models.analyzer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 5</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">FunctionCall</div>
-                            <div class="class-location">Line 8</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">CodeStructure</div>
-                            <div class="class-location">Line 14</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">FunctionNode</div>
-                            <div class="class-location">Line 23</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ClassNode</div>
-                            <div class="class-location">Line 32</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">AnalyzerConfig</div>
-                            <div class="class-location">Line 41</div>
-                    </div></div></div>
+<h4>📦 ValidationError</h4>
+<ul><li>Defined at line 83</li>
+</ul>
+<h2>Complexity Hotspots</h2>
 
-                <div class="module-card">
-                    <div class="module-name">treeline.models.core</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 3</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">CodeStructure</div>
-                            <div class="class-location">Line 9</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">TreeOptions</div>
-                            <div class="class-location">Line 18</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ModuleMetrics</div>
-                            <div class="class-location">Line 27</div>
-                    </div></div></div>
-
-                <div class="module-card">
-                    <div class="module-name">treeline.models.dependency_analyzer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 10</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">FunctionLocation</div>
-                            <div class="class-location">Line 7</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">FunctionCallInfo</div>
-                            <div class="class-location">Line 14</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ClassMethod</div>
-                            <div class="class-location">Line 21</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ClassInfo</div>
-                            <div class="class-location">Line 27</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ModuleMetrics</div>
-                            <div class="class-location">Line 35</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ComplexFunction</div>
-                            <div class="class-location">Line 42</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">MethodInfo</div>
-                            <div class="class-location">Line 49</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">Node</div>
-                            <div class="class-location">Line 55</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">Link</div>
-                            <div class="class-location">Line 62</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">GraphData</div>
-                            <div class="class-location">Line 69</div>
-                    </div></div></div>
-
-                <div class="module-card">
-                    <div class="module-name">treeline.models.enhanced_analyzer</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 0</div>
-                        <div class="stat">Classes: 4</div>
-                        <div class="stat ">Complexity: 0</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">FunctionMetrics</div>
-                            <div class="class-location">Line 8</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">ClassMetrics</div>
-                            <div class="class-location">Line 22</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">CodeDuplication</div>
-                            <div class="class-location">Line 35</div>
-                    </div>
-                        <div class="class-item">
-                            <div class="class-name">QualityIssue</div>
-                            <div class="class-location">Line 41</div>
-                    </div></div></div>
-
-                <div class="module-card">
-                    <div class="module-name">treeline.type_checker</div>
-                    <div class="module-stats">
-                        <div class="stat">Functions: 2</div>
-                        <div class="stat">Classes: 3</div>
-                        <div class="stat warning">Complexity: 25</div>
-                    </div>
-            <div class="classes-section">
-                        <div class="class-item">
-                            <div class="class-name">TypeValidator</div>
-                            <div class="class-location">Line 5</div>
-                    <div class="methods-list"><div class="method-item">validate (Line 7)<div class="method-calls">Calls: get_origin, get_args, TypeError, get_args, get_origin, type, isinstance, TypeError, len, type, isinstance, TypeError, isinstance, TypeError, zip, isinstance, TypeError, len, len, TypeError, type, type, isinstance, TypeError, type, type, len, len, type</div></div></div></div>
-                        <div class="class-item">
-                            <div class="class-name">TypeChecked</div>
-                            <div class="class-location">Line 70</div>
-                    <div class="methods-list"><div class="method-item">__post_init__ (Line 73)<div class="method-calls">Calls: getattr, TypeError, str</div></div></div></div>
-                        <div class="class-item">
-                            <div class="class-name">ValidationError</div>
-                            <div class="class-location">Line 83</div>
-                    </div></div></div>
-            </div>
-        </div>
-
+<h3>validate</h3>
+<ul><li><strong>Module</strong>: treeline.type_checker</li>
+<li><strong>Complexity</strong>: <span style='color: red'>22</span></li>
+</ul>
+<h3>generate_html_visualization</h3>
+<ul><li><strong>Module</strong>: treeline.dependency_analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>18</span></li>
+</ul>
+<h3>generate_module_detail_diagram</h3>
+<ul><li><strong>Module</strong>: treeline.dependency_analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>17</span></li>
+</ul>
+<h3>_analyze_module</h3>
+<ul><li><strong>Module</strong>: treeline.dependency_analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>15</span></li>
+</ul>
+<h3>format_structure</h3>
+<ul><li><strong>Module</strong>: treeline.enhanced_analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>15</span></li>
+</ul>
+<h3>generate_tree</h3>
+<ul><li><strong>Module</strong>: treeline.core</li>
+<li><strong>Complexity</strong>: <span style='color: red'>14</span></li>
+</ul>
+<h3>_analyze_file_metrics</h3>
+<ul><li><strong>Module</strong>: treeline.enhanced_analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>13</span></li>
+</ul>
+<h3>format_structure</h3>
+<ul><li><strong>Module</strong>: treeline.core</li>
+<li><strong>Complexity</strong>: <span style='color: red'>13</span></li>
+</ul>
+<h3>generate_reports</h3>
+<ul><li><strong>Module</strong>: treeline.dependency_analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>12</span></li>
+</ul>
+<h3>analyze_file</h3>
+<ul><li><strong>Module</strong>: treeline.analyzer</li>
+<li><strong>Complexity</strong>: <span style='color: red'>12</span></li>
+</ul>
         </body>
         </html>
