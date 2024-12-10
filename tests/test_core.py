@@ -36,7 +36,7 @@ class TestTreeGenerator(unittest.TestCase):
     def test_markdown_creation(self):
         """Test if markdown file is created when flag is True"""
         generate_tree(self.test_dir, create_md=True)
-        self.assertTrue(os.path.exists("results/tree.md"))
+        self.assertTrue(os.path.exists("results/code_analysis.md"))
 
 
 if __name__ == "__main__":
