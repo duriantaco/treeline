@@ -29,3 +29,4 @@ repos:
     hooks:
     -   id: flake8
         exclude: ^docs/
+        args: ['--extend-ignore=E266']
