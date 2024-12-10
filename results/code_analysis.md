@@ -6,9 +6,11 @@
 
 The following diagrams show the project structure from different perspectives:
 
+
 ### Module Dependencies
 
 Overview of how modules are connected:
+
 
 ```mermaid
 graph TD
@@ -23,7 +25,6 @@ graph TD
     tests_test_treeline["tests.test_treeline"]:::modNode
     tests_test_nested_dir["tests.test_nested_dir"]:::modNode
     treeline_type_checker["treeline.type_checker"]:::modNode
-    treeline_diff_visualizer["treeline.diff_visualizer"]:::modNode
     treeline_dependency_analyzer["treeline.dependency_analyzer"]:::modNode
     treeline_analyzer["treeline.analyzer"]:::modNode
     treeline___init__["treeline.__init__"]:::modNode
@@ -41,17 +42,14 @@ graph TD
     tests_test_empty_dir --> treeline_core
     tests_test_core --> treeline_core
     tests_test_nested_dir --> treeline_core
-    treeline_diff_visualizer --> treeline_dependency_analyzer
-    treeline_diff_visualizer --> treeline_models_dependency_analyzer
     treeline_dependency_analyzer --> treeline_models_dependency_analyzer
-    treeline_analyzer --> treeline_type_checker
     treeline_analyzer --> treeline_models_analyzer
+    treeline_analyzer --> treeline_type_checker
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
-    treeline_core --> treeline_dependency_analyzer
-    treeline_core --> treeline_models_core
-    treeline_core --> treeline_diff_visualizer
-    treeline_core --> treeline_type_checker
     treeline_core --> treeline_enhanced_analyzer
+    treeline_core --> treeline_models_core
+    treeline_core --> treeline_type_checker
+    treeline_core --> treeline_dependency_analyzer
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
@@ -178,46 +176,6 @@ graph TD
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_clean_for_markdown
         treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_reports["⚡ generate_reports"]:::fnNode
         treeline_dependency_analyzer_ModuleDependencyAnalyzer --> treeline_dependency_analyzer_ModuleDependencyAnalyzer_generate_reports
-    end
-
-```
-
-### treeline.diff_visualizer
-
-```mermaid
-graph TD
-
-    %% Styling
-    classDef fnNode fill:#e4d1d1,stroke:#333
-    classDef clsNode fill:#d1e0e4,stroke:#333
-
-    subgraph treeline_diff_visualizer["treeline.diff_visualizer"]
-        direction TB
-        treeline_diff_visualizer_DiffVisualizer["📦 DiffVisualizer"]:::clsNode
-        treeline_diff_visualizer_DiffVisualizer___init__["⚡ __init__"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer___init__
-        treeline_diff_visualizer_DiffVisualizer__serialize_graph_data["⚡ _serialize_graph_data"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_graph_data
-        treeline_diff_visualizer_DiffVisualizer__serialize_node["⚡ _serialize_node"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_node
-        treeline_diff_visualizer_DiffVisualizer__serialize_link["⚡ _serialize_link"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__serialize_link
-        treeline_diff_visualizer_DiffVisualizer__node_was_modified_serial["⚡ _node_was_modified_serial"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__node_was_modified_serial
-        treeline_diff_visualizer_DiffVisualizer__get_node_changes_serial["⚡ _get_node_changes_serial"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__get_node_changes_serial
-        treeline_diff_visualizer_DiffVisualizer__run_git_command["⚡ _run_git_command"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__run_git_command
-        treeline_diff_visualizer_DiffVisualizer__is_git_repo["⚡ _is_git_repo"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__is_git_repo
-        treeline_diff_visualizer_DiffVisualizer__commit_exists["⚡ _commit_exists"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__commit_exists
-        treeline_diff_visualizer_DiffVisualizer__analyze_commit["⚡ _analyze_commit"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__analyze_commit
-        treeline_diff_visualizer_DiffVisualizer__compute_changes["⚡ _compute_changes"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer__compute_changes
-        treeline_diff_visualizer_DiffVisualizer_generate_structural_diff["⚡ generate_structural_diff"]:::fnNode
-        treeline_diff_visualizer_DiffVisualizer --> treeline_diff_visualizer_DiffVisualizer_generate_structural_diff
     end
 
 ```
@@ -418,7 +376,6 @@ graph TD
 ```
 
 ├─ assets
-│ ├─ output.gif
 │ ├─ screenshot1.png
 │ └─ Treeline.png
 ├─ docs
@@ -532,8 +489,6 @@ graph TD
 │ ├─ user_guide.rst
 │ └─ visualization.rst
 ├─ example
-│ ├─ code_diff.html
-│ ├─ dependencies.html
 │ ├─ sample.py
 │ │   **Class**: ◆ Calculator
 │ │   └─ # A simple calculator class.
@@ -727,10 +682,8 @@ graph TD
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
 │ │   **Function**: → main
-│ │   └─ ! Too long (85 lines)
-│ │   └─ ! Deep nesting (depth 5)
+│ │   └─ ! Too long (51 lines)
 │ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! Excessive nesting depth (> 4)
 │ │   **Function**: → add_directory
 │ │   └─ ! Deep nesting (depth 7)
 │ │   └─ ! High cognitive complexity (> 15)
@@ -740,8 +693,8 @@ graph TD
 │ ├─ dependency_analyzer.py
 │ │   **Class**: ◆ ModuleDependencyAnalyzer
 │ │   └─ # Analyzes module-level dependencies and generates summary reports.
-│ │   └─ ! High complexity (95)
-│ │   └─ ! Too long (1132 lines)
+│ │   └─ ! High complexity (92)
+│ │   └─ ! Too long (1091 lines)
 │ │   └─ ! Class too long
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
@@ -793,49 +746,14 @@ graph TD
 │ │   └─ # Remove ANSI colors and simplify symbols for markdown.
 │ │   **Function**: → generate_reports
 │ │   └─ # Generate comprehensive HTML and markdown reports of the code analysis.
-│ │   └─ ! High complexity (15)
-│ │   └─ ! Too long (284 lines)
+│ │   └─ ! High complexity (12)
+│ │   └─ ! Too long (243 lines)
 │ │   └─ ! Deep nesting (depth 6)
 │ │   └─ ! Function exceeds 50 lines
 │ │   └─ ! High cyclomatic complexity(> 10)
 │ │   └─ ! High cognitive complexity (> 15)
 │ │   └─ ! Excessive nesting depth (> 4)
 │ │   └─ ! High cognitive load (> 7 items)
-│ ├─ diff_visualizer.py
-│ │   **Class**: ◆ DiffVisualizer
-│ │   └─ # Visualizes structural differences between different versions of Python code.
-│ │   └─ ! High complexity (35)
-│ │   └─ ! Too long (444 lines)
-│ │   └─ ! Class too long
-│ │   └─ ! Too many methods
-│ │   **Function**: → __init__
-│ │   **Function**: → _serialize_graph_data
-│ │   └─ # Convert a GraphData object to a serializable dictionary
-│ │   **Function**: → _serialize_node
-│ │   └─ # Convert a Node object to a serializable dictionary
-│ │   **Function**: → _serialize_link
-│ │   └─ # Convert a link dictionary to a serializable format
-│ │   **Function**: → _node_was_modified_serial
-│ │   └─ # Check if a serialized node's important properties changed
-│ │   **Function**: → _get_node_changes_serial
-│ │   └─ # Get detailed changes for modified serialized nodes
-│ │   **Function**: → _run_git_command
-│ │   └─ # Run a git command with error handling
-│ │   **Function**: → _is_git_repo
-│ │   **Function**: → _commit_exists
-│ │   **Function**: → _analyze_commit
-│ │   └─ # Analyze a specific commit and return serializable data
-│ │   **Function**: → _compute_changes
-│ │   └─ # Compute the differences between two dependency graphs
-│ │   **Function**: → generate_structural_diff
-│ │   └─ # Generate a visual diff between two commits
-│ │   └─ ! High complexity (12)
-│ │   └─ ! Too long (274 lines)
-│ │   └─ ! Function exceeds 50 lines
-│ │   └─ ! High cyclomatic complexity(> 10)
-│ │   └─ ! High cognitive load (> 7 items)
-│ │   **Function**: → node_key
-│ │   **Function**: → link_key
 │ ├─ enhanced_analyzer.py
 │ │   **Class**: ◆ EnhancedCodeAnalyzer
 │ │   └─ # Enhanced analyzer for code quality and maintainability metrics.
@@ -978,7 +896,6 @@ graph TD
 ├─ .pre-commit-config.yaml
 ├─ .readthedocs.yaml
 ├─ .treeline-ignore
-├─ code_diff.html
 ├─ docker-compose.yaml
 ├─ dockerfile
 ├─ License
@@ -987,3 +904,386 @@ graph TD
 ├─ setup.py
 └─ tox.ini
 ```
+
+## Code Quality Metrics
+
+### docs.conf
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### example.sample
+- Functions: **4**
+- Classes: **1**
+- Complexity: **4**
+
+Classes:
+
+#### 📦 Calculator
+- Defined at line 1
+- Methods:
+  - ⚡ __init__ (line 4)
+  - ⚡ add (line 7)
+  - ⚡ multiply (line 11)
+### setup
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### tests.test_core
+- Functions: **4**
+- Classes: **1**
+- Complexity: **5**
+
+Classes:
+
+#### 📦 TestTreeGenerator
+- Defined at line 10
+- Methods:
+  - ⚡ setUp (line 11)
+    Calls: Path, Path
+  - ⚡ tearDown (line 19)
+  - ⚡ test_tree_structure (line 24)
+    Calls: generate_tree
+  - ⚡ test_markdown_creation (line 36)
+    Calls: generate_tree
+### tests.test_empty_dir
+- Functions: **3**
+- Classes: **1**
+- Complexity: **4**
+
+Classes:
+
+#### 📦 TestEmptyDirectory
+- Defined at line 8
+- Methods:
+  - ⚡ setUp (line 9)
+  - ⚡ tearDown (line 14)
+  - ⚡ test_empty_directory (line 19)
+    Calls: generate_tree
+### tests.test_nested_dir
+- Functions: **3**
+- Classes: **1**
+- Complexity: **4**
+
+Classes:
+
+#### 📦 TestNestedDirectories
+- Defined at line 8
+- Methods:
+  - ⚡ setUp (line 9)
+  - ⚡ tearDown (line 14)
+  - ⚡ test_nested_directories (line 21)
+    Calls: generate_tree, Path
+### tests.test_special_char
+- Functions: **3**
+- Classes: **1**
+- Complexity: **4**
+
+Classes:
+
+#### 📦 TestSpecialCharacters
+- Defined at line 8
+- Methods:
+  - ⚡ setUp (line 9)
+  - ⚡ tearDown (line 14)
+  - ⚡ test_special_characters (line 21)
+    Calls: generate_tree, Path
+### tests.test_treeline
+- Functions: **3**
+- Classes: **1**
+- Complexity: **3**
+
+Classes:
+
+#### 📦 TestTreeLine
+- Defined at line 9
+- Methods:
+  - ⚡ setUp (line 10)
+    Calls: open, open
+  - ⚡ tearDown (line 18)
+  - ⚡ test_basic_tree (line 21)
+    Calls: treeline, str
+### treeline.__init__
+- Functions: **1**
+- Classes: **0**
+- Complexity: **1**
+
+### treeline.__main__
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### treeline.analyzer
+- Functions: **6**
+- Classes: **1**
+- Complexity: **<span style='color: red'>34</span>**
+
+Classes:
+
+#### 📦 CodeAnalyzer
+- Defined at line 10
+- Methods:
+  - ⚡ __init__ (line 23)
+    Calls: defaultdict
+  - ⚡ analyze_file (line 28)
+    Calls: open, CodeStructure, isinstance, CodeStructure, isinstance, print, CodeStructure, str, isinstance
+  - ⚡ _get_function_params (line 128)
+    Calls: hasattr, hasattr, hasattr
+  - ⚡ _find_function_calls (line 150)
+    Calls: set, isinstance, isinstance, FunctionCall, print
+  - ⚡ get_symbol (line 162)
+  - ⚡ format_structure (line 167)
+### treeline.core
+- Functions: **7**
+- Classes: **0**
+- Complexity: **<span style='color: red'>50</span>**
+
+### treeline.dependency_analyzer
+- Functions: **12**
+- Classes: **1**
+- Complexity: **<span style='color: red'>92</span>**
+
+Classes:
+
+#### 📦 ModuleDependencyAnalyzer
+- Defined at line 20
+- Methods:
+  - ⚡ __init__ (line 23)
+    Calls: defaultdict, defaultdict, defaultdict, defaultdict, defaultdict
+  - ⚡ analyze_directory (line 439)
+    Calls: open, str, print, str
+  - ⚡ _analyze_module (line 457)
+    Calls: isinstance, setattr, getattr, isinstance, isinstance, FunctionLocation, isinstance, isinstance, isinstance, FunctionCallInfo, MethodInfo, isinstance, isinstance
+  - ⚡ _analyze_imports (line 510)
+    Calls: isinstance, isinstance
+  - ⚡ _collect_metrics (line 520)
+    Calls: ModuleMetrics, isinstance, isinstance, len, len, ComplexFunction
+  - ⚡ _calculate_complexity (line 550)
+    Calls: isinstance, isinstance, len
+  - ⚡ generate_module_overview_diagram (line 560)
+    Calls: set
+  - ⚡ generate_module_detail_diagram (line 586)
+    Calls: set
+  - ⚡ generate_mermaid_graphs (line 646)
+    Calls: sorted
+  - ⚡ generate_html_visualization (line 732)
+    Calls: set, len, len, Node, Link, len, len, len
+  - ⚡ clean_for_markdown (line 845)
+  - ⚡ generate_reports (line 868)
+    Calls: Path, sorted, range, print, print, print, print, print, open, str, sorted, open, open, str
+### treeline.enhanced_analyzer
+- Functions: **31**
+- Classes: **1**
+- Complexity: **<span style='color: red'>123</span>**
+
+Classes:
+
+#### 📦 EnhancedCodeAnalyzer
+- Defined at line 13
+- Methods:
+  - ⚡ __init__ (line 44)
+    Calls: defaultdict, defaultdict
+  - ⚡ analyze_file (line 55)
+  - ⚡ _calculate_maintainability_index (line 76)
+    Calls: len, len, max, isinstance, isinstance, len, set
+  - ⚡ _calculate_cognitive_load (line 110)
+    Calls: sum, len, isinstance
+  - ⚡ _check_function_metrics (line 122)
+  - ⚡ _calculate_cyclomatic_complexity (line 171)
+    Calls: isinstance, isinstance, len
+  - ⚡ _calculate_cognitive_complexity (line 185)
+    Calls: walk_cognitive, isinstance, walk_cognitive, isinstance, walk_cognitive, len
+  - ⚡ _analyze_file_metrics (line 208)
+    Calls: enumerate, isinstance, len, str, str, str, str, len, len, str, str, len
+  - ⚡ _read_file (line 275)
+    Calls: open, str
+  - ⚡ _parse_content (line 284)
+    Calls: str
+  - ⚡ _analyze_code_elements (line 292)
+    Calls: isinstance, isinstance
+  - ⚡ _analyze_class (line 304)
+  - ⚡ _check_class_metrics (line 317)
+  - ⚡ format_structure (line 367)
+    Calls: isinstance
+  - ⚡ _format_metrics_section (line 424)
+    Calls: isinstance
+  - ⚡ _analyze_function (line 443)
+  - ⚡ _calculate_class_metrics (line 456)
+    Calls: ClassMetrics, isinstance, len, sum, bool, len, len, len
+  - ⚡ _calculate_function_metrics (line 473)
+    Calls: FunctionMetrics, len, len, bool, len, isinstance
+  - ⚡ _calculate_complexity (line 488)
+    Calls: isinstance, isinstance, len
+  - ⚡ _calculate_nested_depth (line 498)
+    Calls: get_depth, isinstance, get_depth, max, max, get_depth
+  - ⚡ _analyze_code_duplication (line 513)
+    Calls: set, range, len, range, len, len, len, len, len, range, range
+  - ⚡ _analyze_imports (line 540)
+    Calls: set, isinstance, len, isinstance
+  - ⚡ _analyze_inheritance (line 557)
+    Calls: get_inheritance_depth, isinstance, max
+  - ⚡ _add_issue (line 570)
+    Calls: QualityIssue
+  - ⚡ generate_report (line 585)
+  - ⚡ _format_report_sections (line 595)
+  - ⚡ _format_overview_section (line 599)
+  - ⚡ _format_issues_section (line 606)
+### treeline.models.__init__
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### treeline.models.analyzer
+- Functions: **0**
+- Classes: **5**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 FunctionCall
+- Defined at line 8
+
+#### 📦 CodeStructure
+- Defined at line 14
+
+#### 📦 FunctionNode
+- Defined at line 23
+
+#### 📦 ClassNode
+- Defined at line 32
+
+#### 📦 AnalyzerConfig
+- Defined at line 41
+### treeline.models.core
+- Functions: **0**
+- Classes: **3**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 CodeStructure
+- Defined at line 9
+
+#### 📦 TreeOptions
+- Defined at line 18
+
+#### 📦 ModuleMetrics
+- Defined at line 27
+### treeline.models.dependency_analyzer
+- Functions: **0**
+- Classes: **10**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 FunctionLocation
+- Defined at line 7
+
+#### 📦 FunctionCallInfo
+- Defined at line 14
+
+#### 📦 ClassMethod
+- Defined at line 21
+
+#### 📦 ClassInfo
+- Defined at line 27
+
+#### 📦 ModuleMetrics
+- Defined at line 35
+
+#### 📦 ComplexFunction
+- Defined at line 42
+
+#### 📦 MethodInfo
+- Defined at line 49
+
+#### 📦 Node
+- Defined at line 55
+
+#### 📦 Link
+- Defined at line 62
+
+#### 📦 GraphData
+- Defined at line 69
+### treeline.models.enhanced_analyzer
+- Functions: **0**
+- Classes: **4**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 FunctionMetrics
+- Defined at line 8
+
+#### 📦 ClassMetrics
+- Defined at line 22
+
+#### 📦 CodeDuplication
+- Defined at line 35
+
+#### 📦 QualityIssue
+- Defined at line 41
+### treeline.type_checker
+- Functions: **2**
+- Classes: **3**
+- Complexity: **<span style='color: red'>25</span>**
+
+Classes:
+
+#### 📦 TypeValidator
+- Defined at line 5
+- Methods:
+  - ⚡ validate (line 7)
+    Calls: get_origin, get_args, TypeError, get_args, get_origin, type, isinstance, TypeError, len, type, isinstance, TypeError, isinstance, TypeError, zip, isinstance, TypeError, len, len, TypeError, type, type, isinstance, TypeError, type, type, len, len, type
+
+#### 📦 TypeChecked
+- Defined at line 70
+- Methods:
+  - ⚡ __post_init__ (line 73)
+    Calls: getattr, TypeError, str
+
+#### 📦 ValidationError
+- Defined at line 83
+
+## Complexity Hotspots
+
+### validate
+- **Module**: treeline.type_checker
+- **Complexity**: <span style='color: red'>22</span>
+
+### generate_html_visualization
+- **Module**: treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>18</span>
+
+### generate_module_detail_diagram
+- **Module**: treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>17</span>
+
+### _analyze_module
+- **Module**: treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>15</span>
+
+### format_structure
+- **Module**: treeline.enhanced_analyzer
+- **Complexity**: <span style='color: red'>15</span>
+
+### generate_tree
+- **Module**: treeline.core
+- **Complexity**: <span style='color: red'>14</span>
+
+### _analyze_file_metrics
+- **Module**: treeline.enhanced_analyzer
+- **Complexity**: <span style='color: red'>13</span>
+
+### format_structure
+- **Module**: treeline.core
+- **Complexity**: <span style='color: red'>13</span>
+
+### generate_reports
+- **Module**: treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>12</span>
+
+### analyze_file
+- **Module**: treeline.analyzer
+- **Complexity**: <span style='color: red'>12</span>

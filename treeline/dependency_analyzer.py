@@ -870,22 +870,18 @@ class ModuleDependencyAnalyzer:
         results_dir = Path("results")
         results_dir.mkdir(exist_ok=True)
 
-        # 1. Generate and save interactive visualization separately
         html_viz = self.generate_html_visualization()
         viz_path = results_dir / "code_visualization.html"
         with open(viz_path, "w", encoding="utf-8") as f:
             f.write(html_viz)
 
-        # 2. Generate markdown content
         md_content = []
         md_content.append("# Project Analysis Report\n")
 
-        # Add link to interactive visualization
         md_content.append(
             "[Open Interactive Code Visualization](./code_visualization.html)\n"
         )
 
-        # Add module dependencies section with Mermaid graphs
         md_content.append("## Code Structure Visualization\n")
         md_content.append(
             "The following diagrams show the project structure from different perspectives:\n\n"
@@ -894,13 +890,11 @@ class ModuleDependencyAnalyzer:
         md_content.append("Overview of how modules are connected:\n\n")
         md_content.append(self.generate_mermaid_graphs())
 
-        # Add directory structure
         md_content.append("## Directory Structure\n")
         md_content.append("```")
         md_content.append("\n".join(self.clean_for_markdown(line) for line in tree_str))
         md_content.append("```\n")
 
-        # Add metrics and analysis
         md_content.append("## Code Quality Metrics\n")
         for module, metrics in sorted(self.module_metrics.items()):
             md_content.append(f"### {module}")
@@ -932,7 +926,6 @@ class ModuleDependencyAnalyzer:
                                     f"    Calls: {', '.join(method_info['calls'])}"
                                 )
 
-        # Add complexity hotspots
         md_content.append("\n## Complexity Hotspots\n")
         if self.complex_functions:
             for module, func, complexity in sorted(
@@ -947,12 +940,10 @@ class ModuleDependencyAnalyzer:
         else:
             md_content.append("*No complex functions found.*\n")
 
-        # 3. Save markdown report
         md_path = results_dir / "code_analysis.md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("\n".join(md_content))
 
-        # 4. Generate and save HTML version
         html_template = """
         <!DOCTYPE html>
         <html>
@@ -1062,21 +1053,17 @@ class ModuleDependencyAnalyzer:
         </html>
         """
 
-        # Convert markdown to HTML (basic conversion - you might want to use a proper MD to HTML converter)
         html_content = "\n".join(md_content)
-        # Convert markdown header syntax
         for i in range(6, 0, -1):
             pattern = f"({'#' * i})\\s+(.+)"
             html_content = re.sub(
                 pattern, f"<h{i}>\\2</h{i}>", html_content, flags=re.MULTILINE
             )
 
-        # Convert markdown list items
         html_content = re.sub(
             r"^-\s+(.+)", r"<li>\1</li>", html_content, flags=re.MULTILINE
         )
 
-        # Convert markdown code blocks
         html_content = re.sub(
             r"```\n(.*?)\n```",
             r"<pre><code>\1</code></pre>",
@@ -1084,21 +1071,17 @@ class ModuleDependencyAnalyzer:
             flags=re.DOTALL,
         )
 
-        # Convert markdown links
         html_content = re.sub(
             r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', html_content
         )
 
-        # Convert markdown emphasis
         html_content = re.sub(r"\*\*([^\*]+)\*\*", r"<strong>\1</strong>", html_content)
         html_content = re.sub(r"\*([^\*]+)\*", r"<em>\1</em>", html_content)
 
-        # Wrap lists in <ul> tags
         html_content = re.sub(
             r"(<li>.*?</li>\n)+", r"<ul>\g<0></ul>", html_content, flags=re.DOTALL
         )
 
-        # Save HTML report
         html_path = results_dir / "code_analysis.html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_template.replace("REPORT_CONTENT", html_content))
