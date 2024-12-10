@@ -27,6 +27,18 @@ class ModuleDependencyAnalyzer:
         self.function_locations = defaultdict(dict)
         self.function_calls = defaultdict(list)
         self.class_info = defaultdict(dict)
+        self.call_graph = defaultdict(
+            lambda: {
+                "callers": defaultdict(int),
+                "callees": defaultdict(int),
+                "module": "",
+                "total_calls": 0,
+                "entry_point": False,
+                "terminal": False,
+                "recursive": False,
+                "call_depth": 0,
+            }
+        )
 
         self.QUALITY_METRICS = {
             "MAX_LINE_LENGTH": 100,
