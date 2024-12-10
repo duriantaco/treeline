@@ -52,5 +52,5 @@ docs/build/
 # treeline specific
 .treeline-ignore
 output/
-*.html
+# *.html
 !docs/**/*.html
