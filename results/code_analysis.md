@@ -37,23 +37,47 @@ graph TD
     treeline_models_enhanced_analyzer["treeline.models.enhanced_analyzer"]:::modNode
     treeline_models_core["treeline.models.core"]:::modNode
     docs_conf["docs.conf"]:::modNode
+    build_lib_treeline_type_checker["build.lib.treeline.type_checker"]:::modNode
+    build_lib_treeline_dependency_analyzer["build.lib.treeline.dependency_analyzer"]:::modNode
+    build_lib_treeline_analyzer["build.lib.treeline.analyzer"]:::modNode
+    build_lib_treeline___init__["build.lib.treeline.__init__"]:::modNode
+    build_lib_treeline_enhanced_analyzer["build.lib.treeline.enhanced_analyzer"]:::modNode
+    build_lib_treeline_core["build.lib.treeline.core"]:::modNode
+    build_lib_treeline___main__["build.lib.treeline.__main__"]:::modNode
+    build_lib_treeline_models_dependency_analyzer["build.lib.treeline.models.dependency_analyzer"]:::modNode
+    build_lib_treeline_models_analyzer["build.lib.treeline.models.analyzer"]:::modNode
+    build_lib_treeline_models___init__["build.lib.treeline.models.__init__"]:::modNode
+    build_lib_treeline_models_enhanced_analyzer["build.lib.treeline.models.enhanced_analyzer"]:::modNode
+    build_lib_treeline_models_core["build.lib.treeline.models.core"]:::modNode
 
     tests_test_special_char --> treeline_core
     tests_test_empty_dir --> treeline_core
     tests_test_core --> treeline_core
     tests_test_nested_dir --> treeline_core
     treeline_dependency_analyzer --> treeline_models_dependency_analyzer
-    treeline_analyzer --> treeline_models_analyzer
     treeline_analyzer --> treeline_type_checker
+    treeline_analyzer --> treeline_models_analyzer
     treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
-    treeline_core --> treeline_type_checker
     treeline_core --> treeline_models_core
+    treeline_core --> treeline_type_checker
     treeline_core --> treeline_enhanced_analyzer
     treeline_core --> treeline_dependency_analyzer
     treeline___main__ --> treeline_core
     treeline_models_analyzer --> treeline_type_checker
     treeline_models_enhanced_analyzer --> treeline_type_checker
     treeline_models_core --> treeline_type_checker
+    build_lib_treeline_dependency_analyzer --> treeline_models_dependency_analyzer
+    build_lib_treeline_analyzer --> treeline_type_checker
+    build_lib_treeline_analyzer --> treeline_models_analyzer
+    build_lib_treeline_enhanced_analyzer --> treeline_models_enhanced_analyzer
+    build_lib_treeline_core --> treeline_models_core
+    build_lib_treeline_core --> treeline_type_checker
+    build_lib_treeline_core --> treeline_enhanced_analyzer
+    build_lib_treeline_core --> treeline_dependency_analyzer
+    build_lib_treeline___main__ --> treeline_core
+    build_lib_treeline_models_analyzer --> treeline_type_checker
+    build_lib_treeline_models_enhanced_analyzer --> treeline_type_checker
+    build_lib_treeline_models_core --> treeline_type_checker
 ```
 
 ### treeline.__init__
@@ -67,7 +91,6 @@ graph TD
 
     subgraph treeline___init__["treeline.__init__"]
         direction TB
-        treeline___init_____call__["⚡ __call__"]:::fnNode
     end
 
 ```
@@ -126,18 +149,8 @@ graph TD
 
     subgraph treeline_core["treeline.core"]
         direction TB
-        treeline_core_main["⚡ main"]:::fnNode
-        treeline_core_create_default_ignore["⚡ create_default_ignore"]:::fnNode
-        treeline_core_read_ignore_patterns["⚡ read_ignore_patterns"]:::fnNode
-        treeline_core_should_ignore["⚡ should_ignore"]:::fnNode
-        treeline_core_format_structure["⚡ format_structure"]:::fnNode
-        treeline_core_generate_tree["⚡ generate_tree"]:::fnNode
     end
 
-    treeline_core_main -.->|calls| treeline_core_generate_tree
-    treeline_core_generate_tree -.->|calls| treeline_core_read_ignore_patterns
-    treeline_core_generate_tree -.->|calls| treeline_core_should_ignore
-    treeline_core_main -.->|calls| treeline_core_create_default_ignore
 ```
 
 ### treeline.dependency_analyzer
@@ -379,7 +392,351 @@ graph TD
 
 ├─ assets
 │ ├─ screenshot1.png
+│ ├─ screenshot2.png
 │ └─ Treeline.png
+├─ build
+│ ├─ bdist.macosx-13.0-arm64
+│ └─ lib
+│   └─ treeline
+│     ├─ models
+│     │ ├─ __init__.py
+│     │ ├─ analyzer.py
+│     │ │   **Class**: ◆ FunctionCall
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ CodeStructure
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ FunctionNode
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ ClassNode
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ AnalyzerConfig
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ ├─ core.py
+│     │ │   **Class**: ◆ CodeStructure
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ TreeOptions
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ ModuleMetrics
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ ├─ dependency_analyzer.py
+│     │ │   **Class**: ◆ FunctionLocation
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ FunctionCallInfo
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ ClassMethod
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ ClassInfo
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ ModuleMetrics
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ ComplexFunction
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ MethodInfo
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ Node
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ Link
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Class**: ◆ GraphData
+│     │ │   └─ ! Missing class docstring
+│     │ │   └─ ! Too few public method (< 1, SOLID-ISP)
+│     │ │   **Function**: → __post_init__
+│     │ └─ enhanced_analyzer.py
+│     │     **Class**: ◆ FunctionMetrics
+│     │     └─ ! Missing class docstring
+│     │     └─ ! Too few public method (< 1, SOLID-ISP)
+│     │     **Class**: ◆ ClassMetrics
+│     │     └─ ! Missing class docstring
+│     │     └─ ! Too few public method (< 1, SOLID-ISP)
+│     │     **Class**: ◆ CodeDuplication
+│     │     └─ ! Missing class docstring
+│     │     └─ ! Too few public method (< 1, SOLID-ISP)
+│     │     **Class**: ◆ QualityIssue
+│     │     └─ ! Missing class docstring
+│     │     └─ ! Too few public method (< 1, SOLID-ISP)
+│     ├─ __init__.py
+│     │   **Function**: → __call__
+│     ├─ __main__.py
+│     ├─ analyzer.py
+│     │   **Class**: ◆ CodeAnalyzer
+│     │   └─ # Simple analyzer for extracting functions and classes from Python files.
+│     │   └─ ! High complexity (34)
+│     │   └─ ! Too long (207 lines)
+│     │   └─ ! Class too long
+│     │   **Function**: → __init__
+│     │   **Function**: → analyze_file
+│     │   └─ # Extracts functions and classes with optional params and relationships.
+│     │   └─ ! High complexity (12)
+│     │   └─ ! Too long (99 lines)
+│     │   └─ ! Deep nesting (depth 7)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! Excessive nesting depth (> 4)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → _get_function_params
+│     │   └─ # Extract function parameters with type hints.
+│     │   **Function**: → _find_function_calls
+│     │   **Function**: → get_symbol
+│     │   └─ # Maps item types to their display symbols.
+│     │   **Function**: → format_structure
+│     │   └─ # Formats the code structure into displayable lines with colors and prefixes.
+│     │   └─ ! High cognitive load (> 7 items)
+│     ├─ core.py
+│     │   **Function**: → create_default_ignore
+│     │   └─ # Create default .treeline-ignore if it doesn't exist
+│     │   **Function**: → read_ignore_patterns
+│     │   └─ # Read patterns from .treeline-ignore file
+│     │   **Function**: → should_ignore
+│     │   └─ # Check if path should be ignored based on patterns
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → format_structure
+│     │   └─ # Format the analysis results into a readable tree structure.
+│     │    Args:
+│     │    structure: List of analysis results
+│     │    indent: String to use for indentation
+│     │    Returns:
+│     │    List of formatted strings representing the code structure
+│     │   └─ ! High complexity (13)
+│     │   └─ ! Too long (61 lines)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → generate_tree
+│     │   └─ # Generate tree structure with code quality and security analysis.
+│     │   └─ ! High complexity (14)
+│     │   └─ ! Too long (76 lines)
+│     │   └─ ! Deep nesting (depth 7)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! Excessive nesting depth (> 4)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → main
+│     │   └─ ! Too long (51 lines)
+│     │   └─ ! Function exceeds 50 lines
+│     │   **Function**: → add_directory
+│     │   └─ ! Deep nesting (depth 7)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! Excessive nesting depth (> 4)
+│     │   └─ ! High cognitive load (> 7 items)
+│     ├─ default_ignore
+│     ├─ dependency_analyzer.py
+│     │   **Class**: ◆ ModuleDependencyAnalyzer
+│     │   └─ # Analyzes module-level dependencies and generates summary reports.
+│     │   └─ ! High complexity (92)
+│     │   └─ ! Too long (1211 lines)
+│     │   └─ ! Class too long
+│     │   └─ ! Too many methods
+│     │   └─ ! High class complexity
+│     │   **Function**: → __init__
+│     │   └─ ! Too long (487 lines)
+│     │   └─ ! Function exceeds 50 lines
+│     │   **Function**: → analyze_directory
+│     │   └─ # Analyze all Python files in directory.
+│     │   **Function**: → _analyze_module
+│     │   └─ # Analyze a single module's contents and relationships.
+│     │   └─ ! High complexity (15)
+│     │   └─ ! Too long (52 lines)
+│     │   └─ ! Deep nesting (depth 7)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! Excessive nesting depth (> 4)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → _analyze_imports
+│     │   └─ # Collect import information from AST.
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → _collect_metrics
+│     │   └─ # Collect code metrics for the module.
+│     │   **Function**: → _calculate_complexity
+│     │   └─ # Calculate cyclomatic complexity.
+│     │   **Function**: → generate_module_overview_diagram
+│     │   └─ # Generate a Mermaid diagram showing modules and their relationships.
+│     │   **Function**: → generate_module_detail_diagram
+│     │   └─ # Generate a Mermaid diagram showing functions and classes in a module.
+│     │   └─ ! High complexity (17)
+│     │   └─ ! Too long (59 lines)
+│     │   └─ ! Deep nesting (depth 5)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! Excessive nesting depth (> 4)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → generate_mermaid_graphs
+│     │   └─ # Generate a markdown report with multiple focused Mermaid graphs.
+│     │   **Function**: → generate_html_visualization
+│     │   └─ # Generate an interactive HTML visualization using D3.js
+│     │   └─ ! High complexity (18)
+│     │   └─ ! Too long (177 lines)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → clean_for_markdown
+│     │   └─ # Remove ANSI colors and simplify symbols for markdown.
+│     │   **Function**: → generate_reports
+│     │   └─ # Generate comprehensive HTML and markdown reports of the code analysis.
+│     │   └─ ! High complexity (12)
+│     │   └─ ! Too long (226 lines)
+│     │   └─ ! Deep nesting (depth 6)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! Excessive nesting depth (> 4)
+│     │   └─ ! High cognitive load (> 7 items)
+│     ├─ enhanced_analyzer.py
+│     │   **Class**: ◆ EnhancedCodeAnalyzer
+│     │   └─ # Enhanced analyzer for code quality and maintainability metrics.
+│     │    This analyzer implements industry-standard code quality checks and metrics
+│     │    following Clean Code principles, SOLID principles, and PEP 8 standards.
+│     │   └─ ! High complexity (123)
+│     │   └─ ! Too long (606 lines)
+│     │   └─ ! Class too long
+│     │   └─ ! Too many methods
+│     │   └─ ! High class complexity
+│     │   **Function**: → __init__
+│     │   └─ # Initialize the code analyzer.
+│     │    Args:
+│     │    show_params: Whether to show function parameters in analysis
+│     │   **Function**: → analyze_file
+│     │   └─ # Analyze a Python file for code quality metrics.
+│     │    Args:
+│     │    file_path: Path to the Python file to analyze
+│     │    Returns:
+│     │    List of analysis results for each code element
+│     │   **Function**: → _calculate_maintainability_index
+│     │   └─ # Calculate Maintainability Index (MI) following Microsoft's formula.
+│     │    MI = max(0, (171 - 5.2 * ln(HV) - 0.23 * CC - 16.2 * ln(LOC)) * 100 / 171)
+│     │    where:
+│     │    - HV = Halstead Volume
+│     │    - CC = Cyclomatic Complexity
+│     │    - LOC = Lines of Code
+│     │   **Function**: → _calculate_cognitive_load
+│     │   └─ # Counts control structures and parameters as cognitive items.
+│     │   **Function**: → _check_function_metrics
+│     │   └─ # Check function metrics against quality thresholds.
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → _calculate_cyclomatic_complexity
+│     │   └─ # Calculate McCabe's cyclomatic complexity.
+│     │    Based on McCabe, 1976 and implementation in Radon/SonarQube.
+│     │   **Function**: → _calculate_cognitive_complexity
+│     │   └─ # Calculate cognitive complexity based on SonarQube's metric.
+│     │    Implements SonarSource's cognitive complexity calculation.
+│     │   **Function**: → _analyze_file_metrics
+│     │   └─ # Analyze file-level metrics including style, duplication, imports, and documentation.
+│     │    Args:
+│     │    content: File content as string
+│     │    file_path: Path to the file being analyzed
+│     │   └─ ! High complexity (13)
+│     │   └─ ! Too long (66 lines)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → _read_file
+│     │   └─ # Read and return file content safely.
+│     │   **Function**: → _parse_content
+│     │   └─ # Parse Python content into AST safely.
+│     │   **Function**: → _analyze_code_elements
+│     │   └─ # Analyze individual code elements in the AST.
+│     │   **Function**: → _analyze_class
+│     │   └─ # Analyze a class's quality metrics.
+│     │   **Function**: → _check_class_metrics
+│     │   └─ # Check class metrics against quality thresholds.
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → format_structure
+│     │   └─ # Format the analysis results into a tree structure.
+│     │   └─ ! High complexity (15)
+│     │   └─ ! Too long (56 lines)
+│     │   └─ ! Function exceeds 50 lines
+│     │   └─ ! High cyclomatic complexity(> 10)
+│     │   └─ ! High cognitive complexity (> 15)
+│     │   └─ ! High cognitive load (> 7 items)
+│     │   **Function**: → _format_metrics_section
+│     │   └─ # Format the metrics section of the report.
+│     │   **Function**: → _analyze_function
+│     │   └─ # Analyze a function's quality metrics.
+│     │   **Function**: → _calculate_class_metrics
+│     │   **Function**: → _calculate_function_metrics
+│     │   **Function**: → _calculate_complexity
+│     │   └─ # Calculate cyclomatic complexity of code.
+│     │   **Function**: → _calculate_nested_depth
+│     │   └─ # Calculate maximum nesting depth in code.
+│     │   **Function**: → _analyze_code_duplication
+│     │   └─ # Analyze code for duplication using line-based comparison.
+│     │   **Function**: → _analyze_imports
+│     │   └─ # Analyze import statements and module dependencies.
+│     │   **Function**: → _analyze_inheritance
+│     │   └─ # Analyze class inheritance depth and hierarchy.
+│     │   **Function**: → _add_issue
+│     │   └─ # Add a quality issue to the collection.
+│     │    Args:
+│     │    category: The category of the issue
+│     │    description: Description of the issue
+│     │    file_path: Optional path to the file where the issue was found
+│     │    line: Optional line number where the issue was found
+│     │   **Function**: → generate_report
+│     │   └─ # Generate a formatted quality report.
+│     │   **Function**: → _format_report_sections
+│     │   └─ # Format and combine report sections.
+│     │   **Function**: → _format_overview_section
+│     │   └─ # Format the report overview section.
+│     │   **Function**: → _format_issues_section
+│     │   └─ # Format the quality issues section.
+│     │   **Function**: → walk_cognitive
+│     │   **Function**: → get_depth
+│     │   **Function**: → get_inheritance_depth
+│     └─ type_checker.py
+│         **Class**: ◆ TypeValidator
+│         └─ ! High complexity (22)
+│         └─ ! Too long (62 lines)
+│         └─ ! Missing class docstring
+│         **Class**: ◆ TypeChecked
+│         └─ # Base class for type-checked dataclasses
+│         └─ ! Too few public method (< 1, SOLID-ISP)
+│         **Class**: ◆ ValidationError
+│         └─ # Raised when type validation fails
+│         └─ ! Too few public method (< 1, SOLID-ISP)
+│         **Function**: → validate
+│         └─ # Validates that a value matches the expected type, with support for generics.
+│          Args:
+│          value: The value to validate
+│          expected_type: The expected type (can be a generic type)
+│          Raises:
+│          TypeError: If the value doesn't match the expected type
+│         └─ ! High complexity (22)
+│         └─ ! Too long (60 lines)
+│         └─ ! Deep nesting (depth 6)
+│         └─ ! Function exceeds 50 lines
+│         └─ ! High cyclomatic complexity(> 10)
+│         └─ ! High cognitive complexity (> 15)
+│         └─ ! Excessive nesting depth (> 4)
+│         └─ ! High cognitive load (> 7 items)
+│         **Function**: → __post_init__
+│         └─ # Validate types after initialization
+├─ dist
+│ ├─ treeline-0.1.1-py3-none-any.whl
+│ └─ treeline-0.1.1.tar.gz
 ├─ docs
 │ ├─ _static
 │ ├─ build
@@ -702,7 +1059,7 @@ graph TD
 │ │   └─ ! Too many methods
 │ │   └─ ! High class complexity
 │ │   **Function**: → __init__
-│ │   └─ ! Too long (485 lines)
+│ │   └─ ! Too long (487 lines)
 │ │   └─ ! Function exceeds 50 lines
 │ │   **Function**: → analyze_directory
 │ │   └─ # Analyze all Python files in directory.
@@ -910,6 +1267,249 @@ graph TD
 
 ## Code Quality Metrics
 
+### build.lib.treeline.__init__
+- Functions: **1**
+- Classes: **0**
+- Complexity: **1**
+
+### build.lib.treeline.__main__
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### build.lib.treeline.analyzer
+- Functions: **6**
+- Classes: **1**
+- Complexity: **<span style='color: red'>34</span>**
+
+Classes:
+
+#### 📦 CodeAnalyzer
+- Defined at line 10
+- Methods:
+  - ⚡ __init__ (line 23)
+    Calls: defaultdict
+  - ⚡ analyze_file (line 28)
+    Calls: open, CodeStructure, isinstance, CodeStructure, isinstance, print, CodeStructure, str, isinstance
+  - ⚡ _get_function_params (line 128)
+    Calls: hasattr, hasattr, hasattr
+  - ⚡ _find_function_calls (line 150)
+    Calls: set, isinstance, isinstance, FunctionCall, print
+  - ⚡ get_symbol (line 162)
+  - ⚡ format_structure (line 167)
+### build.lib.treeline.core
+- Functions: **7**
+- Classes: **0**
+- Complexity: **<span style='color: red'>50</span>**
+
+### build.lib.treeline.dependency_analyzer
+- Functions: **12**
+- Classes: **1**
+- Complexity: **<span style='color: red'>92</span>**
+
+Classes:
+
+#### 📦 ModuleDependencyAnalyzer
+- Defined at line 20
+- Methods:
+  - ⚡ __init__ (line 23)
+    Calls: defaultdict, defaultdict, defaultdict, defaultdict, defaultdict, defaultdict, defaultdict, defaultdict
+  - ⚡ analyze_directory (line 511)
+    Calls: open, str, print, str
+  - ⚡ _analyze_module (line 529)
+    Calls: isinstance, setattr, getattr, isinstance, isinstance, FunctionLocation, isinstance, isinstance, isinstance, FunctionCallInfo, MethodInfo, isinstance, isinstance
+  - ⚡ _analyze_imports (line 582)
+    Calls: isinstance, isinstance
+  - ⚡ _collect_metrics (line 592)
+    Calls: ModuleMetrics, isinstance, isinstance, len, len, ComplexFunction
+  - ⚡ _calculate_complexity (line 622)
+    Calls: isinstance, isinstance, len
+  - ⚡ generate_module_overview_diagram (line 632)
+    Calls: set
+  - ⚡ generate_module_detail_diagram (line 658)
+    Calls: set
+  - ⚡ generate_mermaid_graphs (line 718)
+    Calls: sorted
+  - ⚡ generate_html_visualization (line 804)
+    Calls: set, len, len, Node, Link, len, len, len
+  - ⚡ clean_for_markdown (line 982)
+  - ⚡ generate_reports (line 1005)
+    Calls: Path, sorted, range, print, print, print, print, print, open, str, sorted, open, open, str
+### build.lib.treeline.enhanced_analyzer
+- Functions: **31**
+- Classes: **1**
+- Complexity: **<span style='color: red'>123</span>**
+
+Classes:
+
+#### 📦 EnhancedCodeAnalyzer
+- Defined at line 13
+- Methods:
+  - ⚡ __init__ (line 44)
+    Calls: defaultdict, defaultdict
+  - ⚡ analyze_file (line 55)
+  - ⚡ _calculate_maintainability_index (line 76)
+    Calls: len, len, max, isinstance, isinstance, len, set
+  - ⚡ _calculate_cognitive_load (line 110)
+    Calls: sum, len, isinstance
+  - ⚡ _check_function_metrics (line 122)
+  - ⚡ _calculate_cyclomatic_complexity (line 171)
+    Calls: isinstance, isinstance, len
+  - ⚡ _calculate_cognitive_complexity (line 185)
+    Calls: walk_cognitive, isinstance, walk_cognitive, isinstance, walk_cognitive, len
+  - ⚡ _analyze_file_metrics (line 208)
+    Calls: enumerate, isinstance, len, str, str, str, str, len, len, str, str, len
+  - ⚡ _read_file (line 275)
+    Calls: open, str
+  - ⚡ _parse_content (line 284)
+    Calls: str
+  - ⚡ _analyze_code_elements (line 292)
+    Calls: isinstance, isinstance
+  - ⚡ _analyze_class (line 304)
+  - ⚡ _check_class_metrics (line 317)
+  - ⚡ format_structure (line 367)
+    Calls: isinstance
+  - ⚡ _format_metrics_section (line 424)
+    Calls: isinstance
+  - ⚡ _analyze_function (line 443)
+  - ⚡ _calculate_class_metrics (line 456)
+    Calls: ClassMetrics, isinstance, len, sum, bool, len, len, len
+  - ⚡ _calculate_function_metrics (line 473)
+    Calls: FunctionMetrics, len, len, bool, len, isinstance
+  - ⚡ _calculate_complexity (line 488)
+    Calls: isinstance, isinstance, len
+  - ⚡ _calculate_nested_depth (line 498)
+    Calls: get_depth, isinstance, get_depth, max, max, get_depth
+  - ⚡ _analyze_code_duplication (line 513)
+    Calls: set, range, len, range, len, len, len, len, len, range, range
+  - ⚡ _analyze_imports (line 540)
+    Calls: set, isinstance, len, isinstance
+  - ⚡ _analyze_inheritance (line 557)
+    Calls: get_inheritance_depth, isinstance, max
+  - ⚡ _add_issue (line 570)
+    Calls: QualityIssue
+  - ⚡ generate_report (line 585)
+  - ⚡ _format_report_sections (line 595)
+  - ⚡ _format_overview_section (line 599)
+  - ⚡ _format_issues_section (line 606)
+### build.lib.treeline.models.__init__
+- Functions: **0**
+- Classes: **0**
+- Complexity: **0**
+
+### build.lib.treeline.models.analyzer
+- Functions: **0**
+- Classes: **5**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 FunctionCall
+- Defined at line 8
+
+#### 📦 CodeStructure
+- Defined at line 14
+
+#### 📦 FunctionNode
+- Defined at line 23
+
+#### 📦 ClassNode
+- Defined at line 32
+
+#### 📦 AnalyzerConfig
+- Defined at line 41
+### build.lib.treeline.models.core
+- Functions: **0**
+- Classes: **3**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 CodeStructure
+- Defined at line 9
+
+#### 📦 TreeOptions
+- Defined at line 18
+
+#### 📦 ModuleMetrics
+- Defined at line 27
+### build.lib.treeline.models.dependency_analyzer
+- Functions: **1**
+- Classes: **10**
+- Complexity: **3**
+
+Classes:
+
+#### 📦 FunctionLocation
+- Defined at line 7
+
+#### 📦 FunctionCallInfo
+- Defined at line 14
+
+#### 📦 ClassMethod
+- Defined at line 21
+
+#### 📦 ClassInfo
+- Defined at line 27
+
+#### 📦 ModuleMetrics
+- Defined at line 35
+
+#### 📦 ComplexFunction
+- Defined at line 42
+
+#### 📦 MethodInfo
+- Defined at line 49
+
+#### 📦 Node
+- Defined at line 55
+- Methods:
+  - ⚡ __post_init__ (line 62)
+
+#### 📦 Link
+- Defined at line 70
+
+#### 📦 GraphData
+- Defined at line 77
+### build.lib.treeline.models.enhanced_analyzer
+- Functions: **0**
+- Classes: **4**
+- Complexity: **0**
+
+Classes:
+
+#### 📦 FunctionMetrics
+- Defined at line 8
+
+#### 📦 ClassMetrics
+- Defined at line 22
+
+#### 📦 CodeDuplication
+- Defined at line 35
+
+#### 📦 QualityIssue
+- Defined at line 41
+### build.lib.treeline.type_checker
+- Functions: **2**
+- Classes: **3**
+- Complexity: **<span style='color: red'>25</span>**
+
+Classes:
+
+#### 📦 TypeValidator
+- Defined at line 5
+- Methods:
+  - ⚡ validate (line 7)
+    Calls: get_origin, get_args, TypeError, get_args, get_origin, type, isinstance, TypeError, len, type, isinstance, TypeError, isinstance, TypeError, zip, isinstance, TypeError, len, len, TypeError, type, type, isinstance, TypeError, type, type, len, len, type
+
+#### 📦 TypeChecked
+- Defined at line 70
+- Methods:
+  - ⚡ __post_init__ (line 73)
+    Calls: getattr, TypeError, str
+
+#### 📦 ValidationError
+- Defined at line 83
 ### docs.conf
 - Functions: **0**
 - Classes: **0**
@@ -1054,13 +1654,13 @@ Classes:
 - Methods:
   - ⚡ __init__ (line 23)
     Calls: defaultdict, defaultdict, defaultdict, defaultdict, defaultdict, defaultdict, defaultdict, defaultdict
-  - ⚡ analyze_directory (line 509)
+  - ⚡ analyze_directory (line 511)
     Calls: open, str, print, str
-  - ⚡ _analyze_module (line 527)
+  - ⚡ _analyze_module (line 529)
     Calls: isinstance, setattr, getattr, isinstance, isinstance, FunctionLocation, isinstance, isinstance, isinstance, FunctionCallInfo, MethodInfo, isinstance, isinstance
-  - ⚡ _analyze_imports (line 580)
+  - ⚡ _analyze_imports (line 582)
     Calls: isinstance, isinstance
-  - ⚡ _collect_metrics (line 590)
+  - ⚡ _collect_metrics (line 592)
     Calls: ModuleMetrics, isinstance, isinstance, len, len, ComplexFunction
   - ⚡ _calculate_complexity (line 622)
     Calls: isinstance, isinstance, len
@@ -1257,12 +1857,24 @@ Classes:
 - **Module**: treeline.type_checker
 - **Complexity**: <span style='color: red'>22</span>
 
+### validate
+- **Module**: build.lib.treeline.type_checker
+- **Complexity**: <span style='color: red'>22</span>
+
 ### generate_html_visualization
 - **Module**: treeline.dependency_analyzer
 - **Complexity**: <span style='color: red'>18</span>
 
+### generate_html_visualization
+- **Module**: build.lib.treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>18</span>
+
 ### generate_module_detail_diagram
 - **Module**: treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>17</span>
+
+### generate_module_detail_diagram
+- **Module**: build.lib.treeline.dependency_analyzer
 - **Complexity**: <span style='color: red'>17</span>
 
 ### _analyze_module
@@ -1273,8 +1885,20 @@ Classes:
 - **Module**: treeline.enhanced_analyzer
 - **Complexity**: <span style='color: red'>15</span>
 
+### _analyze_module
+- **Module**: build.lib.treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>15</span>
+
+### format_structure
+- **Module**: build.lib.treeline.enhanced_analyzer
+- **Complexity**: <span style='color: red'>15</span>
+
 ### generate_tree
 - **Module**: treeline.core
+- **Complexity**: <span style='color: red'>14</span>
+
+### generate_tree
+- **Module**: build.lib.treeline.core
 - **Complexity**: <span style='color: red'>14</span>
 
 ### _analyze_file_metrics
@@ -1285,10 +1909,26 @@ Classes:
 - **Module**: treeline.core
 - **Complexity**: <span style='color: red'>13</span>
 
+### _analyze_file_metrics
+- **Module**: build.lib.treeline.enhanced_analyzer
+- **Complexity**: <span style='color: red'>13</span>
+
+### format_structure
+- **Module**: build.lib.treeline.core
+- **Complexity**: <span style='color: red'>13</span>
+
 ### generate_reports
 - **Module**: treeline.dependency_analyzer
 - **Complexity**: <span style='color: red'>12</span>
 
 ### analyze_file
 - **Module**: treeline.analyzer
+- **Complexity**: <span style='color: red'>12</span>
+
+### generate_reports
+- **Module**: build.lib.treeline.dependency_analyzer
+- **Complexity**: <span style='color: red'>12</span>
+
+### analyze_file
+- **Module**: build.lib.treeline.analyzer
 - **Complexity**: <span style='color: red'>12</span>
