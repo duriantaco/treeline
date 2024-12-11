@@ -6,6 +6,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import List
 
+from treeline.ignore import read_ignore_patterns, should_ignore
 from treeline.models.dependency_analyzer import (
     ComplexFunction,
     FunctionCallInfo,
@@ -510,21 +511,50 @@ class ModuleDependencyAnalyzer:
 
     def analyze_directory(self, directory: Path):
         """Analyze all Python files in directory."""
+        ignore_patterns = read_ignore_patterns()  # Import this from your core.py
+
+        def should_skip_module(module_path: str) -> bool:
+            """Check if a module path should be skipped."""
+            if any(
+                indicator in module_path
+                for indicator in ["site-packages", "venv", ".venv"]
+            ):
+                return True
+            return False
+
         for file_path in directory.rglob("*.py"):
             try:
+                if should_ignore(file_path, ignore_patterns):
+                    continue
+
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     tree = ast.parse(content)
 
-                module_name = (
-                    str(file_path.relative_to(directory))
-                    .replace("/", ".")
-                    .replace(".py", "")
-                )
+                module_path = str(file_path.relative_to(directory))
+
+                if should_skip_module(module_path):
+                    continue
+
+                module_name = module_path.replace("/", ".").replace(".py", "")
+
+                if should_skip_module(module_name):
+                    continue
+
                 self._analyze_module(tree, module_name, str(file_path))
 
             except Exception as e:
                 print(f"Error analyzing {file_path}: {e}")
+
+        for module in list(self.module_imports.keys()):
+            if should_skip_module(module):
+                del self.module_imports[module]
+            else:
+                self.module_imports[module] = {
+                    imp
+                    for imp in self.module_imports[module]
+                    if not should_skip_module(imp)
+                }
 
     def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str):
         """Analyze a single module's contents and relationships."""
@@ -732,75 +762,6 @@ class ModuleDependencyAnalyzer:
 
         return "\n".join(sections)
 
-    ## for the entire graph
-    # def generate_mermaid_graph(self) -> str:
-    #     """Generate detailed Mermaid graph showing module, function, and class relationships."""
-    #     mermaid_lines = ['graph TD']
-    #     mermaid_lines.append('    %% Styling')
-    #     mermaid_lines.append('    classDef modNode fill:#b7e2d8,stroke:#333,stroke-width:2px')
-    #     mermaid_lines.append('    classDef fnNode fill:#e4d1d1,stroke:#333')
-    #     mermaid_lines.append('    classDef clsNode fill:#d1e0e4,stroke:#333')
-
-    #     added_nodes = set()
-    #     node_id = 0
-    #     node_map = {}
-
-    #     def get_node_id(name: str) -> str:
-    #         nonlocal node_id
-    #         if name not in node_map:
-    #             node_map[name] = f"n{node_id}"
-    #             node_id += 1
-    #         return node_map[name]
-
-    #     for module in self.module_imports:
-    #         clean_module = get_node_id(module)
-    #         if clean_module not in added_nodes:
-    #             mermaid_lines.append(f'    {clean_module}["{module}"]:::modNode')
-    #             added_nodes.add(clean_module)
-
-    #         for func_name, location in self.function_locations.items():
-    #             if location['module'] == module:
-    #                 clean_func = get_node_id(f"{module}_{func_name}")
-    #                 if clean_func not in added_nodes:
-    #                     mermaid_lines.append(f'    {clean_func}["⚡ {func_name}"]:::fnNode')
-    #                     mermaid_lines.append(f'    {clean_module} --> {clean_func}')
-    #                     added_nodes.add(clean_func)
-
-    #         if module in self.class_info:
-    #             for class_name, info in self.class_info[module].items():
-    #                 clean_class = get_node_id(f"{module}_{class_name}")
-    #                 if clean_class not in added_nodes:
-    #                     mermaid_lines.append(f'    {clean_class}["📦 {class_name}"]:::clsNode')
-    #                     mermaid_lines.append(f'    {clean_module} --> {clean_class}')
-    #                     added_nodes.add(clean_class)
-
-    #                 for method_name in info['methods']:
-    #                     clean_method = get_node_id(f"{module}_{class_name}_{method_name}")
-    #                     if clean_method not in added_nodes:
-    #                         mermaid_lines.append(f'    {clean_method}["⚡ {method_name}"]:::fnNode')
-    #                         mermaid_lines.append(f'    {clean_class} --> {clean_method}')
-    #                         added_nodes.add(clean_method)
-
-    #     for func_name, calls in self.function_calls.items():
-    #         for call in calls:
-    #             if func_name in self.function_locations:
-    #                 from_module = call['from_module']
-    #                 to_module = self.function_locations[func_name]['module']
-    #                 from_func = get_node_id(f"{from_module}_{call['from_function']}")
-    #                 to_func = get_node_id(f"{to_module}_{func_name}")
-
-    #                 if from_func in node_map.values() and to_func in node_map.values():
-    #                     mermaid_lines.append(f'    {from_func} -.->|calls| {to_func}')
-
-    #     for module, imports in self.module_imports.items():
-    #         clean_module = get_node_id(module)
-    #         for imp in imports:
-    #             clean_imp = get_node_id(imp)
-    #             if clean_module in node_map.values() and clean_imp in node_map.values():
-    #                 mermaid_lines.append(f'    {clean_module} -->|imports| {clean_imp}')
-
-    #     return '\n'.join(mermaid_lines)
-
     def generate_html_visualization(self) -> str:
         """Generate an interactive HTML visualization using D3.js"""
         all_modules = set()
@@ -816,7 +777,6 @@ class ModuleDependencyAnalyzer:
         links = []
         node_lookup = {}
 
-        # Module nodes
         for module in all_modules:
             node_id = len(nodes)
             node_lookup[module] = node_id
@@ -830,7 +790,6 @@ class ModuleDependencyAnalyzer:
                 }
             )
 
-        # Class nodes
         for module, classes in self.class_info.items():
             if module not in node_lookup:
                 node_id = len(nodes)
@@ -850,7 +809,6 @@ class ModuleDependencyAnalyzer:
                 node_key = f"{module}.{class_name}"
                 node_lookup[node_key] = node_id
 
-                # Include class metrics and complexity
                 class_metrics = info.get("metrics", {})
                 class_metrics.update(
                     {
@@ -878,7 +836,6 @@ class ModuleDependencyAnalyzer:
                     }
                 )
 
-        # Function nodes
         for func_name, location in self.function_locations.items():
             if "module" not in location:
                 continue
@@ -901,7 +858,6 @@ class ModuleDependencyAnalyzer:
             node_key = f"{module}.{func_name}"
             node_lookup[node_key] = node_id
 
-            # Include function metrics
             func_metrics = {
                 "complexity": location.get("complexity", 0),
                 "cognitive_complexity": location.get("cognitive_complexity", 0),
@@ -922,7 +878,6 @@ class ModuleDependencyAnalyzer:
                 {"source": node_lookup[module], "target": node_id, "type": "contains"}
             )
 
-        # Add function call links
         for func_name, calls in self.function_calls.items():
             if func_name not in self.function_locations:
                 continue
@@ -943,7 +898,6 @@ class ModuleDependencyAnalyzer:
                         }
                     )
 
-        # Add import links
         for module, imports in self.module_imports.items():
             if module in node_lookup:
                 for imp in imports:
@@ -984,13 +938,19 @@ class ModuleDependencyAnalyzer:
         ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         clean_line = ansi_escape.sub("", line)
 
+        if "# " in clean_line:
+            parts = clean_line.split("# ", 1)
+            prefix = parts[0]
+            docstring = parts[1]
+            clean_line = f'{prefix}<span class="docstring">{docstring}</span>'
+
         replacements = {
-            "⚡": "→",
-            "🏛️": "◆",
+            "⚡": '<i class="fas fa-bolt icon-function"></i>',
+            "🏛️": '<i class="fas fa-cube icon-class"></i>',
             "⚠️": "!",
             "📏": "▸",
-            "[FUNC]": "**Function**:",
-            "[CLASS]": "**Class**:",
+            "[FUNC]": "<span class='function-label'>Function:</span>",
+            "[CLASS]": "<span class='class-label'>Class:</span>",
             "├── ": "├─ ",
             "└── ": "└─ ",
             "│   ": "│ ",
@@ -1028,40 +988,16 @@ class ModuleDependencyAnalyzer:
         md_content.append(self.generate_mermaid_graphs())
 
         md_content.append("## Directory Structure\n")
+
+        processed_tree = []
+        for line in tree_str:
+
+            cleaned = self.clean_for_markdown(line)
+            processed_tree.append(cleaned)
+
         md_content.append("```")
-        md_content.append("\n".join(self.clean_for_markdown(line) for line in tree_str))
+        md_content.append("\n".join(processed_tree))
         md_content.append("```\n")
-
-        md_content.append("## Code Quality Metrics\n")
-        for module, metrics in sorted(self.module_metrics.items()):
-            md_content.append(f"### {module}")
-            md_content.append(f"- Functions: **{metrics['functions']}**")
-            md_content.append(f"- Classes: **{metrics['classes']}**")
-
-            complexity_str = str(metrics["complexity"])
-            if (
-                metrics["complexity"]
-                > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]
-            ):
-                complexity_str = f"<span style='color: red'>{complexity_str}</span>"
-            md_content.append(f"- Complexity: **{complexity_str}**\n")
-
-            # Add class information
-            if module in self.class_info:
-                md_content.append("Classes:")
-                for class_name, info in self.class_info[module].items():
-                    md_content.append(f"\n#### 📦 {class_name}")
-                    md_content.append(f"- Defined at line {info['line']}")
-                    if info["methods"]:
-                        md_content.append("- Methods:")
-                        for method_name, method_info in info["methods"].items():
-                            md_content.append(
-                                f"  - ⚡ {method_name} (line {method_info['line']})"
-                            )
-                            if method_info["calls"]:
-                                md_content.append(
-                                    f"    Calls: {', '.join(method_info['calls'])}"
-                                )
 
         md_content.append("\n## Complexity Hotspots\n")
         if self.complex_functions:
@@ -1102,20 +1038,41 @@ class ModuleDependencyAnalyzer:
                 h3 { color: #1e40af; }
                 h4 { color: #1e3a8a; }
 
+                .fa-bolt {
+                    color: #d97706;  /* Amber color for function icon */
+                    margin-right: 4px;
+                }
+
+                .fa-cube {
+                    color: #2563eb;  /* Blue color for class icon */
+                    margin-right: 4px;
+                }
+
+                 .icon-function {
+                    color: #d97706;
+                    margin-right: 4px;
+                }
+
+                .icon-class {
+                    color: #2563eb;
+                    margin-right: 4px;
+                }
+
+                .docstring {
+                    color: #059669;
+                }
+
+                pre code {
+                    font-family: monospace;
+                }
+
+
                 .section {
                     margin: 40px 0;
                     padding: 20px;
                     background: white;
                     border-radius: 8px;
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-                }
-
-                .mermaid {
-                margin: 20px 0;
-                padding: 20px;
-                background: white;
-                border-radius: 8px;
-                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
 
                 pre {
@@ -1128,6 +1085,12 @@ class ModuleDependencyAnalyzer:
                 .tree-view {
                     font-family: monospace;
                     white-space: pre;
+                }
+
+                .tree-view {
+                    color: #059669;
+                    font-size: inherit;
+                    font-weight: normal;
                 }
 
                 .mermaid {
@@ -1191,6 +1154,17 @@ class ModuleDependencyAnalyzer:
         """
 
         html_content = "\n".join(md_content)
+
+        mermaid_sections = []
+
+        def save_mermaid(match):
+            mermaid_sections.append(match.group(1))
+            return f'<div class="mermaid">\n{match.group(1)}\n</div>'
+
+        html_content = re.sub(
+            r"```mermaid\n(.*?)\n```", save_mermaid, html_content, flags=re.DOTALL
+        )
+
         for i in range(6, 0, -1):
             pattern = f"({'#' * i})\\s+(.+)"
             html_content = re.sub(
