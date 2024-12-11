@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name="treeline",
-    version="0.1.2",
+    version="0.1.3",
     packages=find_packages(),
     package_data={
         "treeline": ["default_ignore"],
