@@ -93,7 +93,7 @@ Place .treeline-ignore in any directory to apply rules to that directory and its
 *.pyc
 
 # Ignore specific directories
-__pycache__
+__pycache__/
 .git
 .venv
 
