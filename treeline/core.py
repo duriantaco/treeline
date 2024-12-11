@@ -5,6 +5,7 @@ from typing import Dict, List
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+from treeline.ignore import read_ignore_patterns, should_ignore
 from treeline.models.core import CodeStructure, TreeOptions
 from treeline.type_checker import ValidationError
 
@@ -27,40 +28,6 @@ def create_default_ignore():
                 "dist/\n"
             )
         print("Created .treeline-ignore file")
-
-
-def read_ignore_patterns() -> List[str]:
-    """Read patterns from .treeline-ignore file"""
-    ignore_patterns = []
-    if Path(".treeline-ignore").exists():
-        with open(".treeline-ignore", "r") as f:
-            ignore_patterns = [
-                line.strip() for line in f if line.strip() and not line.startswith("#")
-            ]
-    return ignore_patterns
-
-
-def should_ignore(path: Path, ignore_patterns: List[str]) -> bool:
-    """Check if path should be ignored based on patterns."""
-    path_str = str(path.resolve())
-
-    for pattern in ignore_patterns:
-        if pattern.endswith("/"):
-            if path.is_dir() and pattern[:-1] in path_str:
-                return True
-
-        elif pattern.startswith("*."):
-            if path.suffix == pattern[1:]:
-                return True
-
-        elif pattern in path_str:
-            return True
-
-    if "site-packages" in path_str or "lib" in path_str:
-        if any(p in path_str for p in ["venv", ".venv", "env", ".env"]):
-            return True
-
-    return False
 
 
 def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]:
