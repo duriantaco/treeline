@@ -1,7 +1,11 @@
 # treeline/treeline/core.py
 import argparse
+import os
+import sys
 from pathlib import Path
 from typing import Dict, List
+
+import uvicorn
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
@@ -184,8 +188,19 @@ def main():
             treeline -i "*.pyc,*.git"     # Ignore patterns
             treeline --hide-structure     # Hide code structure
             treeline --no-params          # Hide function parameters
+            treeline start                # Start the API server
             treeline -h                   # Show this help message
         """,
+    )
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    start_parser = subparsers.add_parser("start", help="Start the API server")
+    start_parser.add_argument(
+        "--port", type=int, default=8000, help="Port to run the server on"
+    )
+    start_parser.add_argument(
+        "--host", default="0.0.0.0", help="Host to run the server on"
     )
 
     parser.add_argument(
@@ -216,9 +231,16 @@ def main():
     )
     args = parser.parse_args()
 
-    generate_tree(
-        args.directory,
-        create_md=args.markdown,
-        hide_structure=args.hide_structure,
-        show_params=not args.no_params,
-    )
+    if args.command == "start":
+        print(f"🌳 Starting Treeline server for {args.directory}")
+        print(f"📊 API docs available at http://{args.host}:{args.port}/docs")
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+        uvicorn.run("treeline.api.app:app", host=args.host, port=args.port, reload=True)
+    else:
+        generate_tree(
+            args.directory,
+            create_md=args.markdown,
+            hide_structure=args.hide_structure,
+            show_params=not args.no_params,
+        )

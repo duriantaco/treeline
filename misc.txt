@@ -1,0 +1,195 @@
+import React, { useState } from 'react';
+
+const CodebaseExplorer = () => {
+  const [activeView, setActiveView] = useState('overview');
+
+  // Sample data representing a codebase
+  const codebaseData = {
+    commonFlows: [
+      {
+        name: "User Authentication",
+        steps: [
+          "login_controller → validate_credentials",
+          "validate_credentials → check_password_hash",
+          "login_controller → create_session"
+        ],
+        frequency: "High",
+        entryPoint: "login_controller.py"
+      },
+      {
+        name: "Data Processing Pipeline",
+        steps: [
+          "ingest_data → validate_schema",
+          "validate_schema → transform_data",
+          "transform_data → save_to_db"
+        ],
+        frequency: "Medium",
+        entryPoint: "data_pipeline.py"
+      }
+    ],
+    hotspots: [
+      {
+        file: "auth_manager.py",
+        reason: "Most frequently modified",
+        lastChanged: "2 days ago",
+        impact: "High"
+      },
+      {
+        file: "data_processor.py",
+        reason: "High complexity",
+        callCount: "50+ references",
+        impact: "Medium"
+      }
+    ]
+  };
+
+  return (
+    <div className="w-full max-w-4xl p-6 bg-white rounded-lg shadow">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold mb-2">Codebase Explorer</h2>
+        <div className="flex space-x-4">
+          <button
+            onClick={() => setActiveView('overview')}
+            className={`px-4 py-2 rounded ${
+              activeView === 'overview' ? 'bg-blue-500 text-white' : 'bg-gray-100'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveView('flows')}
+            className={`px-4 py-2 rounded ${
+              activeView === 'flows' ? 'bg-blue-500 text-white' : 'bg-gray-100'
+            }`}
+          >
+            Common Flows
+          </button>
+          <button
+            onClick={() => setActiveView('hotspots')}
+            className={`px-4 py-2 rounded ${
+              activeView === 'hotspots' ? 'bg-blue-500 text-white' : 'bg-gray-100'
+            }`}
+          >
+            Important Areas
+          </button>
+        </div>
+      </div>
+
+      {activeView === 'overview' && (
+        <div className="space-y-4">
+          <div className="p-4 border rounded">
+            <h3 className="font-bold mb-2">Quick Start</h3>
+            <p className="text-gray-600">
+              Most developers start with auth_manager.py or data_pipeline.py.
+              These contain the core business logic.
+            </p>
+          </div>
+          <div className="p-4 border rounded">
+            <h3 className="font-bold mb-2">Key Metrics</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <div className="text-2xl font-bold text-blue-500">24</div>
+                <div className="text-sm text-gray-600">Core Modules</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-500">85%</div>
+                <div className="text-sm text-gray-600">Documentation</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-purple-500">12</div>
+                <div className="text-sm text-gray-600">Entry Points</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeView === 'flows' && (
+        <div className="space-y-4">
+          {codebaseData.commonFlows.map((flow, index) => (
+            <div key={index} className="p-4 border rounded">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold">{flow.name}</h3>
+                <span className="text-sm bg-blue-100 px-2 py-1 rounded">
+                  {flow.frequency} Usage
+                </span>
+              </div>
+              <div className="space-y-2">
+                {flow.steps.map((step, stepIndex) => (
+                  <div key={stepIndex} className="flex items-center text-sm">
+                    <span className="text-gray-600">{stepIndex + 1}.</span>
+                    <span className="ml-2">{step}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-sm text-gray-600">
+                Entry Point: {flow.entryPoint}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {activeView === 'hotspots' && (
+        <div className="space-y-4">
+          {codebaseData.hotspots.map((hotspot, index) => (
+            <div key={index} className="p-4 border rounded">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold">{hotspot.file}</h3>
+                <span className={`text-sm px-2 py-1 rounded ${
+                  hotspot.impact === 'High' ? 'bg-red-100' : 'bg-yellow-100'
+                }`}>
+                  {hotspot.impact} Impact
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">{hotspot.reason}</div>
+              {hotspot.lastChanged && (
+                <div className="text-sm text-gray-600">
+                  Last changed: {hotspot.lastChanged}
+                </div>
+              )}
+              {hotspot.callCount && (
+                <div className="text-sm text-gray-600">
+                  Referenced: {hotspot.callCount}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CodebaseExplorer;
+
+
+This new interface would help new developers by:
+
+Showing Common Workflows
+
+
+"Here's how the authentication flow works"
+"Here's where data processing happens"
+
+
+Highlighting Important Areas
+
+
+Most frequently changed files
+Most called functions
+Core business logic
+
+
+Suggesting Where to Start
+
+
+Entry points for different features
+Well-documented areas
+Simpler parts of the codebase
+
+Instead of just showing a web of connections, it guides users through the codebase based on:
+
+What other developers commonly work with
+Which parts are most important
+How different pieces work together
