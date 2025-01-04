@@ -1,3 +1,35 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "treeline"
+version = "0.1.3"
+description = "A simple tool for analyzing your codebase architecture"
+readme = "README.md"
+authors = [
+    { name = "oha", email = "aaronoh2015@gmail.com" }
+]
+license = { text = "MIT" }
+requires-python = ">=3.7"
+urls = { Homepage = "https://github.com/duriantaco/treeline" }
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.1",
+    "pydantic>=2.6.1",
+    "typer>=0.9.0",
+    "httpx>=0.19.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=2.21.0",
+    "black>=24.2.0",
+    "isort>=5.13.2",
+    "pytest>=7.0.0",
+    "black[jupyter]",
+]
+
 [tool.black]
 line-length = 88
 target-version = ['py37']
@@ -27,3 +59,9 @@ per-file-ignores = [
     "treeline/security_analyzer.py:E501",
     "treeline/enhanced_analyzer.py:E501"
 ]
+
+[tool.setuptools]
+packages = {find = {where = ["."], include = ["treeline*"], exclude = ["assets*", "results*", "docs*", "tests*", "example*"]}}
+
+[project.scripts]
+treeline = "treeline.core:main"
