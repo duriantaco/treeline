@@ -10,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
-from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
 from treeline.utils.report import ReportGenerator
 from treeline.visualizers.mermaid import MermaidVisualizer
 
@@ -46,8 +45,8 @@ static_path = Path(__file__).parent.parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
 
-dependency_analyzer = ModuleDependencyAnalyzer()
-code_analyzer = EnhancedCodeAnalyzer()
+dependency_analyzer = None
+code_analyzer = None
 
 
 @app.get("/")
@@ -65,6 +64,12 @@ async def get_visualization():
             print(f"Error reading HTML: {str(e)}")
             raise
 
+        try:
+            with open(".treeline_dir", "r") as f:
+                target_dir = Path(f.read().strip()).resolve()
+        except FileNotFoundError:
+            target_dir = Path(".").resolve()
+
         if not dependency_analyzer:
             print("Initializing dependency analyzer...")
             try:
@@ -73,10 +78,9 @@ async def get_visualization():
                 print(f"Error initializing analyzer: {str(e)}")
                 raise
 
-        current_dir = Path(".")
         try:
-            dependency_analyzer.analyze_directory(current_dir)
-            print(f"Analyzed directory: {current_dir.absolute()}")
+            dependency_analyzer.analyze_directory(target_dir)
+            print(f"Analyzed directory: {target_dir.absolute()}")
         except Exception as e:
             print(f"Error analyzing directory: {str(e)}")
             raise

@@ -50,33 +50,33 @@ with open("code_diff.html", "w", encoding="utf-8") as f:
 ### In terminal
 
 #### Basic commands
-```
+```bash
 # Show current directory tree
 treeline
 ```
-```
+```bash
 # Show specific directory tree
 treeline /path/to/dir
 ```
-```
+```bash
 # Create markdown file + report in html format (tree.md)
 treeline -m
 ```
-```
+```bash
 # Ignore specific patterns
 treeline -i ".pyc,.git"
 ```
-```
+```bash
 # Show help message
 treeline -h
 ```
 
 #### Visualization Options
-```
+```bash
 # Hide all code structure details
 treeline --hide-structure
 ```
-```
+```bash
 # Hide function parameters
 treeline --no-params
 ```
@@ -105,7 +105,7 @@ secrets.py
 
 Create a treeline.config.json to customize analysis settings:
 
-```
+```json
 {
   "complexity_threshold": 10,
   "ignore_patterns": [".pyc", ".git"],
