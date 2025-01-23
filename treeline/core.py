@@ -183,12 +183,11 @@ def main():
         epilog="""
             Examples:
             treeline                      # Show full analysis
-            treeline /path/to/dir         # Analyze specific directory
             treeline -m                   # Create markdown report
             treeline -i "*.pyc,*.git"     # Ignore patterns
             treeline --hide-structure     # Hide code structure
             treeline --no-params          # Hide function parameters
-            treeline start                # Start the API server
+            treeline start /path/to/dir   # Start API server for specific directory
             treeline -h                   # Show this help message
         """,
     )
@@ -197,18 +196,18 @@ def main():
 
     start_parser = subparsers.add_parser("start", help="Start the API server")
     start_parser.add_argument(
+        "directory",
+        nargs="?",
+        default=".",
+        help="Directory to analyze (default: current directory)",
+    )
+    start_parser.add_argument(
         "--port", type=int, default=8000, help="Port to run the server on"
     )
     start_parser.add_argument(
         "--host", default="0.0.0.0", help="Host to run the server on"
     )
 
-    parser.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Directory path (default: current directory)",
-    )
     parser.add_argument(
         "-m", "--markdown", action="store_true", help="Create markdown report (tree.md)"
     )
@@ -223,7 +222,6 @@ def main():
     parser.add_argument(
         "--no-params", action="store_true", help="Hide function parameters"
     )
-
     parser.add_argument(
         "--diff",
         nargs="*",
@@ -232,15 +230,26 @@ def main():
     args = parser.parse_args()
 
     if args.command == "start":
-        print(f"🌳 Starting Treeline server for {args.directory}")
+        print(f"Raw directory argument: {args.directory}")
+        target_dir = Path(args.directory).resolve()
+        print(f"Resolved path: {target_dir}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"🌳 Starting Treeline server for {target_dir}")
         print(f"📊 API docs available at http://{args.host}:{args.port}/docs")
+
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-        uvicorn.run("treeline.api.app:app", host=args.host, port=args.port, reload=True)
-    else:
-        generate_tree(
-            args.directory,
-            create_md=args.markdown,
-            hide_structure=args.hide_structure,
-            show_params=not args.no_params,
-        )
+        config_dir = Path(__file__).parent.parent
+        with open(config_dir / ".treeline_dir", "w") as f:
+            f.write(str(target_dir))
+
+        print("About to start Uvicorn...")
+        try:
+            uvicorn.run(
+                "treeline.api.app:app", host=args.host, port=args.port, reload=True
+            )
+        except Exception as e:
+            print(f"Failed to start server: {str(e)}")
+            import traceback
+
+            print(traceback.format_exc())

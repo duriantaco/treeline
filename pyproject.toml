@@ -19,6 +19,10 @@ dependencies = [
     "pydantic>=2.6.1",
     "typer>=0.9.0",
     "httpx>=0.19.0",
+    "xxhash>=3.4.1",        # for ultra-mega-super-fast hashing
+    "numpy>=1.24.0",        # for graph operations
+    "scipy>=1.11.0",        # For sparse matrix operations
+    "numba>=0.58.0",
 ]
 
 [project.optional-dependencies]

@@ -60,6 +60,14 @@ class ModuleDependencyAnalyzer:
             "MAX_CLASS_COMPLEXITY": 50,
         }
 
+        self.entry_patterns = {
+            "fastapi_route": r"@(?:app|router)\.(?:get|post|put|delete|patch)",
+            "cli_command": r"@click\.command|@app\.command|def main\(",
+            "django_view": r"class \w+View\(|@api_view",
+            "test_file": r"test_.*\.py$|.*_test\.py$",
+            "main_guard": r'if\s+__name__\s*==\s*[\'"]__main__[\'"]\s*:',
+        }
+
     def analyze_directory(self, directory: Path):
         """Analyze all Python files in directory."""
         ignore_patterns = read_ignore_patterns()
@@ -179,7 +187,7 @@ class ModuleDependencyAnalyzer:
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 complexity = self._calculate_complexity(node)
-                if complexity > 10:  # Threshold for complex functions
+                if complexity > 10:
                     complex_func = ComplexFunction(
                         module=module_name, name=node.name, complexity=complexity
                     )
@@ -250,28 +258,38 @@ class ModuleDependencyAnalyzer:
         for module in all_modules:
             node_id = len(nodes)
             node_lookup[module] = node_id
+            is_entry = not any(
+                module in imports for imports in self.module_imports.values()
+            )
+
             nodes.append(
                 {
                     "id": node_id,
                     "name": module,
                     "type": "module",
+                    "is_entry": is_entry,
                     "metrics": self.module_metrics.get(module, {}),
                     "code_smells": [],
                 }
             )
 
         for module, classes in self.class_info.items():
+            if module not in node_lookup:
+                continue
+
             for class_name, info in classes.items():
                 node_id = len(nodes)
                 node_key = f"{module}.{class_name}"
                 node_lookup[node_key] = node_id
-
+                class_node_id = len(nodes)
                 nodes.append(
                     {
-                        "id": node_id,
+                        "id": class_node_id,
                         "name": class_name,
                         "type": "class",
                         "metrics": info,
+                        "methods": info["methods"],
+                        "docstring": None,
                         "code_smells": [],
                     }
                 )
@@ -279,10 +297,34 @@ class ModuleDependencyAnalyzer:
                 links.append(
                     {
                         "source": node_lookup[module],
-                        "target": node_id,
+                        "target": class_node_id,
                         "type": "contains",
                     }
                 )
+
+                for method_name, method_info in info["methods"].items():
+                    method_node_id = len(nodes)
+                    method_key = f"{node_key}.{method_name}"
+                    node_lookup[method_key] = method_node_id
+
+                    nodes.append(
+                        {
+                            "id": method_node_id,
+                            "name": method_name,
+                            "type": "method",
+                            "parent_class": class_name,
+                            "metrics": method_info,
+                            "docstring": None,
+                        }
+                    )
+
+                    links.append(
+                        {
+                            "source": class_node_id,
+                            "target": method_node_id,
+                            "type": "contains",
+                        }
+                    )
 
         for func_name, location in self.function_locations.items():
             if "module" not in location:
