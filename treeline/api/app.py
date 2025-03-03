@@ -2,17 +2,39 @@
 import json
 from pathlib import Path
 from typing import Dict, List
+import pickle
+import traceback
+from concurrent.futures import ProcessPoolExecutor
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.utils.report import ReportGenerator
-from treeline.visualizers.mermaid import MermaidVisualizer
 
+
+CACHE_DIR = Path(".treeline_cache")
+CACHE_DIR.mkdir(exist_ok=True)
+dependency_analyzer = None
+code_analyzer = None
+
+def analyze_file_wrapper(file_path, analyzer):
+    return analyzer.analyze_file(file_path)
+
+def load_cache(dir_path: Path):
+    cache_file = CACHE_DIR / f"{dir_path.name}.pkl"
+    if cache_file.exists():
+        with open(cache_file, "rb") as f:
+            return pickle.load(f)
+    return None
+
+def save_cache(dir_path: Path, data):
+    cache_file = CACHE_DIR / f"{dir_path.name}.pkl"
+    with open(cache_file, "wb") as f:
+        pickle.dump(data, f)
 
 class AnalysisRequest(BaseModel):
     path: str
@@ -44,25 +66,15 @@ app.add_middleware(
 static_path = Path(__file__).parent.parent / "static"
 app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
-
-dependency_analyzer = None
-code_analyzer = None
-
-
 @app.get("/")
 async def get_visualization():
-    """Serve the main visualization page"""
     global dependency_analyzer
 
     try:
         index_path = static_path / "index.html"
-        try:
-            with open(index_path, "r") as f:
-                html_content = f.read()
-            print("Successfully read HTML template")
-        except Exception as e:
-            print(f"Error reading HTML: {str(e)}")
-            raise
+        with open(index_path, "r") as f:
+            html_content = f.read()
+        print("Successfully read HTML template")
 
         try:
             with open(".treeline_dir", "r") as f:
@@ -72,43 +84,51 @@ async def get_visualization():
 
         if not dependency_analyzer:
             print("Initializing dependency analyzer...")
+            dependency_analyzer = ModuleDependencyAnalyzer()
+
+        cached_data = load_cache(target_dir)
+        
+        if cached_data:
+            print("Using cached graph data")
+            graph_data = cached_data
+        else:
             try:
-                dependency_analyzer = ModuleDependencyAnalyzer()
+                from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+                enhanced_analyzer = EnhancedCodeAnalyzer()
+
+                print(f"Analyzing directory for quality issues: {target_dir.absolute()}")
+                
+                python_files = list(target_dir.rglob("*.py"))
+                with ProcessPoolExecutor(max_workers=4) as executor:
+                    futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
+                    results = [f.result() for f in futures]
+                
+                enhanced_analyzer.analyze_directory(target_dir)
+
+                dependency_analyzer.analyze_directory(target_dir)
+                print(f"Analyzed directory structure: {target_dir.absolute()}")
+
+                nodes, links = dependency_analyzer.get_graph_data_with_quality(enhanced_analyzer)
+                graph_data = {"nodes": nodes, "links": links}
+                
+                save_cache(target_dir, graph_data)
             except Exception as e:
-                print(f"Error initializing analyzer: {str(e)}")
+                print(f"Error analyzing directory: {str(e)}")
                 raise
 
-        try:
-            dependency_analyzer.analyze_directory(target_dir)
-            print(f"Analyzed directory: {target_dir.absolute()}")
-        except Exception as e:
-            print(f"Error analyzing directory: {str(e)}")
-            raise
+        json_data = json.dumps(graph_data)
+        print(f"Generated graph data with {len(graph_data['nodes'])} nodes and {len(graph_data['links'])} links")
 
-        try:
-            nodes, links = dependency_analyzer.get_graph_data()
-            graph_data = {"nodes": nodes, "links": links}
-            json_data = json.dumps(graph_data)
-            print(
-                f"Generated graph data with {len(nodes)} nodes and {len(links)} links"
-            )
-        except Exception as e:
-            print(f"Error generating graph data: {str(e)}")
-            raise
+        nodes_with_issues = [n for n in graph_data['nodes'] if n.get('code_smells') and len(n.get('code_smells')) > 0]
+        print(f"Found {len(nodes_with_issues)} nodes with quality issues")
 
-        try:
-            html_content = html_content.replace("GRAPH_DATA_PLACEHOLDER", json_data)
-            print("Successfully injected graph data")
-        except Exception as e:
-            print(f"Error injecting data into template: {str(e)}")
-            raise
+        html_content = html_content.replace("GRAPH_DATA_PLACEHOLDER", json_data)
+        print("Successfully injected graph data")
 
         return HTMLResponse(html_content)
 
     except Exception as e:
         print(f"\nFATAL ERROR: {str(e)}")
-        import traceback
-
         tb = traceback.format_exc()
         print(f"Traceback:\n{tb}")
         return HTMLResponse(
@@ -121,7 +141,55 @@ async def get_visualization():
             </html>
             """
         )
+    
+@app.get("/api/graph-data")
+async def get_graph_data():
+    """Return the graph data for visualization"""
+    try:
+        try:
+            with open(".treeline_dir", "r") as f:
+                target_dir = Path(f.read().strip()).resolve()
+        except FileNotFoundError:
+            target_dir = Path(".").resolve()
+            
+        cached_data = load_cache(target_dir)
+        
+        if cached_data:
+            print("Using cached graph data")
+            return cached_data
+        else:
+            try:
+                from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+                enhanced_analyzer = EnhancedCodeAnalyzer()
 
+                print(f"Analyzing directory for quality issues: {target_dir.absolute()}")
+                
+                python_files = list(target_dir.rglob("*.py"))
+                with ProcessPoolExecutor(max_workers=4) as executor:
+                    futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
+                    results = [f.result() for f in futures]
+                
+                enhanced_analyzer.analyze_directory(target_dir)
+
+                dependency_analyzer.analyze_directory(target_dir)
+                print(f"Analyzed directory structure: {target_dir.absolute()}")
+
+                nodes, links = dependency_analyzer.get_graph_data_with_quality(enhanced_analyzer)
+                graph_data = {"nodes": nodes, "links": links}
+                
+                save_cache(target_dir, graph_data)
+                return graph_data
+            except Exception as e:
+                print(f"Error analyzing directory: {str(e)}")
+                raise
+                
+    except Exception as e:
+        print(f"\nERROR: {str(e)}")
+        tb = traceback.format_exc()
+        print(f"Traceback:\n{tb}")
+        raise HTTPException(
+            status_code=500, detail=f"Error generating graph data: {str(e)}"
+        )
 
 @app.post("/analyze", response_model=AnalysisResponse)
 async def analyze_codebase(request: AnalysisRequest):
@@ -169,28 +237,24 @@ async def get_module_metrics(module_path: str):
     }
 
 
-@app.get("/api/diagrams")
-async def get_diagrams():
-    """Get Mermaid diagrams for the codebase"""
-    visualizer = MermaidVisualizer()
-
-    overview = visualizer.generate_module_overview_diagram(
-        module_imports=dependency_analyzer.module_imports
-    )
-
-    details = []
-    for module in sorted(dependency_analyzer.module_imports.keys()):
-        if module.startswith("treeline."):
-            detail = visualizer.generate_module_detail_diagram(
-                module=module,
-                class_info=dependency_analyzer.class_info,
-                function_locations=dependency_analyzer.function_locations,
-                function_calls=dependency_analyzer.function_calls,
+@app.get("/reports/complexity")
+async def get_complexity_report():
+    if not dependency_analyzer.complex_functions:
+        return {"message": "No complex functions found"}
+    return {
+        "hotspots": [
+            {
+                "module": module,
+                "function": func,
+                "complexity": complexity,
+                "exceeds_threshold": complexity
+                > dependency_analyzer.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"],
+            }
+            for module, func, complexity in sorted(
+                dependency_analyzer.complex_functions, key=lambda x: x[2], reverse=True
             )
-            details.append({"module": module, "diagram": detail})
-
-    return {"overview": overview, "details": details}
-
+        ]
+    }
 
 @app.get("/reports/complexity")
 async def get_complexity_report():
@@ -220,29 +284,6 @@ async def get_structure_report(tree_str: List[str]):
     processed_tree = [dependency_analyzer.clean_for_markdown(line) for line in tree_str]
 
     return {"structure": processed_tree, "metrics": dependency_analyzer.module_metrics}
-
-
-@app.get("/reports/mermaid")
-async def get_mermaid_report():
-    """Get Mermaid diagram report"""
-    visualizer = MermaidVisualizer()
-
-    overview = visualizer.generate_module_overview_diagram(
-        dependency_analyzer.module_imports
-    )
-
-    details = []
-    for module in sorted(dependency_analyzer.module_imports.keys()):
-        if module.startswith("treeline."):
-            detail = visualizer.generate_module_detail_diagram(
-                module=module,
-                class_info=dependency_analyzer.class_info,
-                function_locations=dependency_analyzer.function_locations,
-                function_calls=dependency_analyzer.function_calls,
-            )
-            details.append({"module": module, "diagram": detail})
-
-    return {"overview": overview, "details": details}
 
 
 @app.get("/reports/quality")
@@ -279,7 +320,6 @@ async def export_report(format: str = "html"):
             "links": links,
             "metrics": dependency_analyzer.module_metrics,
             "quality": await get_quality_report(),
-            "mermaid": await get_mermaid_report(),
         }
 
         return HTMLResponse(template.replace("REPORT_DATA", json.dumps(report_data)))
@@ -289,12 +329,10 @@ async def export_report(format: str = "html"):
         md_content.append("# Code Analysis Report\n")
 
         quality_data = await get_quality_report()
-        mermaid_data = await get_mermaid_report()
 
         md_content.extend(
             [
                 "## Module Overview\n",
-                f"```mermaid\n{mermaid_data['overview']}\n```\n",
                 "## Quality Metrics\n",
                 f"Complex Functions: {len(quality_data['metrics']['complex_functions'])}\n",
                 "## Core Components\n",
@@ -309,7 +347,102 @@ async def export_report(format: str = "html"):
 
     raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
 
-
+@app.get("/api/node/{node_id}")
+async def get_node_details(node_id: str):
+    """Return the details for a specific node"""
+    try:
+        try:
+            with open(".treeline_dir", "r") as f:
+                target_dir = Path(f.read().strip()).resolve()
+        except FileNotFoundError:
+            target_dir = Path(".").resolve()
+            
+        cached_data = load_cache(target_dir)
+        
+        if not cached_data:
+            return JSONResponse(
+                status_code=404, 
+                content={"detail": "No graph data available"}
+            )
+            
+        nodes = cached_data.get('nodes', [])
+        links = cached_data.get('links', [])
+        
+        print(f"Looking for node_id: {node_id}")
+        print(f"Available node IDs: {[n.get('id') for n in nodes[:10]]}")  # Print first 10 for brevity
+        print(f"Loaded {len(nodes)} nodes and {len(links)} links from cache")
+        
+        # Find nodes by ID
+        node_lookup = {str(n.get('id')): n for n in nodes}
+        
+        if str(node_id) not in node_lookup:
+            return JSONResponse(
+                status_code=404,
+                content={"detail": f"Node with ID {node_id} not found", "available_ids_range": f"0-{len(nodes)-1}"}
+            )
+            
+        node = node_lookup[str(node_id)]
+        
+        incoming_links = []
+        outgoing_links = []
+        
+        # Helper to safely extract IDs from source/target
+        def extract_id(item):
+            if isinstance(item, str):
+                return item
+            elif isinstance(item, dict) and 'id' in item:
+                return item['id']
+            elif isinstance(item, int):
+                # If it's an integer index, try to map it to the actual node ID
+                if 0 <= item < len(nodes):
+                    return nodes[item].get('id')
+                return str(item)  # Fall back to string representation
+            return str(item)  # Default fallback
+        
+        # Process links
+        for link in links:
+            try:
+                source_id = extract_id(link['source'])
+                target_id = extract_id(link['target'])
+                
+                # Make sure we're comparing strings
+                if str(source_id) == str(node_id):
+                    outgoing_links.append(link)
+                if str(target_id) == str(node_id):
+                    incoming_links.append(link)
+            except Exception as e:
+                print(f"Error processing link: {e}")
+                continue
+        
+        file_path = None
+        if 'file_path' in node:
+            file_path = node['file_path']
+            try:
+                with open(file_path, 'r') as f:
+                    file_content = f.read()
+            except:
+                file_content = None
+        else:
+            file_content = None
+        
+        return {
+            "node": node,
+            "connections": {
+                "incoming": incoming_links,
+                "outgoing": outgoing_links
+            },
+            "file_content": file_content
+        }
+                
+    except Exception as e:
+        print(f"\nERROR: {str(e)}")
+        tb = traceback.format_exc()
+        print(f"Traceback:\n{tb}")
+        return JSONResponse(
+            status_code=500, 
+            content={"detail": f"Error fetching node details: {str(e)}"}
+        )
+    
 @app.get("/reports/{format}")
 async def generate_report(
     format: str = "html", tree_str: List[str] = Query(None), path: str = Query(None)
@@ -321,14 +454,12 @@ async def generate_report(
             raise HTTPException(status_code=404, detail=f"Path {path} not found")
         dependency_analyzer.analyze_directory(target_path)
 
-    mermaid_data = await get_diagrams()
 
     report_data = ReportGenerator.generate_report_data(
         tree_str=tree_str or [],
         complex_functions=dependency_analyzer.complex_functions,
         module_metrics=dependency_analyzer.module_metrics,
         quality_metrics=dependency_analyzer.QUALITY_METRICS,
-        mermaid_diagrams=mermaid_data,
     )
 
     if format == "json":

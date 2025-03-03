@@ -2,6 +2,7 @@ import ast
 import re
 from collections import defaultdict
 from pathlib import Path
+from typing import Dict
 
 from treeline.ignore import read_ignore_patterns, should_ignore
 from treeline.models.dependency_analyzer import (
@@ -11,13 +12,10 @@ from treeline.models.dependency_analyzer import (
     MethodInfo,
     ModuleMetrics,
 )
-from treeline.visualizers.mermaid import MermaidVisualizer
-
 
 class ModuleDependencyAnalyzer:
-    """Analyzes module-level dependencies and generates summary reports."""
-
-    def __init__(self):
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
         self.module_imports = defaultdict(set)
         self.module_metrics = defaultdict(dict)
         self.complex_functions = []
@@ -36,30 +34,28 @@ class ModuleDependencyAnalyzer:
                 "call_depth": 0,
             }
         )
-
         self.QUALITY_METRICS = {
-            "MAX_LINE_LENGTH": 100,
-            "MAX_DOC_LENGTH": 80,
-            "MAX_CYCLOMATIC_COMPLEXITY": 10,
-            "MAX_COGNITIVE_COMPLEXITY": 15,
-            "MAX_NESTED_DEPTH": 4,
-            "MAX_FUNCTION_LINES": 50,
-            "MAX_PARAMS": 5,
-            "MAX_RETURNS": 4,
-            "MAX_ARGUMENTS_PER_LINE": 5,
-            "MIN_MAINTAINABILITY_INDEX": 20,
-            "MAX_FUNC_COGNITIVE_LOAD": 15,
-            "MIN_PUBLIC_METHODS": 1,
-            "MAX_IMPORT_STATEMENTS": 15,
-            "MAX_MODULE_DEPENDENCIES": 10,
-            "MAX_INHERITANCE_DEPTH": 3,
-            "MAX_DUPLICATED_LINES": 6,
-            "MAX_DUPLICATED_BLOCKS": 2,
-            "MAX_CLASS_LINES": 300,
-            "MAX_METHODS_PER_CLASS": 20,
-            "MAX_CLASS_COMPLEXITY": 50,
+            "MAX_LINE_LENGTH": self.config.get("MAX_LINE_LENGTH", 80),
+            "MAX_DOC_LENGTH": self.config.get("MAX_DOC_LENGTH", 80),
+            "MAX_CYCLOMATIC_COMPLEXITY": self.config.get("MAX_CYCLOMATIC_COMPLEXITY", 10),
+            "MAX_COGNITIVE_COMPLEXITY": self.config.get("MAX_COGNITIVE_COMPLEXITY", 15),
+            "MAX_NESTED_DEPTH": self.config.get("MAX_NESTED_DEPTH", 4),
+            "MAX_FUNCTION_LINES": self.config.get("MAX_FUNCTION_LINES", 50),
+            "MAX_PARAMS": self.config.get("MAX_PARAMS", 5),
+            "MAX_RETURNS": self.config.get("MAX_RETURNS", 4),
+            "MAX_ARGUMENTS_PER_LINE": self.config.get("MAX_ARGUMENTS_PER_LINE", 5),
+            "MIN_MAINTAINABILITY_INDEX": self.config.get("MIN_MAINTAINABILITY_INDEX", 20),
+            "MAX_FUNC_COGNITIVE_LOAD": self.config.get("MAX_FUNC_COGNITIVE_LOAD", 15),
+            "MIN_PUBLIC_METHODS": self.config.get("MIN_PUBLIC_METHODS", 1),
+            "MAX_IMPORT_STATEMENTS": self.config.get("MAX_IMPORT_STATEMENTS", 15),
+            "MAX_MODULE_DEPENDENCIES": self.config.get("MAX_MODULE_DEPENDENCIES", 10),
+            "MAX_INHERITANCE_DEPTH": self.config.get("MAX_INHERITANCE_DEPTH", 3),
+            "MAX_DUPLICATED_LINES": self.config.get("MAX_DUPLICATED_LINES", 6),
+            "MAX_DUPLICATED_BLOCKS": self.config.get("MAX_DUPLICATED_BLOCKS", 2),
+            "MAX_CLASS_LINES": self.config.get("MAX_CLASS_LINES", 300),
+            "MAX_METHODS_PER_CLASS": self.config.get("MAX_METHODS_PER_CLASS", 20),
+            "MAX_CLASS_COMPLEXITY": self.config.get("MAX_CLASS_COMPLEXITY", 50),
         }
-
         self.entry_patterns = {
             "fastapi_route": r"@(?:app|router)\.(?:get|post|put|delete|patch)",
             "cli_command": r"@click\.command|@app\.command|def main\(",
@@ -69,11 +65,9 @@ class ModuleDependencyAnalyzer:
         }
 
     def analyze_directory(self, directory: Path):
-        """Analyze all Python files in directory."""
         ignore_patterns = read_ignore_patterns()
 
         def should_skip_module(module_path: str) -> bool:
-            """Check if a module path should be skipped."""
             if any(
                 indicator in module_path
                 for indicator in ["site-packages", "venv", ".venv"]
@@ -116,7 +110,6 @@ class ModuleDependencyAnalyzer:
                 }
 
     def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str):
-        """Analyze a single module's contents and relationships."""
         for parent in ast.walk(tree):
             for child in ast.iter_child_nodes(parent):
                 setattr(child, "parent", parent)
@@ -169,7 +162,6 @@ class ModuleDependencyAnalyzer:
                 self.class_info[module_name][node.name] = class_info
 
     def _analyze_imports(self, tree: ast.AST, module_name: str):
-        """Collect import information from AST."""
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for name in node.names:
@@ -179,7 +171,6 @@ class ModuleDependencyAnalyzer:
                     self.module_imports[module_name].add(node.module)
 
     def _collect_metrics(self, tree: ast.AST, module_name: str):
-        """Collect code metrics for the module."""
         functions = []
         classes = []
         total_complexity = 0
@@ -187,7 +178,7 @@ class ModuleDependencyAnalyzer:
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 complexity = self._calculate_complexity(node)
-                if complexity > 10:
+                if complexity > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]:
                     complex_func = ComplexFunction(
                         module=module_name, name=node.name, complexity=complexity
                     )
@@ -209,7 +200,6 @@ class ModuleDependencyAnalyzer:
         self.module_metrics[module_name] = metrics.__dict__
 
     def _calculate_complexity(self, node: ast.AST) -> int:
-        """Calculate cyclomatic complexity."""
         complexity = 1
         for child in ast.walk(node):
             if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
@@ -218,30 +208,7 @@ class ModuleDependencyAnalyzer:
                 complexity += len(child.values) - 1
         return complexity
 
-    def get_mermaid_diagrams(self) -> str:
-        visualizer = MermaidVisualizer()
-
-        module_diagram = visualizer.generate_module_overview_diagram(
-            self.module_imports
-        )
-
-        module_details = []
-        for module in sorted(self.module_imports.keys()):
-            if module.startswith("treeline."):
-                detail_diagram = visualizer.generate_module_detail_diagram(
-                    module=module,
-                    class_info=self.class_info,
-                    function_locations=self.function_locations,
-                    function_calls=self.function_calls,
-                )
-                module_details.append(
-                    f"### {module}\n```mermaid\n{detail_diagram}\n```\n"
-                )
-
-        return f"```mermaid\n{module_diagram}\n```\n" + "\n".join(module_details)
-
     def get_graph_data(self):
-        """Get graph data for visualization"""
         all_modules = set()
         all_modules.update(self.module_imports.keys())
         all_modules.update(self.module_metrics.keys())
@@ -382,7 +349,6 @@ class ModuleDependencyAnalyzer:
         return nodes, links
 
     def get_entry_points(self):
-        """Get potential entry points of the codebase"""
         entry_points = []
         for module, metrics in self.module_metrics.items():
             if not any(module in imports for imports in self.module_imports.values()):
@@ -390,7 +356,6 @@ class ModuleDependencyAnalyzer:
         return entry_points
 
     def get_core_components(self):
-        """Identify core components based on usage and dependencies"""
         components = []
         for module in self.module_imports:
             incoming = len(
@@ -399,16 +364,76 @@ class ModuleDependencyAnalyzer:
             outgoing = len(self.module_imports[module])
             if (
                 incoming > 2 and outgoing > 2
-            ):  # some arbitrary threshold for core components
+            ):
                 components.append(
                     {"name": module, "incoming": incoming, "outgoing": outgoing}
                 )
         return sorted(
             components, key=lambda x: x["incoming"] + x["outgoing"], reverse=True
         )
+    
+    def get_graph_data_with_quality(self, enhanced_analyzer=None):
+        nodes, links = self.get_graph_data()
+        
+        if enhanced_analyzer and hasattr(enhanced_analyzer, 'quality_issues') and enhanced_analyzer.quality_issues:
+            print(f"Found {sum(len(issues) for issues in enhanced_analyzer.quality_issues.values())} quality issues")
+            
+            file_to_module = {}
+            
+            for node in nodes:
+                if node['type'] == 'module':
+                    for func_name, location in self.function_locations.items():
+                        if location.get('module') == node['name'] and 'file' in location:
+                            file_to_module[location.get('file')] = node['name']
+                    
+                    for module_name, classes in self.class_info.items():
+                        if module_name == node['name']:
+                            for class_name, info in classes.items():
+                                if 'file' in info:
+                                    file_to_module[info.get('file')] = node['name']
+            
+            file_basenames = {}
+            for file_path, module_name in file_to_module.items():
+                base_name = Path(file_path).name
+                file_basenames[base_name] = module_name
+            
+            for category, issues in enhanced_analyzer.quality_issues.items():
+                for issue in issues:
+                    if isinstance(issue, dict) and 'file_path' in issue:
+                        file_path = issue['file_path']
+                        
+                        module_name = file_to_module.get(file_path)
+                        
+                        if not module_name:
+                            basename = Path(file_path).name
+                            module_name = file_basenames.get(basename)
+                        
+                        if not module_name:
+                            for path, mod in file_to_module.items():
+                                if path.endswith(file_path) or file_path.endswith(path):
+                                    module_name = mod
+                                    break
+                        
+                        if module_name:
+                            for node in nodes:
+                                if node['type'] == 'module' and node['name'] == module_name:
+                                    if 'code_smells' not in node:
+                                        node['code_smells'] = []
+                                    
+                                    issue_text = f"[{category}] {issue.get('description', 'Unknown issue')}"
+                                    if issue.get('line'):
+                                        issue_text += f" (Line {issue['line']})"
+                                    
+                                    if issue_text not in node['code_smells']:
+                                        node['code_smells'].append(issue_text)
+                                        print(f"Added issue to {module_name}: {issue_text}")
+                                    break
+                        else:
+                            print(f"Could not map file {file_path} to any module")
+        
+        return nodes, links
 
     def get_common_flows(self):
-        """Identify common code flows based on function calls"""
         flows = []
         for func, calls in self.function_calls.items():
             if len(calls) > 2:
@@ -418,7 +443,6 @@ class ModuleDependencyAnalyzer:
         return sorted(flows, key=lambda x: x["call_count"], reverse=True)
 
     def clean_for_markdown(self, line: str) -> str:
-        """Remove ANSI colors and simplify symbols for markdown."""
         ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         clean_line = ansi_escape.sub("", line)
 
