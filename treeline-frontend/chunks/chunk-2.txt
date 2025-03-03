@@ -1,0 +1,616 @@
+================================================================================
+CHUNK 3 OF 5
+================================================================================
+
+========================================
+File: ./src/components/CodeMetricsGraphs.tsx
+========================================
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+
+interface CodeMetricsGraphsProps {
+  metrics: any;
+  codeSmells: any[];
+  className?: string;
+}
+
+const CodeMetricsGraphs: React.FC<CodeMetricsGraphsProps> = ({ 
+  metrics, 
+  codeSmells,
+  className = '' 
+}) => {
+  const donutChartRef = useRef<SVGSVGElement>(null);
+  const barChartRef = useRef<SVGSVGElement>(null);
+  const radarChartRef = useRef<SVGSVGElement>(null);
+  
+  useEffect(() => {
+    if (metrics && codeSmells) {
+      renderDonutChart();
+      renderBarChart();
+      renderRadarChart();
+    }
+  }, [metrics, codeSmells]);
+  
+  const renderDonutChart = () => {
+    if (!donutChartRef.current) return;
+    
+    d3.select(donutChartRef.current).selectAll('*').remove();
+    
+    const width = 300;
+    const height = 300;
+    const margin = 40;
+    
+    const radius = Math.min(width, height) / 2 - margin;
+    
+    const svg = d3.select(donutChartRef.current)
+      .attr('width', width)
+      .attr('height', height)
+      .append('g')
+      .attr('transform', `translate(${width / 2}, ${height / 2})`);
+    
+    const issueCategories: { [key: string]: number } = {};
+    
+    codeSmells.forEach(smell => {
+      let category = 'Other';
+      
+      if (typeof smell === 'string') {
+        const match = smell.match(/^\[([^\]]+)\]/);
+        if (match) category = match[1];
+      } else if (smell.category) {
+        category = smell.category;
+      } else if (smell.message && smell.message.includes('complexity')) {
+        category = 'Complexity';
+      } else if (smell.message && smell.message.includes('security')) {
+        category = 'Security';
+      }
+      
+      issueCategories[category] = (issueCategories[category] || 0) + 1;
+    });
+    
+    const data = Object.entries(issueCategories).map(([name, value]) => ({name, value}));
+    
+    const color = d3.scaleOrdinal()
+      .domain(data.map(d => d.name))
+      .range([
+        '#ef4444', // red (security)
+        '#f59e0b', // amber (complexity)
+        '#3b82f6', // blue (style)
+        '#10b981', // emerald (duplication)
+        '#8b5cf6', // violet (other)
+        '#ec4899', // pink
+        '#6366f1'  // indigo
+      ]);
+    
+    const pie = d3.pie<any>()
+      .sort(null)
+      .value(d => d.value);
+    
+    const arc = d3.arc()
+      .innerRadius(radius * 0.5)
+      .outerRadius(radius * 0.8);
+    
+    const outerArc = d3.arc()
+      .innerRadius(radius * 0.9)
+      .outerRadius(radius * 0.9);
+    
+    const arcs = svg.selectAll('allSlices')
+      .data(pie(data))
+      .enter()
+      .append('path')
+      .attr('d', arc as any)
+      .attr('fill', d => color(d.data.name) as string)
+      .attr('stroke', 'white')
+      .style('stroke-width', '2px')
+      .style('opacity', 0.7);
+    
+    arcs.append('title')
+        .text(d => `${d.data.name}: ${d.data.value} issues (${Math.round(d.data.value/codeSmells.length*100)}%)`);
+
+    
+    svg.selectAll('allPolylines')
+      .data(pie(data))
+      .enter()
+      .append('polyline')
+      .attr('stroke', 'black')
+      .style('fill', 'none')
+      .attr('stroke-width', 1)
+      .attr('points', function(d) {
+        const posA = arc.centroid(d as any);
+        const posB = outerArc.centroid(d as any);
+        const posC = outerArc.centroid(d as any);
+        posC[0] = radius * 0.95 * (d.startAngle + (d.endAngle - d.startAngle) / 2 < Math.PI ? 1 : -1);
+        return `${posA[0]},${posA[1]} ${posB[0]},${posB[1]} ${posC[0]},${posC[1]}`;
+      });
+    
+    svg.selectAll('allLabels')
+      .data(pie(data))
+      .enter()
+      .append('text')
+      .text(d => `${d.data.name} (${d.data.value})`)
+      .attr('transform', function(d) {
+        const pos = outerArc.centroid(d as any);
+        pos[0] = radius * 0.99 * (d.startAngle + (d.endAngle - d.startAngle) / 2 < Math.PI ? 1 : -1);
+        return `translate(${pos})`;
+      })
+      .style('text-anchor', d => (d.startAngle + (d.endAngle - d.startAngle) / 2 < Math.PI ? 'start' : 'end'))
+      .style('font-size', '12px');
+    
+    svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('font-size', '16px')
+      .attr('font-weight', 'bold')
+      .text(`${codeSmells.length} Issues`);
+  };
+  
+  const renderBarChart = () => {
+    if (!barChartRef.current || !metrics) return;
+    
+    d3.select(barChartRef.current).selectAll('*').remove();
+    
+    const width = 450;
+    const height = 300;
+    const margin = { top: 30, right: 30, bottom: 70, left: 60 };
+    const innerWidth = width - margin.left - margin.right;
+    const innerHeight = height - margin.top - margin.bottom;
+    
+    const svg = d3.select(barChartRef.current)
+      .attr('width', width)
+      .attr('height', height)
+      .append('g')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+    
+    const metricsToShow = [
+      { key: 'complexity', label: 'Complexity', threshold: 10 },
+      { key: 'cognitive_complexity', label: 'Cognitive', threshold: 15 },
+      { key: 'nested_depth', label: 'Nesting', threshold: 4 },
+      { key: 'params', label: 'Parameters', threshold: 5 },
+      { key: 'lines', label: 'Lines', threshold: 100, scale: 0.1 }
+    ];
+    
+    const data = metricsToShow
+      .filter(m => metrics[m.key] !== undefined)
+      .map(m => ({
+        name: m.label,
+        value: m.scale ? metrics[m.key] * m.scale : metrics[m.key],
+        originalValue: metrics[m.key],
+        threshold: m.scale ? m.threshold * m.scale : m.threshold
+      }));
+    
+    const x = d3.scaleBand()
+      .domain(data.map(d => d.name))
+      .range([0, innerWidth])
+      .padding(0.3);
+    
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(data, d => Math.max(d.value, d.threshold)) as number * 1.1])
+      .range([innerHeight, 0]);
+    
+    svg.append('g')
+      .attr('transform', `translate(0,${innerHeight})`)
+      .call(d3.axisBottom(x))
+      .selectAll('text')
+      .style('text-anchor', 'end')
+      .attr('dx', '-.8em')
+      .attr('dy', '.15em')
+      .attr('transform', 'rotate(-45)');
+    
+    svg.append('g')
+      .call(d3.axisLeft(y));
+    
+    svg.selectAll('threshold-lines')
+      .data(data)
+      .enter()
+      .append('line')
+      .attr('x1', d => (x(d.name) || 0))
+      .attr('x2', d => (x(d.name) || 0) + x.bandwidth())
+      .attr('y1', d => y(d.threshold))
+      .attr('y2', d => y(d.threshold))
+      .attr('stroke', '#ef4444')
+      .attr('stroke-dasharray', '5,5')
+      .attr('stroke-width', 1);
+    
+    svg.selectAll('bars')
+      .data(data)
+      .enter()
+      .append('rect')
+      .attr('x', d => x(d.name) || 0)
+      .attr('y', d => y(d.value))
+      .attr('width', x.bandwidth())
+      .attr('height', d => innerHeight - y(d.value))
+      .attr('fill', d => d.value > d.threshold ? '#ef4444' : '#3b82f6')
+      .on('mouseover', function(_, d) {
+        d3.select(this).attr('fill-opacity', 0.7);
+        
+        svg.append('text')
+          .attr('class', 'tooltip-text')
+          .attr('x', (x(d.name) || 0) + x.bandwidth() / 2)
+          .attr('y', y(d.value) - 15)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '12px')
+          .style('font-weight', 'bold')
+          .text(`${d.name}: ${d.originalValue}${d.value > d.threshold ? ' ⚠️' : ''}`);
+      })
+      .on('mouseout', function() {
+        d3.select(this).attr('fill-opacity', 1);
+        svg.selectAll('.tooltip-text').remove();
+      });
+      
+    svg.selectAll('bar-values')
+      .data(data)
+      .enter()
+      .append('text')
+      .attr('x', d => (x(d.name) || 0) + x.bandwidth() / 2)
+      .attr('y', d => y(d.value) - 5)
+      .attr('text-anchor', 'middle')
+      .text(d => d.originalValue)
+      .style('font-size', '12px');
+    
+    svg.append('text')
+      .attr('x', innerWidth / 2)
+      .attr('y', -10)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '16px')
+      .style('font-weight', 'bold')
+      .text('Key Metrics vs. Thresholds');
+  };
+  
+  const renderRadarChart = () => {
+    if (!radarChartRef.current || !metrics) return;
+    
+    d3.select(radarChartRef.current).selectAll('*').remove();
+    
+    const width = 350;
+    const height = 350;
+    const margin = 60;
+    
+    const svg = d3.select(radarChartRef.current)
+      .attr('width', width)
+      .attr('height', height)
+      .append('g')
+      .attr('transform', `translate(${width/2},${height/2})`);
+    
+    const radius = Math.min(width, height) / 2 - margin;
+    
+    const metricsToShow = [
+      { key: 'complexity', label: 'Complexity', max: 20 },
+      { key: 'cognitive_complexity', label: 'Cognitive Complexity', max: 25 },
+      { key: 'nested_depth', label: 'Nesting Depth', max: 8 },
+      { key: 'params', label: 'Parameters', max: 10 },
+      { key: 'functions', label: 'Functions', max: 20 }
+    ].filter(m => metrics[m.key] !== undefined);
+    
+    const data = [
+      metricsToShow.map(m => ({
+        axis: m.label,
+        value: Math.min(1, metrics[m.key] / m.max)
+      }))
+    ];
+    
+    const allAxis = data[0].map(i => i.axis);
+    const total = allAxis.length;
+    const angleSlice = Math.PI * 2 / total;
+    
+    const rScale = d3.scaleLinear()
+      .range([0, radius])
+      .domain([0, 1]);
+    
+    const axisGrid = svg.append('g').attr('class', 'axis-grid');
+    
+    axisGrid.selectAll('.axis-line')
+      .data(d3.range(1, 6))
+      .enter()
+      .append('circle')
+      .attr('cx', 0)
+      .attr('cy', 0)
+      .attr('r', d => radius / 5 * d)
+      .style('fill', 'none')
+      .style('stroke', 'gray')
+      .style('stroke-dasharray', '4,4')
+      .style('opacity', 0.5);
+    
+    const axis = axisGrid.selectAll('.axis')
+      .data(allAxis)
+      .enter()
+      .append('g')
+      .attr('class', 'axis');
+    
+    axis.append('line')
+      .attr('x1', 0)
+      .attr('y1', 0)
+      .attr('x2', (_, i) => rScale(1.1) * Math.cos(angleSlice * i - Math.PI / 2))
+      .attr('y2', (_, i) => rScale(1.1) * Math.sin(angleSlice * i - Math.PI / 2))
+      .style('stroke', 'gray')
+      .style('stroke-width', '1px');
+    
+    axis.append('text')
+      .attr('class', 'legend')
+      .attr('text-anchor', 'middle')
+      .attr('dy', '0.35em')
+      .attr('x', (_, i) => rScale(1.15) * Math.cos(angleSlice * i - Math.PI / 2))
+      .attr('y', (_, i) => rScale(1.15) * Math.sin(angleSlice * i - Math.PI / 2))
+      .text(d => d)
+      .style('font-size', '10px');
+    
+    const radarLine = d3.lineRadial<{axis: string, value: number}>()
+      .curve(d3.curveLinearClosed)
+      .radius(d => rScale(d.value))
+      .angle((_, i) => i * angleSlice);
+    
+    const blobWrapper = svg.selectAll('.radar-wrapper')
+      .data(data)
+      .enter()
+      .append('g')
+      .attr('class', 'radar-wrapper');
+    
+    blobWrapper
+      .append('path')
+      .attr('class', 'radar-area')
+      .attr('d', d => radarLine(d) as string)
+      .style('fill', '#3b82f6')
+      .style('fill-opacity', 0.5)
+      .style('stroke', '#3b82f6')
+      .style('stroke-width', '1px');
+    
+    blobWrapper.selectAll('.radar-circle')
+      .data(d => d)
+      .enter()
+      .append('circle')
+      .attr('class', 'radar-circle')
+      .attr('r', 5)
+      .attr('cx', (d, i) => rScale(d.value) * Math.cos(angleSlice * i - Math.PI / 2))
+      .attr('cy', (d, i) => rScale(d.value) * Math.sin(angleSlice * i - Math.PI / 2))
+      .style('fill', '#3b82f6')
+      .style('stroke', 'none');
+    
+    svg.append('text')
+      .attr('x', 0)
+      .attr('y', -radius - 20)
+      .attr('text-anchor', 'middle')
+      .style('font-size', '16px')
+      .style('font-weight', 'bold')
+      .text('Complexity Radar');
+  };
+  
+  return (
+    <div className={`code-metrics-graphs ${className}`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-4 text-center">Code Issues by Category</h3>
+          <div className="flex justify-center">
+            <svg ref={donutChartRef}></svg>
+          </div>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-4 text-center">Complexity Profile</h3>
+          <div className="flex justify-center">
+            <svg ref={radarChartRef}></svg>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white p-4 rounded-lg shadow mb-8">
+        <h3 className="text-lg font-semibold mb-4 text-center">Metrics vs Thresholds</h3>
+        <div className="flex justify-center">
+          <svg ref={barChartRef}></svg>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CodeMetricsGraphs;
+========================================
+File: ./src/assets/react.svg
+========================================
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+========================================
+File: ./src/components/NodeConnections.tsx
+========================================
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { CodeLink } from '../types';
+
+interface NodeConnectionsProps {
+  incoming: CodeLink[];
+  outgoing: CodeLink[];
+}
+
+const NodeConnections: React.FC<NodeConnectionsProps> = ({ incoming, outgoing }) => {
+  const getNodeName = (link: CodeLink, isSource: boolean): string => {
+    const node = isSource ? link.source : link.target;
+    return typeof node === 'object' ? node.name : node;
+  };
+  
+  const getNodeId = (link: CodeLink, isSource: boolean): string => {
+    const node = isSource ? link.source : link.target;
+    return typeof node === 'object' ? node.id : node;
+  };
+  
+  const renderConnectionList = (links: CodeLink[], isIncoming: boolean) => {
+    if (links.length === 0) return null;
+    
+    return (
+      <div className="connection-group">
+        <h4>{isIncoming ? 'Incoming' : 'Outgoing'} ({links.length})</h4>
+        <ul className="connection-list">
+          {links.map((link, index) => (
+            <li key={index}>
+              <span className={`link-type ${link.type}`}>{link.type}</span>
+              {isIncoming ? 'from' : 'to'} <Link to={`/node/${getNodeId(link, isIncoming)}`}>
+                <strong>{getNodeName(link, isIncoming)}</strong>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+  
+  return (
+    <div className="connections-section">
+      <h3>🔄 Dependencies</h3>
+      {renderConnectionList(incoming, true)}
+      {renderConnectionList(outgoing, false)}
+    </div>
+  );
+};
+
+export default NodeConnections;
+========================================
+File: ./src/services/dataServices.ts
+========================================
+import { GraphData } from '../types';
+
+const API_BASE_URL = 'http://localhost:8000';
+
+export async function fetchGraphData(): Promise<GraphData> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/graph-data`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching graph data:', error);
+    throw error;
+  }
+}
+
+export async function fetchNodeData(nodeId: string): Promise<any> {
+  try {
+    console.log(`Fetching data for node: ${nodeId}`);
+    const response = await fetch(`${API_BASE_URL}/api/node/${nodeId}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        const errorData = await response.json();
+        throw new Error(`Node not found: ${errorData.detail || 'The requested node does not exist'}`);
+      }
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching data for node ${nodeId}:`, error);
+    throw error;
+  }
+}
+========================================
+File: ./src/App.css
+========================================
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+========================================
+File: ./eslint.config.js
+========================================
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
+
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  },
+)
+
+========================================
+File: ./tsconfig.node.json
+========================================
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+========================================
+File: ./postcss.config.cjs
+========================================
+module.exports = {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    }
+  }
