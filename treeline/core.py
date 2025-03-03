@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Dict, List
+from collections import deque
 
 import uvicorn
 
@@ -97,15 +98,7 @@ def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]
     return lines
 
 
-def generate_tree(
-    directory,
-    create_md=False,
-    hide_structure=False,
-    show_params=True,
-    show_relationships=False,
-):
-    """Generate tree structure with code quality and security analysis."""
-
+def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=False):
     options = TreeOptions(
         directory=directory,
         create_md=create_md,
@@ -118,53 +111,44 @@ def generate_tree(
     directory = Path(options.directory)
     ignore_patterns = read_ignore_patterns()
 
-    code_analyzer = (
-        None if hide_structure else EnhancedCodeAnalyzer(show_params=show_params)
-    )
+    code_analyzer = None if hide_structure else EnhancedCodeAnalyzer(show_params=show_params)
 
     dep_analyzer = ModuleDependencyAnalyzer() if create_md else None
     if dep_analyzer:
         dep_analyzer.analyze_directory(directory)
 
-    def add_directory(path, prefix=""):
-        try:
-            files = sorted(
-                path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())
-            )
-            for i, entry in enumerate(files):
-                if should_ignore(entry, ignore_patterns):
-                    continue
+    stack = deque([(directory, "", False)])
 
-                is_last = i == len(files) - 1
-                cur_prefix = prefix + ("└── " if is_last else "├── ")
-                tree_str.append(f"{cur_prefix}{entry.name}")
-
-                if entry.is_dir():
+    while stack:
+        item = stack.pop()
+        if item[2]:
+            path, file_prefix, structure_prefix = item[0], item[1], item[3]
+            tree_str.append(f"{file_prefix}{path.name}")
+            if not hide_structure and path.suffix == ".py" and code_analyzer:
+                try:
+                    structure = code_analyzer.analyze_file(path)
+                    if structure:
+                        formatted = code_analyzer.format_structure(structure, structure_prefix + "  ")
+                        tree_str.extend(formatted)
+                except Exception as e:
+                    tree_str.append(f"{structure_prefix}  ⚠️ Error analyzing: {str(e)}")
+        else:
+            path, prefix = item[0], item[1]
+            tree_str.append(f"{prefix}{path.name}")
+            try:
+                files = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
+                for entry in reversed(files):
+                    if should_ignore(entry, ignore_patterns):
+                        continue
+                    is_last = entry == files[-1]
+                    cur_prefix = prefix + ("└── " if is_last else "├── ")
                     next_prefix = prefix + ("    " if is_last else "│   ")
-                    add_directory(entry, next_prefix)
-                elif not hide_structure and entry.suffix == ".py":
-                    next_prefix = prefix + ("    " if is_last else "│   ")
-                    if code_analyzer:
-                        try:
-                            structure = code_analyzer.analyze_file(entry)
-                            if structure:
-                                tree_str.extend(
-                                    code_analyzer.format_structure(
-                                        structure, next_prefix + "  "
-                                    )
-                                )
-                        except Exception as e:
-                            tree_str.append(
-                                f"{next_prefix}  ⚠️ Error analyzing: {str(e)}"
-                            )
-        except Exception as e:
-            tree_str.append(f"{prefix}⚠️ Error reading directory: {str(e)}")
-
-    try:
-        tree_str.append(str(directory.name))
-        add_directory(directory)
-    except Exception as e:
-        tree_str.append(f"⚠️ Fatal error: {str(e)}")
+                    if entry.is_dir():
+                        stack.append((entry, next_prefix, False))
+                    else:
+                        stack.append((entry, cur_prefix, next_prefix, True))
+            except Exception as e:
+                tree_str.append(f"{prefix}⚠️ Error reading directory: {str(e)}")
 
     print("\n".join(tree_str))
     print("\n")
@@ -173,7 +157,6 @@ def generate_tree(
         dep_analyzer.generate_reports(tree_str)
 
     return "\n".join(tree_str)
-
 
 def main():
     create_default_ignore()
@@ -194,7 +177,7 @@ def main():
 
     subparsers = parser.add_subparsers(dest="command")
 
-    start_parser = subparsers.add_parser("start", help="Start the API server")
+    start_parser = subparsers.add_parser("serve", help="Start the API server")
     start_parser.add_argument(
         "directory",
         nargs="?",
@@ -229,7 +212,7 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.command == "start":
+    if args.command == "serve":
         print(f"Raw directory argument: {args.directory}")
         target_dir = Path(args.directory).resolve()
         print(f"Resolved path: {target_dir}")
