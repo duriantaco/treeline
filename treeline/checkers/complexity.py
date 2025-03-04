@@ -16,15 +16,16 @@ class ComplexityAnalyzer:
             if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
                 cc = self._calculate_cyclomatic_complexity(node)
                 cog = self._calculate_cognitive_complexity(node)
+                element_type = "function" if isinstance(node, ast.FunctionDef) else "class"
                 if cc > self.max_cyclomatic:
                     quality_issues["complexity"].append(QualityIssue(
-                        description=f"High cyclomatic complexity ({cc} > {self.max_cyclomatic})",
+                        description=f"High cyclomatic complexity ({cc} > {self.max_cyclomatic}) in {element_type} '{node.name}'",
                         file_path=str(file_path),
                         line=node.lineno
                     ).__dict__)
                 if cog > self.max_cognitive:
                     quality_issues["complexity"].append(QualityIssue(
-                        description=f"High cognitive complexity ({cog} > {self.max_cognitive})",
+                        description=f"High cognitive complexity ({cog} > {self.max_cognitive}) in {element_type} '{node.name}'",
                         file_path=str(file_path),
                         line=node.lineno
                     ).__dict__)

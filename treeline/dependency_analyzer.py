@@ -6,7 +6,6 @@ from typing import Dict
 
 from treeline.ignore import read_ignore_patterns, should_ignore
 from treeline.models.dependency_analyzer import (
-    ComplexFunction,
     FunctionCallInfo,
     FunctionLocation,
     MethodInfo,
@@ -66,48 +65,17 @@ class ModuleDependencyAnalyzer:
 
     def analyze_directory(self, directory: Path):
         ignore_patterns = read_ignore_patterns()
-
-        def should_skip_module(module_path: str) -> bool:
-            if any(
-                indicator in module_path
-                for indicator in ["site-packages", "venv", ".venv"]
-            ):
-                return True
-            return False
-
         for file_path in directory.rglob("*.py"):
+            if should_ignore(file_path, ignore_patterns):
+                continue
             try:
-                if should_ignore(file_path, ignore_patterns):
-                    continue
-
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
                     tree = ast.parse(content)
-
-                module_path = str(file_path.relative_to(directory))
-
-                if should_skip_module(module_path):
-                    continue
-
-                module_name = module_path.replace("/", ".").replace(".py", "")
-
-                if should_skip_module(module_name):
-                    continue
-
+                module_name = str(file_path.relative_to(directory)).replace("/", ".").replace(".py", "")
                 self._analyze_module(tree, module_name, str(file_path))
-
             except Exception as e:
                 print(f"Error analyzing {file_path}: {e}")
-
-        for module in list(self.module_imports.keys()):
-            if should_skip_module(module):
-                del self.module_imports[module]
-            else:
-                self.module_imports[module] = {
-                    imp
-                    for imp in self.module_imports[module]
-                    if not should_skip_module(imp)
-                }
 
     def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str):
         for parent in ast.walk(tree):
@@ -174,29 +142,14 @@ class ModuleDependencyAnalyzer:
         functions = []
         classes = []
         total_complexity = 0
-
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 complexity = self._calculate_complexity(node)
-                if complexity > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]:
-                    complex_func = ComplexFunction(
-                        module=module_name, name=node.name, complexity=complexity
-                    )
-                    self.complex_functions.append(
-                        (
-                            complex_func.module,
-                            complex_func.name,
-                            complex_func.complexity,
-                        )
-                    )
                 total_complexity += complexity
                 functions.append(node.name)
             elif isinstance(node, ast.ClassDef):
                 classes.append(node.name)
-
-        metrics = ModuleMetrics(
-            functions=len(functions), classes=len(classes), complexity=total_complexity
-        )
+        metrics = ModuleMetrics(functions=len(functions), classes=len(classes), complexity=total_complexity)
         self.module_metrics[module_name] = metrics.__dict__
 
     def _calculate_complexity(self, node: ast.AST) -> int:

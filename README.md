@@ -16,9 +16,56 @@ A Python toolkit for analyzing and visualizing code structure, dependencies, and
 
 ## Usage
 
-### As a python module
+### In the CLI
+
+1. Command-Line Interface (CLI)
+After installing, Treeline provides the following commands:
+
+```bash
+treeline analyze DIRECTORY [--depth=N]
+```
+
+2. Analyzes code structure and prints entry points plus core components.
+   
+```bash
+treeline quality DIRECTORY [--min-complexity=N]
+```
+
+3. Performs code-quality checks, highlighting complex or smelly functions.
+```bash
+treeline serve
+```
+
+4. Launches the Treeline web interface (FastAPI + Uvicorn) at localhost:8000.
+Ideal for interactive dependency graphs, metrics, and code exploration.
+```bash
+treeline report [DIRECTORY] [--output=FILENAME]
+```
+
+Examples:
+
+```bash
+# Analyze your codebase structure
+treeline analyze /path/to/codebase
+
+# Increase analysis depth
+treeline analyze . --depth 2
+
+# Check code quality with a higher complexity threshold
+treeline quality . --min-complexity 12
+
+# Start the web interface
+treeline serve
+
+# Generate a markdown report (saved as 'treeline_report.md' by default)
+treeline report /path/to/codebase
+
+Generates a Markdown report summarizing issues and hotspots in the specified directory (defaults to .).
 
 ```
+### As a python module
+
+```python
 from treeline import treeline
 
 # Generate and print tree structure
@@ -47,31 +94,8 @@ with open("code_diff.html", "w", encoding="utf-8") as f:
     f.write(diff_html)
 ```
 
-### In terminal
-
-#### Basic commands
-```bash
-# Show current directory tree
-treeline
-```
-```bash
-# Show specific directory tree
-treeline /path/to/dir
-```
-```bash
-# Create markdown file + report in html format (tree.md)
-treeline -m
-```
-```bash
-# Ignore specific patterns
-treeline -i ".pyc,.git"
-```
-```bash
-# Show help message
-treeline -h
-```
-
 #### Visualization Options
+
 ```bash
 # Hide all code structure details
 treeline --hide-structure
@@ -84,9 +108,10 @@ treeline --no-params
 ## Configuration
 
 ### .treeline-ignore
-the .treeline-ignore will ignore whatever is in the folder.
 
-Place .treeline-ignore in any directory to apply rules to that directory and its subdirectories.
+the `.treeline-ignore` will ignore whatever is in the folder.
+
+Place `.treeline-ignore` in any directory to apply rules to that directory and its subdirectories.
 
 ```
 # Ignore all .pyc files
@@ -101,21 +126,43 @@ __pycache__/
 config.local.py
 secrets.py
 ```
-### Analysis configuration
 
-Create a treeline.config.json to customize analysis settings:
+### Analysis Configuration (Optional)
+You can place a JSON config file (e.g. treeline.config.json) to override default thresholds or configure how the analysis runs:
 
 ```json
 {
-  "complexity_threshold": 10,
-  "ignore_patterns": [".pyc", ".git"],
-  "relationship_types": ["imports", "calls", "contains"],
-  "visualization": {
-    "layout": "force-directed",
-    "theme": "light"
-  }
+  "MAX_CYCLOMATIC_COMPLEXITY": 12,
+  "MAX_LINE_LENGTH": 100,
+  "MAX_FILE_LINES": 1000
 }
 ```
+
+## Key metrics tracked
+
+| **Config Key**               | **Typical Meaning**                                                       | **Default/Threshold** |
+|------------------------------|---------------------------------------------------------------------------|-----------------------|
+| **MAX_PARAMS**               | Maximum allowed parameters in a function or method.                       | 5                     |
+| **MAX_CYCLOMATIC_COMPLEXITY**| Cyclomatic complexity threshold (linearly independent paths).             | 10                    |
+| **MAX_COGNITIVE_COMPLEXITY** | Cognitive complexity threshold (accounts for nesting, branching).         | 15                    |
+| **MAX_DUPLICATED_LINES**     | Number of duplicated lines in code blocks.                                 | 5                     |
+| **MAX_LINE_LENGTH**          | Preferred maximum line length for style checks.                            | 80                    |
+| **MAX_DOC_LENGTH**           | Preferred docstring/comment line length.                                   | 80                    |
+| **MAX_NESTED_DEPTH**         | Maximum nesting depth allowed (if/else/switch/try).                        | 4                     |
+| **MAX_FUNCTION_LINES**       | Max lines per function.                                                    | 50                    |
+| **MAX_RETURNS**              | How many return statements are acceptable in one function.                 | 4                     |
+| **MAX_ARGUMENTS_PER_LINE**   | Maximum arguments in a single call line.                                   | 5                     |
+| **MIN_MAINTAINABILITY_INDEX**| Minimum maintainability index (not all projects enforce this in code).     | 20                    |
+| **MAX_FUNC_COGNITIVE_LOAD**  | Another cognitive load threshold for functions.                            | 15                    |
+| **MIN_PUBLIC_METHODS**       | Lower bound for how many public methods a class should have.               | 1                     |
+| **MAX_IMPORT_STATEMENTS**    | How many import statements per module (beyond is ‘too big’).               | 15                    |
+| **MAX_MODULE_DEPENDENCIES**  | Maximum module-level dependencies.                                         | 10                    |
+| **MAX_INHERITANCE_DEPTH**    | Depth of inheritance in class hierarchies.                                 | 3                     |
+| **MAX_DUPLICATED_BLOCKS**    | Number of duplicated code blocks allowed.                                  | 2                     |
+| **MAX_CLASS_LINES**          | Approx. limit on lines per class.                                          | 300                   |
+| **MAX_METHODS_PER_CLASS**    | Method count threshold in a single class.                                  | 20                    |
+| **MAX_CLASS_COMPLEXITY**     | Overall complexity threshold for a class.                                 | 50                    |
+
 
 ## Contributing
 

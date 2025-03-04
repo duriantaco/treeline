@@ -31,7 +31,7 @@ dev = [
     "black>=24.2.0",
     "isort>=5.13.2",
     "pytest>=7.0.0",
-    "black[jupyter]",
+    "markdown"
 ]
 
 [tool.black]
@@ -68,4 +68,4 @@ per-file-ignores = [
 packages = {find = {where = ["."], include = ["treeline*"], exclude = ["assets*", "results*", "docs*", "tests*", "example*"]}}
 
 [project.scripts]
-treeline = "treeline.core:main"
+treeline = "treeline.cli:cli"

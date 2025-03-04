@@ -14,7 +14,7 @@ class SecurityAnalyzer:
 
     def _check_hardcoded_credentials(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
         for node in ast.walk(tree):
-            if isinstance(node, ast.Str) and any(kw in node.s.lower() for kw in ["password", "key", "secret"]):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and any(kw in node.value.lower() for kw in ["password", "key", "secret"]):
                 quality_issues["security"].append(QualityIssue(
                     description="Possible hardcoded credential",
                     file_path=str(file_path),

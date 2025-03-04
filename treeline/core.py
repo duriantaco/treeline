@@ -1,238 +1,36 @@
 # treeline/treeline/core.py
-import argparse
-import os
-import sys
+
 from pathlib import Path
-from typing import Dict, List
-from collections import deque
-
-import uvicorn
-
-from treeline.dependency_analyzer import ModuleDependencyAnalyzer
-from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
-from treeline.ignore import read_ignore_patterns, should_ignore
-from treeline.models.core import CodeStructure, TreeOptions
-from treeline.type_checker import ValidationError
-
+from treeline.cli import cli
 
 def create_default_ignore():
-    """Create default .treeline-ignore if it doesn't exist."""
-    if not Path(".treeline-ignore").exists():
-        with open(".treeline-ignore", "w") as f:
-            f.write(
-                "*.pyc\n"
-                "__pycache__/\n"
-                ".git/\n"
-                ".env/\n"
-                "venv/\n"
-                ".venv/\n"
-                ".DS_Store\n"
-                "node_modules/\n"
-                "env/\n"
-                "build/\n"
-                "dist/\n"
-            )
+    """Create a default .treeline-ignore file if it does not already exist."""
+    ignore_file = Path(".treeline-ignore")
+    if not ignore_file.exists():
+        ignore_file.write_text(
+            "\n".join([
+                "*.pyc",
+                "__pycache__/",
+                ".git/",
+                ".env/",
+                "venv/",
+                ".venv/",
+                ".DS_Store",
+                "node_modules/",
+                "env/",
+                "build/",
+                "dist/",
+                ""
+            ])
+        )
         print("Created .treeline-ignore file")
 
 
-def format_structure(self, structure: List[Dict], indent: str = "") -> List[str]:
-    """
-    Format the analysis results into a readable tree structure.
-
-    Args:
-        structure: List of analysis results
-        indent: String to use for indentation
-
-    Returns:
-        List of formatted strings representing the code structure
-    """
-    lines = []
-
-    for item in structure:
-        try:
-            validated_item = CodeStructure(**item)
-        except ValidationError as e:
-            lines.append(f"{indent}⚠️ Invalid item: {str(e)}")
-            continue
-
-        if validated_item.type == "class":
-            lines.append(f"{indent}[CLASS] 🏛️ {validated_item.name}")
-        elif validated_item.type == "function":
-            lines.append(f"{indent}[FUNC] ⚡ {validated_item.name}")
-        elif validated_item.type == "error":
-            lines.append(f"{indent}⚠️ {validated_item.name}")
-            continue
-
-        if validated_item.docstring:
-            lines.append(f"{indent}  └─ # {validated_item.docstring}")
-
-        if validated_item.metrics:
-            if (
-                validated_item.metrics.get("complexity", 0)
-                > self.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"]
-            ):
-                lines.append(
-                    f"{indent}  └─ ⚠️ High complexity ({validated_item.metrics['complexity']})"
-                )
-
-            if (
-                validated_item.metrics.get("lines", 0)
-                > self.QUALITY_METRICS["MAX_FUNCTION_LINES"]
-            ):
-                lines.append(
-                    f"{indent}  └─ ⚠️ Too long ({validated_item.metrics['lines']} lines)"
-                )
-
-            if (
-                validated_item.metrics.get("nested_depth", 0)
-                > self.QUALITY_METRICS["MAX_NESTED_DEPTH"]
-            ):
-                lines.append(
-                    f"{indent}  └─ ⚠️ Deep nesting (depth {validated_item.metrics['nested_depth']})"
-                )
-
-        if validated_item.code_smells:
-            for smell in validated_item.code_smells:
-                lines.append(f"{indent}  └─ ⚠️ {smell}")
-
-    return lines
-
-
-def generate_tree(directory, create_md=False, hide_structure=False, show_params=True, show_relationships=False):
-    options = TreeOptions(
-        directory=directory,
-        create_md=create_md,
-        hide_structure=hide_structure,
-        show_params=show_params,
-        show_relationships=show_relationships,
-    )
-
-    tree_str = []
-    directory = Path(options.directory)
-    ignore_patterns = read_ignore_patterns()
-
-    code_analyzer = None if hide_structure else EnhancedCodeAnalyzer(show_params=show_params)
-
-    dep_analyzer = ModuleDependencyAnalyzer() if create_md else None
-    if dep_analyzer:
-        dep_analyzer.analyze_directory(directory)
-
-    stack = deque([(directory, "", False)])
-
-    while stack:
-        item = stack.pop()
-        if item[2]:
-            path, file_prefix, structure_prefix = item[0], item[1], item[3]
-            tree_str.append(f"{file_prefix}{path.name}")
-            if not hide_structure and path.suffix == ".py" and code_analyzer:
-                try:
-                    structure = code_analyzer.analyze_file(path)
-                    if structure:
-                        formatted = code_analyzer.format_structure(structure, structure_prefix + "  ")
-                        tree_str.extend(formatted)
-                except Exception as e:
-                    tree_str.append(f"{structure_prefix}  ⚠️ Error analyzing: {str(e)}")
-        else:
-            path, prefix = item[0], item[1]
-            tree_str.append(f"{prefix}{path.name}")
-            try:
-                files = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower()))
-                for entry in reversed(files):
-                    if should_ignore(entry, ignore_patterns):
-                        continue
-                    is_last = entry == files[-1]
-                    cur_prefix = prefix + ("└── " if is_last else "├── ")
-                    next_prefix = prefix + ("    " if is_last else "│   ")
-                    if entry.is_dir():
-                        stack.append((entry, next_prefix, False))
-                    else:
-                        stack.append((entry, cur_prefix, next_prefix, True))
-            except Exception as e:
-                tree_str.append(f"{prefix}⚠️ Error reading directory: {str(e)}")
-
-    print("\n".join(tree_str))
-    print("\n")
-
-    if create_md and dep_analyzer:
-        dep_analyzer.generate_reports(tree_str)
-
-    return "\n".join(tree_str)
-
 def main():
-    create_default_ignore()
-    parser = argparse.ArgumentParser(
-        description="Generate code analysis with quality checks",
-        formatter_class=argparse.RawTextHelpFormatter,
-        epilog="""
-            Examples:
-            treeline                      # Show full analysis
-            treeline -m                   # Create markdown report
-            treeline -i "*.pyc,*.git"     # Ignore patterns
-            treeline --hide-structure     # Hide code structure
-            treeline --no-params          # Hide function parameters
-            treeline start /path/to/dir   # Start API server for specific directory
-            treeline -h                   # Show this help message
-        """,
-    )
+    """Entry point for the Treeline CLI."""
+    create_default_ignore() 
+    cli()  
 
-    subparsers = parser.add_subparsers(dest="command")
 
-    start_parser = subparsers.add_parser("serve", help="Start the API server")
-    start_parser.add_argument(
-        "directory",
-        nargs="?",
-        default=".",
-        help="Directory to analyze (default: current directory)",
-    )
-    start_parser.add_argument(
-        "--port", type=int, default=8000, help="Port to run the server on"
-    )
-    start_parser.add_argument(
-        "--host", default="0.0.0.0", help="Host to run the server on"
-    )
-
-    parser.add_argument(
-        "-m", "--markdown", action="store_true", help="Create markdown report (tree.md)"
-    )
-    parser.add_argument(
-        "-i",
-        "--ignore",
-        help='Comma-separated patterns to ignore (e.g., "*.pyc,*.git")',
-    )
-    parser.add_argument(
-        "--hide-structure", action="store_true", help="Hide code structure"
-    )
-    parser.add_argument(
-        "--no-params", action="store_true", help="Hide function parameters"
-    )
-    parser.add_argument(
-        "--diff",
-        nargs="*",
-        help="Compare code structure between commits. Usage: --diff [before_commit] [after_commit]",
-    )
-    args = parser.parse_args()
-
-    if args.command == "serve":
-        print(f"Raw directory argument: {args.directory}")
-        target_dir = Path(args.directory).resolve()
-        print(f"Resolved path: {target_dir}")
-        print(f"Current working directory: {os.getcwd()}")
-        print(f"🌳 Starting Treeline server for {target_dir}")
-        print(f"📊 API docs available at http://{args.host}:{args.port}/docs")
-
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-        config_dir = Path(__file__).parent.parent
-        with open(config_dir / ".treeline_dir", "w") as f:
-            f.write(str(target_dir))
-
-        print("About to start Uvicorn...")
-        try:
-            uvicorn.run(
-                "treeline.api.app:app", host=args.host, port=args.port, reload=True
-            )
-        except Exception as e:
-            print(f"Failed to start server: {str(e)}")
-            import traceback
-
-            print(traceback.format_exc())
+if __name__ == "__main__":
+    main()
