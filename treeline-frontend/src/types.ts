@@ -8,6 +8,8 @@ export interface CodeNode {
     security_issues?: Array<string | CodeSmell>;
     complexity_issues?: Array<string | CodeSmell>;
     duplication_issues?: Array<string | CodeSmell>;
+    radius?: number;
+    file_path?: string;
     metrics?: {
       complexity?: number;
       cognitive_complexity?: number;

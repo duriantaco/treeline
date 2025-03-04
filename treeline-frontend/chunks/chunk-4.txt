@@ -693,183 +693,178 @@ const ComplexityTimeline: React.FC<ComplexityTimelineProps> = ({
 
 export default ComplexityTimeline;
 ========================================
-File: ./README.md
+File: ./src/services/dataServices.ts
 ========================================
-# React + TypeScript + Vite
+import { GraphData } from '../types';
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+const API_BASE_URL = 'http://localhost:8000';
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
-
-========================================
-File: ./src/components/NodeMetrics.tsx
-========================================
-import React from 'react';
-
-interface NodeMetricsProps {
-  metrics: {
-    complexity?: number;
-    cognitive_complexity?: number;
-    lines?: number;
-    functions?: number;
-    classes?: number;
-    params?: number;
-    methods?: number;
-    nested_depth?: number;
-    [key: string]: any;
-  };
+export interface GraphDataParams {
+  limit?: number;
+  offset?: number;
+  minConnections?: number;
+  types?: string[];
+  searchTerm?: string;
+  includeEntryPointsOnly?: boolean;
 }
 
-const NodeMetrics: React.FC<NodeMetricsProps> = ({ metrics }) => {
-  const isWarning = (key: string, value: any): boolean => {
-    if (typeof value !== 'number') return false;
+export async function fetchGraphData(params: GraphDataParams = {}): Promise<GraphData> {
+  try {
+    const queryParams = new URLSearchParams();
     
-    switch (key) {
-      case 'complexity':
-        return value > 10;
-      case 'cognitive_complexity':
-        return value > 15;
-      case 'lines':
-        return value > 100;
-      case 'params':
-        return value > 5;
-      case 'methods':
-        return value > 20;
-      case 'nested_depth':
-        return value > 4;
-      default:
-        return false;
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.offset) queryParams.append('offset', params.offset.toString());
+    if (params.minConnections) queryParams.append('min_connections', params.minConnections.toString());
+    if (params.types && params.types.length > 0) {
+      params.types.forEach(type => queryParams.append('type', type));
     }
-  };
-  
-  const formatKey = (key: string): string => {
-    return key
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, c => c.toUpperCase());
-  };
-  
-  return (
-    <div className="metrics-section">
-      <h3>📊 Detailed Metrics</h3>
-      <table className="metrics-table">
-        <tbody>
-          {Object.entries(metrics).map(([key, value]) => {
-            if (key.startsWith('_')) return null;
-            
-            const formattedKey = formatKey(key);
-            const warning = isWarning(key, value);
-            
-            return (
-              <tr key={key} className={warning ? 'metric-warning' : ''}>
-                <td>{formattedKey}</td>
-                <td>{value}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-export default NodeMetrics;
-========================================
-File: ./src/components/Graph.tsx
-========================================
-import React, { useEffect, useRef } from 'react';
-import * as d3 from 'd3';
-
-interface GraphProps {
-  data: { nodes: any[]; links: any[] };
-  onNodeClick: (node: any) => void;
+    if (params.searchTerm) queryParams.append('search', params.searchTerm);
+    if (params.includeEntryPointsOnly) queryParams.append('entry_points_only', 'true');
+    
+    const queryString = queryParams.toString();
+    const url = `${API_BASE_URL}/api/graph-data${queryString ? `?${queryString}` : ''}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching graph data:', error);
+    throw error;
+  }
 }
 
-const Graph: React.FC<GraphProps> = ({ data, onNodeClick }) => {
-  const svgRef = useRef<SVGSVGElement>(null);
+export async function fetchNodeData(nodeId: string): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/node/${nodeId}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        const errorData = await response.json();
+        throw new Error(`Node not found: ${errorData.detail || 'The requested node does not exist'}`);
+      }
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching data for node ${nodeId}:`, error);
+    throw error;
+  }
+}
 
-  useEffect(() => {
-    if (!svgRef.current || !data.nodes.length) return;
+export async function fetchNodeConnections(nodeId: string, depth: number = 1): Promise<any> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/node/${nodeId}/connections?depth=${depth}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching connections for node ${nodeId}:`, error);
+    throw error;
+  }
+}
 
-    const svg = d3.select(svgRef.current).attr('width', 800).attr('height', 600);
-    svg.selectAll('*').remove();
+export async function fetchGraphSummary(): Promise<any> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/graph-summary`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching graph summary:', error);
+    throw error;
+  }
+}
 
-    const simulation = d3.forceSimulation(data.nodes)
-      .force('link', d3.forceLink(data.links).id((d: any) => d.id))
-      .force('charge', d3.forceManyBody().strength(-400))
-      .force('center', d3.forceCenter(400, 300));
-
-    const links = svg.append('g').selectAll('line')
-      .data(data.links)
-      .enter().append('line')
-      .attr('stroke', '#999');
-
-    const nodes = svg.append('g').selectAll('circle')
-      .data(data.nodes)
-      .enter().append('circle')
-      .attr('r', 5)
-      .attr('fill', 'blue')
-      .on('click', (_event, d) => onNodeClick(d));
-
-    simulation.on('tick', () => {
-      links.attr('x1', (d: any) => d.source.x).attr('y1', (d: any) => d.source.y)
-           .attr('x2', (d: any) => d.target.x).attr('y2', (d: any) => d.target.y);
-      nodes.attr('cx', (d: any) => d.x).attr('cy', (d: any) => d.y);
-    });
-  }, [data, onNodeClick]);
-
-  return <svg ref={svgRef} />;
-};
-
-export default Graph;
+export async function searchNodes(query: string, limit: number = 20): Promise<any[]> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/search?q=${encodeURIComponent(query)}&limit=${limit}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error searching nodes:', error);
+    throw error;
+  }
+}
+========================================
+File: ./src/types.ts
+========================================
+export interface CodeNode {
+    id: string;
+    name: string;
+    type: 'module' | 'class' | 'function';
+    is_entry?: boolean;
+    docstring?: string;
+    code_smells?: Array<string | CodeSmell>;
+    security_issues?: Array<string | CodeSmell>;
+    complexity_issues?: Array<string | CodeSmell>;
+    duplication_issues?: Array<string | CodeSmell>;
+    radius?: number;
+    metrics?: {
+      complexity?: number;
+      cognitive_complexity?: number;
+      lines?: number;
+      functions?: number;
+      classes?: number;
+      params?: number;
+      methods?: number;
+      nested_depth?: number;
+      [key: string]: any;
+    };
+    methods?: {
+      [key: string]: any;
+    };
+    x?: number;
+    y?: number;
+    vx?: number;
+    vy?: number;
+    fx?: number | null;
+    fy?: number | null;
+  }
+  
+  export interface CodeLink {
+    source: string | CodeNode;
+    target: string | CodeNode;
+    type: 'imports' | 'contains' | 'calls';
+  }
+  
+  export interface CodeSmell {
+    category?: string;
+    description?: string;
+    message?: string;
+    line?: number | null;
+    lineno?: number | null;
+  }
+  
+  export interface GraphData {
+    nodes: CodeNode[];
+    links: CodeLink[];
+  }
+  
+  export interface Issue {
+    category: string;
+    description: string;
+    line: number | null;
+    source: string;
+  }
 ========================================
 File: ./src/components/Controls.tsx
 ========================================
@@ -922,73 +917,67 @@ const Controls: React.FC<ControlsProps> = ({
 
 export default Controls;
 ========================================
-File: ./tsconfig.app.json
+File: ./eslint.config.js
 ========================================
-{
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "skipLibCheck": true,
+import js from '@eslint/js'
+import globals from 'globals'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
 
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-    "jsx": "react-jsx",
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+export default tseslint.config(
+  { ignores: ['dist'] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ['**/*.{ts,tsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
   },
-  "include": ["src"]
-}
-
-========================================
-File: ./.gitignore
-========================================
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-========================================
-File: ./src/main.tsx
-========================================
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css';  
-import App from './App.tsx'
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
 )
+
+========================================
+File: ./index.html
+========================================
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + React + TS</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+========================================
+File: ./tailwind.config.js
+========================================
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+========================================
+File: ./src/vite-env.d.ts
+========================================
+/// <reference types="vite/client" />
+

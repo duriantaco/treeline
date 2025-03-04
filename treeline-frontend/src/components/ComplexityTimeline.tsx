@@ -25,7 +25,6 @@ const ComplexityTimeline: React.FC<ComplexityTimelineProps> = ({
     const width = 600 - margin.left - margin.right;
     const height = 300 - margin.top - margin.bottom;
     
-    // Create SVG
     const svg = d3.select(svgRef.current)
       .attr('width', width + margin.left + margin.right)
       .attr('height', height + margin.top + margin.bottom)

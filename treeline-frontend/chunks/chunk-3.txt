@@ -34,28 +34,21 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
   useEffect(() => {
     if (!svgRef.current) return;
 
-    // Clear previous chart
     d3.select(svgRef.current).selectAll('*').remove();
 
-    // Set up dimensions
     const width = 600;
     const height = 400;
 
-    // Create SVG
     const svg = d3.select(svgRef.current)
       .attr('width', width)
       .attr('height', height);
 
-    // Process the data to include 2 levels of depth
-    // Level 1: Direct connections
-    // Level 2: Secondary connections (dependencies of dependencies)
     const nodes: any[] = [];
     const links: any[] = [];
     
     const addedNodes = new Set<string>([nodeId]);
     const secondaryNodes = new Set<string>();
     
-    // Add the central node
     nodes.push({
       id: nodeId,
       name: nodeName,
@@ -65,8 +58,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       hasIssues,
       highComplexity
     });
-    
-    // Process incoming connections (level 1)
     connections.incoming.forEach(connection => {
       const sourceId = typeof connection.source === 'object' ? connection.source.id : connection.source;
       const sourceName = typeof connection.source === 'object' ? connection.source.name : `Node ${sourceId}`;
@@ -92,7 +83,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       });
     });
     
-    // Process outgoing connections (level 1)
     connections.outgoing.forEach(connection => {
       const targetId = typeof connection.target === 'object' ? connection.target.id : connection.target;
       const targetName = typeof connection.target === 'object' ? connection.target.name : `Node ${targetId}`;
@@ -118,50 +108,41 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       });
     });
     
-    // Calculate impact scores
-    // This is an estimation based on number of connections, type of node, complexity, etc.
+
     const impactScores = new Map<string, number>();
     
-    // The current node has maximum impact
     impactScores.set(nodeId, 10);
     
     nodes.forEach(node => {
       if (node.id === nodeId) return;
       
-      // Base score
       let score = 5;
       
-      // Adjust based on connection type
       const directConnections = links.filter(link => 
         link.source === node.id || link.target === node.id
       );
       
-      // Importance by connection type
       directConnections.forEach(link => {
         if (link.type === 'contains') score += 3;
         else if (link.type === 'imports') score += 2;
         else if (link.type === 'calls') score += 1;
       });
       
-      // Importance by node type
       if (node.type === 'module') score += 3;
       else if (node.type === 'class') score += 2;
       else if (node.type === 'function') score += 1;
       
-      // Limit the score to 0-10 range
       score = Math.min(10, Math.max(0, score));
       
       impactScores.set(node.id, score);
     });
     
-    // Set up force simulation
     const simulation = d3.forceSimulation(nodes)
       .force('link', d3.forceLink(links).id((d: any) => d.id).distance(80))
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(30));
     
-    // Add defs with arrow markers
     const defs = svg.append('defs');
     ['imports', 'contains', 'calls'].forEach(type => {
       defs.append('marker')
@@ -177,7 +158,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         .attr('d', 'M0,-5L10,0L0,5');
     });
     
-    // Create a group for links
     const link = svg.append('g')
       .selectAll('path')
       .data(links)
@@ -189,19 +169,16 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         return '#ea580c';
       })
       .attr('stroke-width', d => {
-        // Direct links to/from central node are thicker
         if (d.source === nodeId || d.target === nodeId) return 2;
         return 1.5;
       })
       .attr('stroke-opacity', d => {
-        // Direct links to/from central node are more opaque
         if (d.source === nodeId || d.target === nodeId) return 0.8;
         return 0.6;
       })
       .attr('marker-end', d => `url(#impact-arrow-${d.type})`)
       .attr('fill', 'none');
     
-    // Create a group for nodes
     const node = svg.append('g')
       .selectAll('.node')
       .data(nodes)
@@ -213,7 +190,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         .on('drag', dragged)
         .on('end', dragended));
     
-    // Add circles for nodes
     node.append('circle')
       .attr('r', d => {
         if (d.isCenter) return 15;
@@ -235,15 +211,13 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       })
       .attr('stroke-width', d => d.isCenter ? 3 : 1.5);
     
-    // Add impact score visualizations
     node.append('circle')
       .attr('r', d => {
         const score = impactScores.get(d.id) || 0;
-        return score * 2; // Scale the radius based on impact score
+        return score * 2; 
       })
       .attr('fill', 'none')
       .attr('stroke', d => {
-        // Red for high impact, yellow for medium, green for low
         const score = impactScores.get(d.id) || 0;
         if (score >= 7) return '#ef4444';
         if (score >= 4) return '#f59e0b';
@@ -253,7 +227,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       .attr('stroke-dasharray', '3,3')
       .attr('stroke-opacity', 0.7);
     
-    // Add text labels
     node.append('text')
       .attr('dx', 15)
       .attr('dy', 5)
@@ -261,7 +234,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       .attr('font-size', d => d.isCenter ? '14px' : '12px')
       .attr('font-weight', d => d.isCenter ? 'bold' : 'normal');
     
-    // Add background rectangle for text
     node.select('text')
       .each(function() {
         const textElement = this as SVGTextElement;
@@ -279,14 +251,12 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
           .attr('rx', 3);
       });
     
-    // Add tooltips
     node.append('title')
       .text(d => {
         const score = impactScores.get(d.id) || 0;
         return `${d.name} (${d.type})\nImpact Score: ${score.toFixed(1)}/10`;
       });
     
-    // Define the tick function for simulation
     simulation.on('tick', () => {
       link.attr('d', d => {
         const dx = d.target.x - d.source.x;
@@ -298,11 +268,9 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       node.attr('transform', d => `translate(${d.x},${d.y})`);
     });
     
-    // Add legend
     const legend = svg.append('g')
       .attr('transform', `translate(10, 20)`);
     
-    // Legend title
     legend.append('text')
       .attr('x', 0)
       .attr('y', 0)
@@ -310,7 +278,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       .attr('font-size', '16px')
       .attr('font-weight', 'bold');
     
-    // Legend entries
     const legendItems = [
       { color: '#3b82f6', label: 'Current Node' },
       { color: '#ef4444', label: 'High Impact' },
@@ -333,7 +300,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         .attr('font-size', '12px');
     });
     
-    // Drag functions
     function dragstarted(event: any, d: any) {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       d.fx = d.x;
@@ -518,65 +484,116 @@ def stringify(value, *args, **kwargs):
     return _json.dumps(output, *args, **kwargs)
 
 ========================================
-File: ./src/types.ts
+File: ./README.md
 ========================================
-export interface CodeNode {
-    id: string;
-    name: string;
-    type: 'module' | 'class' | 'function';
-    is_entry?: boolean;
-    docstring?: string;
-    code_smells?: Array<string | CodeSmell>;
-    security_issues?: Array<string | CodeSmell>;
-    complexity_issues?: Array<string | CodeSmell>;
-    duplication_issues?: Array<string | CodeSmell>;
-    metrics?: {
-      complexity?: number;
-      cognitive_complexity?: number;
-      lines?: number;
-      functions?: number;
-      classes?: number;
-      params?: number;
-      methods?: number;
-      nested_depth?: number;
-      [key: string]: any;
-    };
-    methods?: {
-      [key: string]: any;
-    };
-    x?: number;
-    y?: number;
-    vx?: number;
-    vy?: number;
-    fx?: number | null;
-    fy?: number | null;
-  }
+# React + TypeScript + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
+```
+
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
+```
+
+========================================
+File: ./src/components/NodeConnections.tsx
+========================================
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { CodeLink } from '../types';
+
+interface NodeConnectionsProps {
+  incoming: CodeLink[];
+  outgoing: CodeLink[];
+}
+
+const NodeConnections: React.FC<NodeConnectionsProps> = ({ incoming, outgoing }) => {
+  const getNodeName = (link: CodeLink, isSource: boolean): string => {
+    const node = isSource ? link.source : link.target;
+    return typeof node === 'object' ? node.name : node;
+  };
   
-  export interface CodeLink {
-    source: string | CodeNode;
-    target: string | CodeNode;
-    type: 'imports' | 'contains' | 'calls';
-  }
+  const getNodeId = (link: CodeLink, isSource: boolean): string => {
+    const node = isSource ? link.source : link.target;
+    return typeof node === 'object' ? node.id : node;
+  };
   
-  export interface CodeSmell {
-    category?: string;
-    description?: string;
-    message?: string;
-    line?: number | null;
-    lineno?: number | null;
-  }
+  const renderConnectionList = (links: CodeLink[], isIncoming: boolean) => {
+    if (links.length === 0) return null;
+    
+    return (
+      <div className="connection-group">
+        <h4>{isIncoming ? 'Incoming' : 'Outgoing'} ({links.length})</h4>
+        <ul className="connection-list">
+          {links.map((link, index) => (
+            <li key={index}>
+              <span className={`link-type ${link.type}`}>{link.type}</span>
+              {isIncoming ? 'from' : 'to'} <Link to={`/node/${getNodeId(link, isIncoming)}`}>
+                <strong>{getNodeName(link, isIncoming)}</strong>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
   
-  export interface GraphData {
-    nodes: CodeNode[];
-    links: CodeLink[];
-  }
-  
-  export interface Issue {
-    category: string;
-    description: string;
-    line: number | null;
-    source: string;
-  }
+  return (
+    <div className="connections-section">
+      <h3>🔄 Dependencies</h3>
+      {renderConnectionList(incoming, true)}
+      {renderConnectionList(outgoing, false)}
+    </div>
+  );
+};
+
+export default NodeConnections;
 ========================================
 File: ./src/components/Legend.tsx
 ========================================
@@ -643,12 +660,15 @@ File: ./package.json
   "dependencies": {
     "@types/d3": "^7.4.3",
     "d3": "^7.9.0",
+    "lodash": "^4.17.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.2.0"
+    "react-router-dom": "^7.2.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@types/lodash": "^4.17.16",
     "@types/node": "^22.13.8",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
@@ -667,63 +687,60 @@ File: ./package.json
 }
 
 ========================================
-File: ./vite.config.ts
-========================================
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-
-export default defineConfig({
-  base: '/static/',
-  plugins: [
-    react(),
-  ],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  css: {
-    postcss: './postcss.config.js',
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-      },
-    },
-  },
-});
-========================================
-File: ./src/index.tsx
+File: ./src/App.tsx
 ========================================
 import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-import './index.css';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import VisualizationPage from './page/VisualizationPage';
+import NodeDetailsPage from './page/NodeDetailsPage';
 
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<VisualizationPage />} />
+        <Route path="/node/:nodeId" element={<NodeDetailsPage />} />
+        <Route path="*" element={<div>Not Found</div>} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
 ========================================
-File: ./tsconfig.json
+File: ./tsconfig.node.json
 ========================================
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
 }
 
 ========================================
-File: ./src/index.css
+File: ./postcss.config.cjs
 ========================================
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+module.exports = {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    }
+  }
