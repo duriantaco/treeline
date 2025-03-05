@@ -3,6 +3,232 @@ CHUNK 5 OF 5
 ================================================================================
 
 ========================================
+File: ./enhanced_analyzer.py
+========================================
+import ast
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional
+
+
+from treeline.models.enhanced_analyzer import QualityIssue
+from treeline.aggregator.metrics import MetricsAggregator
+
+class EnhancedCodeAnalyzer:
+    def __init__(self, show_params: bool = True, config: Dict = None):
+        self.show_params = show_params
+        self.quality_issues = defaultdict(list)
+        self.metrics_summary = defaultdict(dict)
+        self.config = config or {}
+        
+        self.metrics_aggregator = MetricsAggregator(self.config)
+
+    def analyze_file(self, file_path: Path) -> List[Dict]:
+        """Analyze a file for code quality issues and structure"""
+        try:
+            content = self._read_file(file_path)
+            if not content:
+                return []
+                
+            tree = self._parse_content(content)
+            if not tree:
+                return []
+
+            results = self._analyze_code_elements(tree, content, file_path)
+            
+            for result in results:
+                if 'code_smells' not in result:
+                    result['code_smells'] = []
+            
+            self._add_file_issues_to_elements(results, file_path)
+            
+            return results
+        except Exception as e:
+            return []
+
+    def _add_file_issues_to_elements(self, elements: List[Dict], file_path: Path):
+        """Add file-specific issues to the corresponding code elements"""
+        file_path_str = str(file_path)
+        
+        file_issues = []
+        for category, issues in self.quality_issues.items():
+            for issue in issues:
+                if isinstance(issue, dict) and issue.get('file_path') == file_path_str:
+                    issue_with_category = issue.copy()
+                    issue_with_category['category'] = category
+                    file_issues.append(issue_with_category)
+        
+        if not file_issues:
+            return
+            
+        elements_by_line = {}
+        for element in elements:
+            if 'line' in element:
+                elements_by_line[element['line']] = element
+        
+        for issue in file_issues:
+            issue_line = issue.get('line')
+            if not issue_line:
+                continue
+                
+            closest_element = None
+            closest_distance = float('inf')
+            
+            for element_line, element in elements_by_line.items():
+                if element_line <= issue_line:
+                    distance = issue_line - element_line
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        closest_element = element
+            
+            if closest_element and closest_distance <= 100:
+                issue_text = f"[{issue['category']}] {issue.get('description', 'Unknown issue')}"
+                if issue_line:
+                    issue_text += f" (Line {issue_line})"
+                    
+                closest_element['code_smells'].append(issue_text)
+
+    def analyze_directory(self, directory: Path) -> List[Dict]:
+        results = []
+        for file_path in directory.rglob("*.py"):
+            results.extend(self.analyze_file(file_path))
+        return results
+
+    def generate_report(self) -> str:
+        report = ["# Code Quality Analysis Report"]
+        for category, issues in self.quality_issues.items():
+            report.append(f"## {category.title()}")
+            for issue in issues:
+                line_info = f" (Line {issue['line']})" if issue.get('line') else ""
+                report.append(f"- {issue['description']}{line_info}")
+        return "\n".join(report)
+
+    def _read_file(self, file_path: Path) -> Optional[str]:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception as e:
+            self._add_issue("file", f"Could not read file: {str(e)}")
+            return None
+
+    def _parse_content(self, content: str) -> Optional[ast.AST]:
+        try:
+            return ast.parse(content)
+        except Exception as e:
+            self._add_issue("parsing", f"Could not parse content: {str(e)}")
+            return None
+
+    def _add_issue(self, category: str, description: str, file_path: str = None, line: int = None):
+        issue = QualityIssue(description=description, file_path=file_path, line=line)
+        self.quality_issues[category].append(issue.__dict__)
+
+    def _analyze_code_elements(self, tree: ast.AST, content: str, file_path: Path) -> List[Dict]:
+        results = []
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                func_info = self._analyze_function(node, content)
+                self._add_quality_issues_to_element(func_info, node.lineno, file_path) 
+                results.append(func_info)
+                
+            elif isinstance(node, ast.ClassDef):
+                class_info = self._analyze_class(node, content)
+                self._add_quality_issues_to_element(class_info, node.lineno, file_path)
+                results.append(class_info)
+    
+        return results
+
+    def _add_quality_issues_to_element(self, element_info: Dict, line_number: int, file_path: Path):
+        if 'code_smells' not in element_info:
+            element_info['code_smells'] = []
+            
+        file_path_str = str(file_path)
+        
+        for category, issues in self.quality_issues.items():
+            for issue in issues:
+                if (isinstance(issue, dict) and 
+                    issue.get('file_path') == file_path_str and 
+                    issue.get('line') is not None and
+                    abs(issue.get('line') - line_number) <= 10):
+                    
+                    issue_text = f"[{category}] {issue.get('description')}"
+                    if issue.get('line'):
+                        issue_text += f" (Line {issue.get('line')})"
+                    element_info['code_smells'].append(issue_text)
+
+    def _analyze_function(self, node: ast.FunctionDef, content: str) -> Dict:
+        func_lines = content.splitlines()[node.lineno-1:node.end_lineno]
+        line_count = len(func_lines)
+        docstring = ast.get_docstring(node)
+        param_count = len(node.args.args)
+        complexity = self._calculate_complexity(node)
+        nested_depth = self._calculate_nested_depth(node)
+        returns = self._count_returns(node)
+        max_line_length = max(len(line.rstrip()) for line in func_lines) if func_lines else 0
+        doc_length = len(docstring) if docstring else 0
+        
+        return {
+            "type": "function",
+            "name": node.name,
+            "line": node.lineno,
+            "docstring": docstring,
+            "metrics": {
+                "lines": line_count,
+                "params": param_count,
+                "complexity": complexity,
+                "nested_depth": nested_depth,
+                "returns": returns,
+                "max_line_length": max_line_length,
+                "doc_length": doc_length,
+            },
+            "code_smells": []  
+        }
+
+    def _analyze_class(self, node: ast.ClassDef, content: str) -> Dict:
+        class_lines = content.splitlines()[node.lineno-1:node.end_lineno]
+        line_count = len(class_lines)
+        docstring = ast.get_docstring(node)
+        methods = [n.name for n in node.body if isinstance(n, ast.FunctionDef)]
+        methods_count = len(methods)
+        
+        return {
+            "type": "class",
+            "name": node.name,
+            "line": node.lineno,
+            "docstring": docstring,
+            "metrics": {
+                "lines": line_count,
+                "methods_count": methods_count
+            },
+            "code_smells": []  
+        }
+        
+    def _calculate_complexity(self, node: ast.AST) -> int:
+        """Calculate cyclomatic complexity."""
+        complexity = 1
+        for child in ast.walk(node):
+            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                complexity += 1
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+        return complexity
+    
+    def _calculate_nested_depth(self, node: ast.AST) -> int:
+        def walk_depth(current_node, current_depth):
+            max_depth = current_depth
+            for child in ast.iter_child_nodes(current_node):
+                if isinstance(child, (ast.If, ast.For, ast.While, ast.Try, ast.With)):
+                    child_depth = walk_depth(child, current_depth + 1)
+                    max_depth = max(max_depth, child_depth)
+                else:
+                    child_depth = walk_depth(child, current_depth)
+                    max_depth = max(max_depth, child_depth)
+            return max_depth
+        return walk_depth(node, 0)
+    
+    def _count_returns(self, node: ast.AST) -> int:
+        return sum(1 for child in ast.walk(node) if isinstance(child, ast.Return))
+========================================
 File: ./renderer/renderer.js
 ========================================
 class AdaptiveRenderer {
@@ -262,268 +488,195 @@ class OptimizedD3Renderer {
 export { AdaptiveRenderer };
 
 ========================================
-File: ./utils/report.py
+File: ./optimization/graph.py
 ========================================
 from collections import defaultdict
-from datetime import datetime
-from pathlib import Path
-from typing import Dict, List, Set, Tuple, Union
-
-class ReportGenerator:
-    def __init__(self, target_dir: Path, output_dir: Path = None):
-        self.target_dir = target_dir
-        self.output_dir = output_dir or Path("treeline_reports")
-        self.output_dir.mkdir(exist_ok=True)
-
-        from treeline.dependency_analyzer import ModuleDependencyAnalyzer
-        from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
-
-        self.dependency_analyzer = ModuleDependencyAnalyzer()
-        self.enhanced_analyzer = EnhancedCodeAnalyzer()
-
-        self.analyzed_files = []
-        self.quality_issues = defaultdict(list)
-        self.complexity_metrics = {}
-        self.dependency_graph = {}
-        self.entry_points = []
-        self.core_components = []
-        self.code_smells_by_category = defaultdict(list)
-        self.issues_by_file = defaultdict(list)
-        self.issues_count = 0
-
-    def analyze(self):
-        print(f"Analyzing {self.target_dir}...")
-
-        for py_file in self.target_dir.rglob("*.py"):
-            if not self._should_analyze_file(py_file):
-                continue
-
-            self.analyzed_files.append(py_file)
-            try:
-                self.enhanced_analyzer.analyze_file(py_file)
-            except Exception as e:
-                print(f"Error analyzing {py_file}: {e}")
-
-        self.quality_issues = self.enhanced_analyzer.quality_issues
-        self.issues_count = sum(len(issues) for issues in self.quality_issues.values())
-
-        for category, issues in self.quality_issues.items():
-            for issue in issues:
-                if isinstance(issue, dict) and 'file_path' in issue:
-                    file_path = issue['file_path']
-                    self.issues_by_file[file_path].append({
-                        'category': category,
-                        'description': issue.get('description', 'Unknown issue'),
-                        'line': issue.get('line', 'Unknown')
-                    })
-                    self.code_smells_by_category[category].append(issue)
-
-        self.dependency_analyzer.analyze_directory(self.target_dir)
-        self.entry_points = self.dependency_analyzer.get_entry_points()
-        self.core_components = self.dependency_analyzer.get_core_components()
-        
-        self.complexity_metrics = {
-            'complex_functions': self.dependency_analyzer.complex_functions,
-            'thresholds': self.dependency_analyzer.QUALITY_METRICS
-        }
-
-        print(f"Analysis complete! Found {self.issues_count} issues in {len(self.analyzed_files)} files.")
-
-    def generate_report(self) -> str:
-        sections = []
-        
-        sections.append(f"# Treeline Code Analysis Report\n")
-        sections.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        sections.append(f"**Project:** {self.target_dir.absolute()}")
-        sections.append(f"**Files Analyzed:** {len(self.analyzed_files)}")
-        sections.append(f"**Issues Found:** {self.issues_count}\n")
-        
-        sections.append("## Quality Issues Overview\n")
-        
-        if self.issues_count > 0:
-            sections.append("| Category | Count |")
-            sections.append("| --- | ---: |")
-            for category, issues in self.code_smells_by_category.items():
-                sections.append(f"| {category.title()} | {len(issues)} |")
-        else:
-            sections.append("No quality issues found. Great job!")
-        
-        security_issues = self.code_smells_by_category.get('security', [])
-        sql_injection_issues = [
-            issue for category, issues in self.code_smells_by_category.items()
-            for issue in issues
-            if isinstance(issue, dict) and 
-            issue.get('description', '').lower().find('sql injection') != -1
-        ]
-        
-        if security_issues or sql_injection_issues:
-            sections.append("\n## Security Issues\n")
-            
-            if security_issues:
-                sections.append("### General Security Issues\n")
-                for issue in security_issues:
-                    if isinstance(issue, dict):
-                        file_path = issue.get('file_path', 'Unknown')
-                        rel_path = Path(file_path).relative_to(self.target_dir) if Path(file_path).is_absolute() else file_path
-                        line = issue.get('line', 'Unknown')
-                        description = issue.get('description', 'Unknown issue')
-                        
-                        sections.append(f"- **{rel_path}:{line}**: {description}")
-            
-            if sql_injection_issues:
-                sections.append("\n### SQL Injection Vulnerabilities\n")
-                for issue in sql_injection_issues:
-                    if isinstance(issue, dict):
-                        file_path = issue.get('file_path', 'Unknown')
-                        rel_path = Path(file_path).relative_to(self.target_dir) if Path(file_path).is_absolute() else file_path
-                        line = issue.get('line', 'Unknown')
-                        description = issue.get('description', 'Unknown issue')
-                        
-                        sections.append(f"- **{rel_path}:{line}**: {description}")
-        
-        sections.append("\n## Complexity Hotspots\n")
-        
-        if self.complexity_metrics['complex_functions']:
-            sections.append("| Module | Function | Complexity |")
-            sections.append("| --- | --- | ---: |")
-            
-            threshold = self.complexity_metrics['thresholds']['MAX_CYCLOMATIC_COMPLEXITY']
-            
-            for module, func, complexity in sorted(
-                self.complexity_metrics['complex_functions'], 
-                key=lambda x: x[2], 
-                reverse=True
-            )[:10]:
-                sections.append(f"| {module} | {func} | {complexity} |")
-                
-            if len(self.complexity_metrics['complex_functions']) > 10:
-                sections.append(f"\n*...and {len(self.complexity_metrics['complex_functions']) - 10} more complex functions*")
-        else:
-            sections.append("No complex functions found. Great job!")
-            
-        sections.append("\n## Top Issues by File\n")
-        
-        if self.issues_by_file:
-            top_files = sorted(
-                self.issues_by_file.items(), 
-                key=lambda x: len(x[1]), 
-                reverse=True
-            )[:5]
-            
-            for file_path, issues in top_files:
-                rel_path = Path(file_path).relative_to(self.target_dir) if Path(file_path).is_absolute() else file_path
-                sections.append(f"### {rel_path} ({len(issues)} issues)\n")
-                
-                issues_by_category = defaultdict(list)
-                for issue in issues:
-                    issues_by_category[issue['category']].append(issue)
-                    
-                for category, cat_issues in issues_by_category.items():
-                    sections.append(f"**{category.title()}** ({len(cat_issues)})\n")
-                    
-                    for issue in cat_issues[:3]:
-                        line_info = f" (Line {issue['line']})" if issue['line'] != 'Unknown' else ""
-                        sections.append(f"- {issue['description']}{line_info}")
-                    
-                    if len(cat_issues) > 3:
-                        sections.append(f"- *...and {len(cat_issues) - 3} more {category} issues*")
-                    
-                    sections.append("")
-                    
-            if len(self.issues_by_file) > 5:
-                sections.append(f"\n*...and {len(self.issues_by_file) - 5} more files with issues*")
-        else:
-            sections.append("No quality issues found. Great job!")
-            
-        sections.append("\n## Core Components\n")
-        
-        if self.core_components:
-            sections.append("| Component | Incoming | Outgoing |")
-            sections.append("| --- | ---: | ---: |")
-            for comp in self.core_components:
-                sections.append(f"| {comp['name']} | {comp['incoming']} | {comp['outgoing']} |")
-        else:
-            sections.append("No core components identified.")
-            
-        sections.append("\n## Entry Points\n")
-        
-        if self.entry_points:
-            for ep in self.entry_points:
-                sections.append(f"- {ep}")
-        else:
-            sections.append("No entry points identified.")
-        
-        sections.append("\n---\n")
-        sections.append("Report generated by Treeline")
-        
-        return "\n".join(sections)
-
-    def save_report(self, filename: str = None) -> Path:
-        content = self.generate_report()
-        
-        if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"treeline_report_{timestamp}.md"
-        
-        output_path = self.output_dir / filename
-        
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(content)
-            
-        print(f"Report saved to {output_path}")
-        return output_path
-
-    def _should_analyze_file(self, file_path: Path) -> bool:
-        if any(p in str(file_path) for p in ["venv", "site-packages", "__pycache__", ".git"]):
-            return False
-            
-        return True
-
-========================================
-File: ./ignore.py
-========================================
-import os
-from pathlib import Path
-from typing import List
+from typing import Dict, List, Set
 
 
-def read_ignore_patterns() -> List[str]:
-    """Read patterns from .treeline-ignore file"""
-    ignore_patterns = []
-    if Path(".treeline-ignore").exists():
-        with open(".treeline-ignore", "r") as f:
-            ignore_patterns = [
-                line.strip() for line in f if line.strip() and not line.startswith("#")
-            ]
-    return ignore_patterns
+class OptimizedDependencyGraph:
+    """High-performance graph structure for code dependencies"""
 
+    def __init__(self):
+        self.nodes: Dict[str, int] = {}  # name -> index mapping
+        self.reverse_nodes: Dict[int, str] = {}  # index -> name mapping
+        self.node_types: Dict[int, str] = {}  # node metadata
+        self._next_index: int = 0
+        self.outgoing_edges: Dict[int, Set[int]] = defaultdict(set)
+        self._cache = {}
 
-def should_ignore(path: Path, ignore_patterns: List[str]) -> bool:
-    """Check if path should be ignored based on patterns."""
-    path_str = str(path.resolve())
-    dot_path = str(path).replace(os.sep, ".")
+    def _get_node_index(self, name: str, node_type: str = None) -> int:
+        if name not in self.nodes:
+            self.nodes[name] = self._next_index
+            self.reverse_nodes[self._next_index] = name
+            if node_type:
+                self.node_types[self._next_index] = node_type
+            self._next_index += 1
+        return self.nodes[name]
 
-    if dot_path.startswith("venv.") and (
-        "site-packages" in dot_path or "lib" in dot_path
+    def add_edge(
+        self, from_node: str, to_node: str, from_type: str = None, to_type: str = None
     ):
-        return True
+        """Add a directed edge between nodes"""
+        from_idx = self._get_node_index(from_node, from_type)
+        to_idx = self._get_node_index(to_node, to_type)
 
-    if "venv_" in path_str and ("site-packages" in path_str or "lib" in path_str):
-        return True
+        self.outgoing_edges[from_idx].add(to_idx)
 
-    for pattern in ignore_patterns:
-        pattern = pattern.rstrip("/")
+        self._cache.clear()
 
-        if pattern in path_str or pattern in dot_path:
-            return True
+    def get_connected_components(self) -> List[Set[str]]:
+        """Get strongly connected components using efficient algorithms"""
+        cache_key = "connected_components"
+        if cache_key not in self._cache:
+            components = self._strongly_connected_components()
 
-        if pattern.startswith("*.") and (
-            path_str.endswith(pattern[1:]) or dot_path.endswith(pattern[1:])
-        ):
-            return True
+            self._cache[cache_key] = components
 
-    return False
+        return self._cache[cache_key]
 
+    def get_dependency_chain(
+        self, start_node: str, max_depth: int = -1
+    ) -> Dict[str, int]:
+        """Get all dependencies and their distances from start node"""
+        if start_node not in self.nodes:
+            return {}
+
+    def _strongly_connected_components(self) -> List[Set[str]]:
+        index_counter = 0
+        stack = []
+        on_stack = set()
+        index_map = {}
+        lowlink = {}
+        sccs = []
+
+        def strongconnect(v):
+            nonlocal index_counter
+            index_map[v] = index_counter
+            lowlink[v] = index_counter
+            index_counter += 1
+            stack.append(v)
+            on_stack.add(v)
+
+            for w in self.outgoing_edges[v]:
+                if w not in index_map:
+                    strongconnect(w)
+                    lowlink[v] = min(lowlink[v], lowlink[w])
+                elif w in on_stack:
+                    lowlink[v] = min(lowlink[v], index_map[w])
+
+            if lowlink[v] == index_map[v]:
+                comp = set()
+                while True:
+                    w = stack.pop()
+                    on_stack.remove(w)
+                    comp.add(self.reverse_nodes[w])
+                    if w == v:
+                        break
+                sccs.append(comp)
+
+        for node_idx in range(self._next_index):
+            if node_idx not in index_map:
+                strongconnect(node_idx)
+
+        return sccs
+
+    def get_cycles(self) -> List[List[str]]:
+        """Detect dependency cycles efficiently"""
+        cache_key = "cycles"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+
+        cycles = []
+        visited = set()
+        path = []
+        path_set = set()
+
+        def dfs(node_idx):
+            if node_idx in path_set:
+                cycle_start = path.index(node_idx)
+                cycle = path[cycle_start:]
+                cycles.append([self.reverse_nodes[i] for i in cycle])
+                return
+
+            if node_idx in visited:
+                return
+
+            visited.add(node_idx)
+            path.append(node_idx)
+            path_set.add(node_idx)
+
+            row = self.adjacency_matrix[node_idx].tocoo()
+            for _, col, _ in zip(row.row, row.col, row.data):
+                dfs(col)
+
+            path.pop()
+            path_set.remove(node_idx)
+
+        for node_idx in range(self._next_index):
+            if node_idx not in visited:
+                dfs(node_idx)
+
+        self._cache[cache_key] = cycles
+        return cycles
+
+========================================
+File: ./checkers/complexity.py
+========================================
+import ast
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List
+
+from treeline.models.enhanced_analyzer import QualityIssue
+
+class ComplexityAnalyzer:
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
+        self.max_cyclomatic = self.config.get("MAX_CYCLOMATIC_COMPLEXITY", 10)
+        self.max_cognitive = self.config.get("MAX_COGNITIVE_COMPLEXITY", 15)
+
+    def check(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef)):
+                cc = self._calculate_cyclomatic_complexity(node)
+                cog = self._calculate_cognitive_complexity(node)
+                element_type = "function" if isinstance(node, ast.FunctionDef) else "class"
+                if cc > self.max_cyclomatic:
+                    quality_issues["complexity"].append(QualityIssue(
+                        description=f"High cyclomatic complexity ({cc} > {self.max_cyclomatic}) in {element_type} '{node.name}'",
+                        file_path=str(file_path),
+                        line=node.lineno
+                    ).__dict__)
+                if cog > self.max_cognitive:
+                    quality_issues["complexity"].append(QualityIssue(
+                        description=f"High cognitive complexity ({cog} > {self.max_cognitive}) in {element_type} '{node.name}'",
+                        file_path=str(file_path),
+                        line=node.lineno
+                    ).__dict__)
+
+    def _calculate_cyclomatic_complexity(self, node: ast.AST) -> int:
+        complexity = 1
+        for child in ast.walk(node):
+            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                complexity += 1
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+        return complexity
+
+    def _calculate_cognitive_complexity(self, node: ast.AST) -> int:
+        def walk_cognitive(node: ast.AST, nesting: int = 0) -> int:
+            complexity = 0
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.If, ast.While, ast.For)):
+                    complexity += 1 + nesting
+                    complexity += walk_cognitive(child, nesting + 1)
+                elif isinstance(child, ast.BoolOp):
+                    complexity += len(child.values) - 1
+                else:
+                    complexity += walk_cognitive(child, nesting)
+            return complexity
+        return walk_cognitive(node)
 ========================================
 File: ./checkers/magic_numbers.py
 ========================================
@@ -588,42 +741,25 @@ class StyleChecker:
                     line=i
                 ).__dict__)
 ========================================
-File: ./core.py
+File: ./checkers/sql_injection.py
 ========================================
-# treeline/treeline/core.py
-
+from collections import defaultdict
 from pathlib import Path
-from treeline.cli import cli
+import ast
+from typing import Dict
 
-def create_default_ignore():
-    """Create a default .treeline-ignore file if it does not already exist."""
-    ignore_file = Path(".treeline-ignore")
-    if not ignore_file.exists():
-        ignore_file.write_text(
-            "\n".join([
-                "*.pyc",
-                "__pycache__/",
-                ".git/",
-                ".env/",
-                "venv/",
-                ".venv/",
-                ".DS_Store",
-                "node_modules/",
-                "env/",
-                "build/",
-                "dist/",
-                ""
-            ])
-        )
-        print("Created .treeline-ignore file")
+class SQLInjectionChecker:
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
 
-
-def main():
-    """Entry point for the Treeline CLI."""
-    create_default_ignore() 
-    cli()  
-
-
-if __name__ == "__main__":
-    main()
-
+    def check(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.Call) and 
+                isinstance(node.func, ast.Attribute) and 
+                node.func.attr == "execute"):
+                if any(isinstance(arg, ast.Constant) and isinstance(arg.value, str) for arg in node.args):
+                    quality_issues["security"].append({
+                        "description": "Potential SQL injection risk",
+                        "file_path": str(file_path),
+                        "line": node.lineno
+                    })

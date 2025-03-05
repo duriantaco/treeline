@@ -1,0 +1,518 @@
+import ast
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+
+class MetricsAggregator:
+    """
+    Central aggregator for all code quality metrics.
+    This class collects metrics from all individual checkers and provides a unified interface.
+    """
+    
+    def __init__(self, config: Dict = None):
+        self.config = config or {}
+        self.thresholds = {
+            "MAX_PARAMS": self.config.get("MAX_PARAMS", 5),
+            "MAX_CYCLOMATIC_COMPLEXITY": self.config.get("MAX_CYCLOMATIC_COMPLEXITY", 10),
+            "MAX_COGNITIVE_COMPLEXITY": self.config.get("MAX_COGNITIVE_COMPLEXITY", 15),
+            "MAX_DUPLICATED_LINES": self.config.get("MAX_DUPLICATED_LINES", 5),
+            "MAX_LINE_LENGTH": self.config.get("MAX_LINE_LENGTH", 80),
+            "MAX_DOC_LENGTH": self.config.get("MAX_DOC_LENGTH", 80),
+            "MAX_NESTED_DEPTH": self.config.get("MAX_NESTED_DEPTH", 4),
+            "MAX_FUNCTION_LINES": self.config.get("MAX_FUNCTION_LINES", 50),
+            "MAX_RETURNS": self.config.get("MAX_RETURNS", 4),
+            "MIN_MAINTAINABILITY_INDEX": self.config.get("MIN_MAINTAINABILITY_INDEX", 20),
+            "MAX_FUNC_COGNITIVE_LOAD": self.config.get("MAX_FUNC_COGNITIVE_LOAD", 15),
+        }
+        
+        self.metrics_by_file = {}
+        self.metrics_by_module = {}
+        self.metrics_by_class = {}
+        self.metrics_by_function = {}
+        self.all_issues = defaultdict(list)
+        
+    def calculate_function_metrics(self, node: ast.FunctionDef, content: str) -> Dict[str, Any]:
+        """Calculate all metrics for a function node"""
+        func_lines = content.splitlines()[node.lineno-1:node.end_lineno]
+        line_count = len(func_lines)
+        docstring = ast.get_docstring(node)
+        param_count = len(node.args.args)
+        
+        complexity = 1
+        for child in ast.walk(node):
+            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                complexity += 1
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+                
+        cognitive_complexity = self._calculate_cognitive_complexity(node)
+        
+        nested_depth = self._calculate_nested_depth(node)
+
+        returns_count = sum(1 for _ in ast.walk(node) if isinstance(_, ast.Return))
+        
+        max_line_length = max((len(line) for line in func_lines), default=0)
+        
+        doc_length = len(docstring or "")
+        
+        # Calculate maintainability index (simplified version)
+        # MI = 171 - 5.2 * ln(V) - 0.23 * G - 16.2 * ln(L) + 50 * sin(sqrt(2.4 * C))
+        # where V is Halstead Volume, G is cyclomatic complexity, L is lines of code, C is comment ratio
+        maintainability_index = max(0, 100 - complexity * 2 - line_count / 2 + (doc_length > 0) * 10)
+        
+        return_statements = sum(1 for child in ast.walk(node) if isinstance(child, ast.Return))
+        
+        func_cognitive_load = complexity * (param_count + 1) * (return_statements + 1) / 10
+        
+        metrics = {
+            "lines": line_count,
+            "params": param_count,
+            "complexity": complexity,
+            "cognitive_complexity": cognitive_complexity,
+            "nested_depth": nested_depth,
+            "returns": returns_count,
+            "max_line_length": max_line_length,
+            "doc_length": doc_length,
+            "maintainability_index": maintainability_index,
+            "func_cognitive_load": func_cognitive_load,
+            "has_docstring": docstring is not None,
+        }
+        
+        return metrics
+    
+    def calculate_class_metrics(self, node: ast.ClassDef, content: str) -> Dict[str, Any]:
+        """Calculate all metrics for a class node"""
+        class_lines = content.splitlines()[node.lineno-1:node.end_lineno]
+        line_count = len(class_lines)
+        docstring = ast.get_docstring(node)
+        
+        methods = [n for n in node.body if isinstance(n, ast.FunctionDef)]
+        method_count = len(methods)
+        
+        public_methods = sum(1 for m in methods if not m.name.startswith('_'))
+        private_methods = method_count - public_methods
+        
+        inheritance_depth = len(node.bases)
+        
+        class_complexity = 1
+        for method in methods:
+            for child in ast.walk(method):
+                if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                    class_complexity += 1
+                elif isinstance(child, ast.BoolOp):
+                    class_complexity += len(child.values) - 1
+        
+        max_line_length = max((len(line) for line in class_lines), default=0)
+        
+        doc_length = len(docstring or "")
+        
+        imports = {}
+        for child in ast.walk(node):
+            if isinstance(child, ast.Import):
+                for name in child.names:
+                    imports[name.name] = imports.get(name.name, 0) + 1
+            elif isinstance(child, ast.ImportFrom):
+                if child.module:
+                    imports[child.module] = imports.get(child.module, 0) + 1
+        
+        metrics = {
+            "lines": line_count,
+            "methods": method_count,
+            "public_methods": public_methods,
+            "private_methods": private_methods,
+            "complexity": class_complexity,
+            "inheritance_depth": inheritance_depth,
+            "max_line_length": max_line_length,
+            "doc_length": doc_length,
+            "imports": imports,
+            "has_docstring": docstring is not None,
+        }
+        
+        return metrics
+    
+    def calculate_module_metrics(self, tree: ast.AST, content: str) -> Dict[str, Any]:
+        """Calculate all metrics for a module"""
+        lines = content.splitlines()
+        line_count = len(lines)
+        
+        functions = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and isinstance(n.parent, ast.Module)]
+        classes = [n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and isinstance(n.parent, ast.Module)]
+        
+        function_count = len(functions)
+        class_count = len(classes)
+        
+        module_complexity = 0
+        for func in functions:
+            for child in ast.walk(func):
+                if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                    module_complexity += 1
+                elif isinstance(child, ast.BoolOp):
+                    module_complexity += len(child.values) - 1
+        
+        for cls in classes:
+            for method in [n for n in cls.body if isinstance(n, ast.FunctionDef)]:
+                for child in ast.walk(method):
+                    if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                        module_complexity += 1
+                    elif isinstance(child, ast.BoolOp):
+                        module_complexity += len(child.values) - 1
+        
+        max_line_length = max((len(line) for line in lines), default=0)
+        
+        imports = {}
+        for child in ast.walk(tree):
+            if isinstance(child, ast.Import):
+                for name in child.names:
+                    imports[name.name] = imports.get(name.name, 0) + 1
+            elif isinstance(child, ast.ImportFrom):
+                if child.module:
+                    imports[child.module] = imports.get(child.module, 0) + 1
+        
+        import_count = len(imports)
+        
+        metrics = {
+            "lines": line_count,
+            "functions": function_count,
+            "classes": class_count,
+            "complexity": module_complexity,
+            "max_line_length": max_line_length,
+            "imports": import_count,
+        }
+        
+        return metrics
+    
+    def _calculate_cognitive_complexity(self, node: ast.AST) -> int:
+        """Calculate cognitive complexity of a node"""
+        def walk_cognitive(node: ast.AST, nesting: int = 0) -> int:
+            complexity = 0
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.If, ast.While, ast.For)):
+                    complexity += 1 + nesting
+                    complexity += walk_cognitive(child, nesting + 1)
+                elif isinstance(child, ast.BoolOp):
+                    complexity += len(child.values) - 1
+                else:
+                    complexity += walk_cognitive(child, nesting)
+            return complexity
+        return walk_cognitive(node)
+    
+    def _calculate_nested_depth(self, node: ast.AST) -> int:
+        """Calculate maximum nesting depth of a node"""
+        def walk_depth(current_node, current_depth):
+            max_depth = current_depth
+            for child in ast.iter_child_nodes(current_node):
+                if isinstance(child, (ast.If, ast.For, ast.While, ast.Try, ast.With)):
+                    child_depth = walk_depth(child, current_depth + 1)
+                    max_depth = max(max_depth, child_depth)
+                else:
+                    child_depth = walk_depth(child, current_depth)
+                    max_depth = max(max_depth, child_depth)
+            return max_depth
+        return walk_depth(node, 0)
+    
+    def analyze_file(self, file_path: Path, content: str = None, tree: ast.AST = None) -> Dict[str, Any]:
+        """
+        Analyze a file and calculate all metrics.
+        
+        Args:
+            file_path: Path to the file
+            content: File content (optional, will be read if not provided)
+            tree: AST tree (optional, will be parsed if not provided)
+            
+        Returns:
+            Dictionary with all metrics for the file
+        """
+        if content is None:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception as e:
+                self.all_issues["file"].append({
+                    "description": f"Could not read file: {str(e)}",
+                    "file_path": str(file_path),
+                    "line": None
+                })
+                return {}
+        
+        if tree is None:
+            try:
+                tree = ast.parse(content)
+                for parent in ast.walk(tree):
+                    for child in ast.iter_child_nodes(parent):
+                        setattr(child, "parent", parent)
+            except Exception as e:
+                self.all_issues["parsing"].append({
+                    "description": f"Could not parse content: {str(e)}",
+                    "file_path": str(file_path),
+                    "line": None
+                })
+                return {}
+        
+        module_metrics = self.calculate_module_metrics(tree, content)
+        self.metrics_by_file[str(file_path)] = module_metrics
+        
+        functions = []
+        classes = []
+        
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                parent = getattr(node, "parent", None)
+                if isinstance(parent, ast.Module):
+                    func_metrics = self.calculate_function_metrics(node, content)
+                    functions.append({
+                        "name": node.name,
+                        "line": node.lineno,
+                        "metrics": func_metrics,
+                        "docstring": ast.get_docstring(node),
+                        "code_smells": []
+                    })
+                    self.metrics_by_function[f"{file_path}:{node.name}"] = func_metrics
+                    
+                    self._check_function_warnings(node, func_metrics, file_path)
+                
+            elif isinstance(node, ast.ClassDef):
+                parent = getattr(node, "parent", None)
+                if isinstance(parent, ast.Module):
+                    class_metrics = self.calculate_class_metrics(node, content)
+                    classes.append({
+                        "name": node.name,
+                        "line": node.lineno,
+                        "metrics": class_metrics,
+                        "docstring": ast.get_docstring(node),
+                        "code_smells": []
+                    })
+                    self.metrics_by_class[f"{file_path}:{node.name}"] = class_metrics
+                    
+                    self._check_class_warnings(node, class_metrics, file_path)
+        
+        self._check_style_issues(content, file_path)
+        
+
+        return {
+            "file_path": str(file_path),
+            "module_metrics": module_metrics,
+            "functions": functions,
+            "classes": classes,
+            "issues": self._get_issues_for_file(file_path)
+        }
+    
+    def _check_function_warnings(self, node: ast.FunctionDef, metrics: Dict, file_path: Path):
+        """Check for warnings in function metrics"""
+        if metrics["complexity"] > self.thresholds["MAX_CYCLOMATIC_COMPLEXITY"]:
+            self.all_issues["complexity"].append({
+                "description": f"Function has high cyclomatic complexity ({metrics['complexity']} > {self.thresholds['MAX_CYCLOMATIC_COMPLEXITY']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["cognitive_complexity"] > self.thresholds["MAX_COGNITIVE_COMPLEXITY"]:
+            self.all_issues["complexity"].append({
+                "description": f"Function has high cognitive complexity ({metrics['cognitive_complexity']} > {self.thresholds['MAX_COGNITIVE_COMPLEXITY']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["lines"] > self.thresholds["MAX_FUNCTION_LINES"]:
+            self.all_issues["style"].append({
+                "description": f"Function is too long ({metrics['lines']} lines > {self.thresholds['MAX_FUNCTION_LINES']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["params"] > self.thresholds["MAX_PARAMS"]:
+            self.all_issues["code_smells"].append({
+                "description": f"Function has too many parameters ({metrics['params']} > {self.thresholds['MAX_PARAMS']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["nested_depth"] > self.thresholds["MAX_NESTED_DEPTH"]:
+            self.all_issues["complexity"].append({
+                "description": f"Function has excessive nesting depth ({metrics['nested_depth']} > {self.thresholds['MAX_NESTED_DEPTH']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["returns"] > self.thresholds["MAX_RETURNS"]:
+            self.all_issues["code_smells"].append({
+                "description": f"Function has too many return statements ({metrics['returns']} > {self.thresholds['MAX_RETURNS']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["maintainability_index"] < self.thresholds["MIN_MAINTAINABILITY_INDEX"]:
+            self.all_issues["maintainability"].append({
+                "description": f"Function has low maintainability index ({metrics['maintainability_index']} < {self.thresholds['MIN_MAINTAINABILITY_INDEX']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["func_cognitive_load"] > self.thresholds["MAX_FUNC_COGNITIVE_LOAD"]:
+            self.all_issues["complexity"].append({
+                "description": f"Function has high cognitive load ({metrics['func_cognitive_load']} > {self.thresholds['MAX_FUNC_COGNITIVE_LOAD']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if not metrics["has_docstring"]:
+            self.all_issues["documentation"].append({
+                "description": "Function lacks a docstring",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+    
+    def _check_class_warnings(self, node: ast.ClassDef, metrics: Dict, file_path: Path):
+        """Check for warnings in class metrics"""
+        if metrics["complexity"] > self.thresholds["MAX_CYCLOMATIC_COMPLEXITY"]:
+            self.all_issues["complexity"].append({
+                "description": f"Class has high complexity ({metrics['complexity']} > {self.thresholds['MAX_CYCLOMATIC_COMPLEXITY']})",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if metrics["lines"] > self.thresholds["MAX_FUNCTION_LINES"] * 3:  
+            self.all_issues["style"].append({
+                "description": f"Class is too long ({metrics['lines']} lines)",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+        
+        if not metrics["has_docstring"]:
+            self.all_issues["documentation"].append({
+                "description": "Class lacks a docstring",
+                "file_path": str(file_path),
+                "line": node.lineno
+            })
+    
+    def _check_style_issues(self, content: str, file_path: Path):
+        """Check for style issues in a file"""
+        lines = content.splitlines()
+        
+        if len(lines) > 500:  
+            self.all_issues["style"].append({
+                "description": f"File is too long ({len(lines)} lines)",
+                "file_path": str(file_path),
+                "line": None
+            })
+        
+        for i, line in enumerate(lines, 1):
+            if len(line) > self.thresholds["MAX_LINE_LENGTH"]:
+                self.all_issues["style"].append({
+                    "description": f"Line exceeds maximum length ({len(line)} > {self.thresholds['MAX_LINE_LENGTH']})",
+                    "file_path": str(file_path),
+                    "line": i
+                })
+    
+    def _get_issues_for_file(self, file_path: Path) -> List[Dict]:
+        """Get all issues for a specific file"""
+        file_path_str = str(file_path)
+        issues = []
+        
+        for category, category_issues in self.all_issues.items():
+            for issue in category_issues:
+                if issue.get("file_path") == file_path_str:
+                    issues.append({
+                        "category": category,
+                        "description": issue.get("description", "Unknown issue"),
+                        "line": issue.get("line")
+                    })
+        
+        return issues
+    
+    def analyze_directory(self, directory: Path) -> Dict[str, Any]:
+        """
+        Analyze all Python files in a directory and calculate all metrics.
+        
+        Args:
+            directory: Path to the directory
+            
+        Returns:
+            Dictionary with all metrics for the directory
+        """
+        results = {}
+        python_files = list(directory.rglob("*.py"))
+        
+        for file_path in python_files:
+            try:
+                file_results = self.analyze_file(file_path)
+                if file_results:
+                    results[str(file_path)] = file_results
+            except Exception as e:
+                print(f"Error analyzing {file_path}: {e}")
+        
+        self._check_duplications(python_files)
+        
+        return {
+            "files": results,
+            "total_files": len(python_files),
+            "total_issues": sum(len(issues) for issues in self.all_issues.values()),
+            "issues_by_category": {category: len(issues) for category, issues in self.all_issues.items()},
+            "metrics_summary": self._calculate_metrics_summary(),
+        }
+    
+    def _check_duplications(self, python_files: List[Path]):
+        """Check for code duplications across files"""
+        all_lines = {}
+        for file_path in python_files:
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    lines = f.read().splitlines()
+                    all_lines[str(file_path)] = lines
+            except Exception:
+                continue
+        
+        seen = {}
+        for file_path, lines in all_lines.items():
+            for i, line in enumerate(lines, 1):
+                if not line.strip():
+                    continue
+                    
+                if line in seen:
+                    seen[line]["count"] += 1
+                    if seen[line]["count"] >= self.thresholds["MAX_DUPLICATED_LINES"]:
+                        self.all_issues["duplication"].append({
+                            "description": f"Duplicated code (line also appears in {seen[line]['file']}:{seen[line]['line']})",
+                            "file_path": file_path,
+                            "line": i
+                        })
+                else:
+                    seen[line] = {"file": file_path, "line": i, "count": 1}
+    
+    def _calculate_metrics_summary(self) -> Dict[str, Any]:
+        """Calculate summary metrics across all files"""
+        total_lines = sum(m.get("lines", 0) for m in self.metrics_by_file.values())
+        total_functions = sum(m.get("functions", 0) for m in self.metrics_by_file.values())
+        total_classes = sum(m.get("classes", 0) for m in self.metrics_by_file.values())
+        total_complexity = sum(m.get("complexity", 0) for m in self.metrics_by_file.values())
+        
+        function_complexities = [m.get("complexity", 0) for m in self.metrics_by_function.values()]
+        avg_function_complexity = sum(function_complexities) / len(function_complexities) if function_complexities else 0
+        
+        complex_functions = sorted([
+            {"name": name, "complexity": metrics.get("complexity", 0)}
+            for name, metrics in self.metrics_by_function.items()
+        ], key=lambda x: x["complexity"], reverse=True)[:10]
+        
+        return {
+            "total_lines": total_lines,
+            "total_functions": total_functions,
+            "total_classes": total_classes,
+            "total_complexity": total_complexity,
+            "avg_function_complexity": avg_function_complexity,
+            "complex_functions": complex_functions,
+        }
+    
+    def get_metrics_for_node(self, node_type: str, node_id: str) -> Dict[str, Any]:
+        """Get metrics for a specific node (function, class, file)"""
+        if node_type == "function":
+            return self.metrics_by_function.get(node_id, {})
+        elif node_type == "class":
+            return self.metrics_by_class.get(node_id, {})
+        elif node_type == "file":
+            return self.metrics_by_file.get(node_id, {})
+        else:
+            return {}
+    
+    def get_all_issues(self) -> Dict[str, List[Dict]]:
+        """Get all issues found during analysis"""
+        return self.all_issues

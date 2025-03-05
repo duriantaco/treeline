@@ -9,7 +9,7 @@ import re
 from collections import defaultdict
 import os
 
-from fastapi import FastAPI, HTTPException, Query, Depends, APIRouter, Path as FastAPIPath
+from fastapi import FastAPI, HTTPException, Query, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +18,7 @@ from pydantic import BaseModel, ValidationError
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.utils.report import ReportGenerator
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+from treeline.aggregator.metrics import MetricsAggregator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -104,6 +105,29 @@ class ComplexityBreakdown(BaseModel):
     lambda_functions: int = 0
     nested_functions: int = 0
     nested_classes: int = 0
+
+class FileMetrics(BaseModel):
+    file_path: str
+    lines: int
+    functions: List[Dict[str, Any]] = []
+    classes: List[Dict[str, Any]] = []
+    issues: Dict[str, List[Dict[str, Any]]] = {}
+    metrics_summary: Dict[str, Any] = {}
+
+class ProjectMetrics(BaseModel):
+    total_files: int
+    total_functions: int
+    total_classes: int
+    total_issues: int
+    avg_complexity: float
+    max_complexity: int
+    total_lines: int
+
+class MetricsResponse(BaseModel):
+    files: Dict[str, FileMetrics]
+    project_metrics: ProjectMetrics
+    issues_summary: Dict[str, int]
+
 
 def load_cache(dir_path: Path) -> Optional[Dict[str, Any]]:
     cache_file = CACHE_DIR / f"{dir_path.name}.json"
@@ -802,14 +826,48 @@ async def get_detailed_metrics(
         "issues_summary": dict(issues_summary)
     }
 
+@app.get("/project-metrics")
+async def get_project_metrics():
+    """Return project-wide metrics dashboard data"""
+    try:
+        try:
+            with open(".treeline_dir", "r") as f:
+                target_dir = Path(f.read().strip()).resolve()
+        except FileNotFoundError:
+            target_dir = Path(".").resolve()
+            
+        dependency_analyzer, enhanced_analyzer = analyze_directory(target_dir)
+        
+        files_analyzed = list(target_dir.rglob("*.py"))
+        
+        complexity_values = []
+        for file_path in files_analyzed:
+            file_results = enhanced_analyzer.analyze_file(file_path)
+            for result in file_results:
+                if result.get("type") == "function" and "metrics" in result:
+                    if "complexity" in result["metrics"]:
+                        complexity_values.append(result["metrics"]["complexity"])
+        
+        return {
+            "total_files": len(files_analyzed),
+            "total_issues": sum(len(issues) for issues in enhanced_analyzer.quality_issues.values()),
+            "avg_complexity": sum(complexity_values) / len(complexity_values) if complexity_values else 0,
+            "max_complexity": max(complexity_values) if complexity_values else 0,
+            "issues_by_category": {
+                category: len(issues) for category, issues in enhanced_analyzer.quality_issues.items()
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating project metrics: {str(e)}")
+    
 @detailed_metrics_router.get("/file/{file_path:path}", response_model=FileMetricsDetail)
 async def get_file_detailed_metrics(
-    file_path: str = FastAPIPath(..., description="File path to analyze")
+    file_path: str = Path(description="File path to analyze")
 ):
     """
     Get detailed metrics for a specific file.
     """
-    target_file = FastAPIPath(file_path).resolve()
+    target_file = Path(file_path).resolve()
     
     if not target_file.exists() or not target_file.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
@@ -1135,6 +1193,279 @@ async def get_issues_by_category(
             category: len(issues) for category, issues in code_analyzer.quality_issues.items()
         }
     }
+
+@app.get("/api/analyze/{path:path}", response_model=MetricsResponse)
+async def analyze_path(path: str):
+    """
+    Analyze a directory or file for code quality metrics
+    
+    Args:
+        path: Path to analyze (directory or file)
+        
+    Returns:
+        Comprehensive metrics analysis
+    """
+    try:
+        target_path = Path(path).resolve()
+        
+        if not target_path.exists():
+            raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+        
+        cache_key = str(target_path)
+        if cache_key in results_cache:
+            logger.info(f"Using cached results for {cache_key}")
+            return results_cache[cache_key]
+        
+        code_analyzer = EnhancedCodeAnalyzer()
+        metrics_aggregator = MetricsAggregator()
+        
+        if target_path.is_dir():
+            logger.info(f"Analyzing directory: {target_path}")
+            
+            python_files = list(target_path.rglob("*.py"))
+            
+            file_results = []
+            with ProcessPoolExecutor(max_workers=min(8, len(python_files))) as executor:
+                futures = [executor.submit(analyze_file_wrapper, f, code_analyzer) for f in python_files]
+                for future in futures:
+                    result = future.result()
+                    if result:
+                        file_results.extend(result)
+                        
+            for file_path in python_files:
+                metrics_aggregator.analyze_file(file_path)
+                
+        else:  
+            logger.info(f"Analyzing file: {target_path}")
+            if target_path.suffix.lower() != '.py':
+                raise HTTPException(status_code=400, detail="Only Python files can be analyzed")
+                
+            file_results = code_analyzer.analyze_file(target_path)
+            metrics_aggregator.analyze_file(target_path)
+        
+        files_data = {}
+        issues_summary = defaultdict(int)
+        
+        for category, issues in code_analyzer.quality_issues.items():
+            for issue in issues:
+                if isinstance(issue, dict) and 'file_path' in issue:
+                    file_path = issue['file_path']
+                    if file_path not in files_data:
+                        files_data[file_path] = {
+                            "file_path": file_path,
+                            "lines": 0,
+                            "functions": [],
+                            "classes": [],
+                            "issues": defaultdict(list),
+                            "metrics_summary": {}
+                        }
+                    
+                    files_data[file_path]["issues"][category].append(issue)
+                    issues_summary[category] += 1
+        
+        for result in file_results:
+            file_path = getattr(result, 'file_path', None) or result.get('file_path', 'unknown')
+            
+            if file_path not in files_data:
+                files_data[file_path] = {
+                    "file_path": file_path,
+                    "lines": 0,
+                    "functions": [],
+                    "classes": [],
+                    "issues": defaultdict(list),
+                    "metrics_summary": {}
+                }
+            
+            if result.get("type") == "function":
+                function_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                files_data[file_path]["functions"].append(function_detail)
+                
+            elif result.get("type") == "class":
+                class_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                files_data[file_path]["classes"].append(class_detail)
+        
+        for file_path in files_data:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    line_count = len(f.readlines())
+                    files_data[file_path]["lines"] = line_count
+            except Exception as e:
+                logger.error(f"Error reading file {file_path}: {str(e)}")
+                files_data[file_path]["lines"] = 0
+                files_data[file_path]["issues"]["file"].append({
+                    "description": f"Could not read file: {str(e)}",
+                    "file_path": file_path,
+                    "line": None
+                })
+        
+        total_files = len(files_data)
+        total_functions = sum(len(file_data["functions"]) for file_data in files_data.values())
+        total_classes = sum(len(file_data["classes"]) for file_data in files_data.values())
+        total_lines = sum(file_data["lines"] for file_data in files_data.values())
+        total_issues = sum(len(issues) for file_data in files_data.values() 
+                          for issues in file_data["issues"].values())
+        
+        complexity_values = []
+        for file_data in files_data.values():
+            for func in file_data["functions"]:
+                if "metrics" in func and "complexity" in func["metrics"]:
+                    complexity_values.append(func["metrics"]["complexity"])
+        
+        avg_complexity = sum(complexity_values) / len(complexity_values) if complexity_values else 0
+        max_complexity = max(complexity_values) if complexity_values else 0
+        
+        project_metrics = {
+            "total_files": total_files,
+            "total_functions": total_functions,
+            "total_classes": total_classes,
+            "total_issues": total_issues,
+            "avg_complexity": round(avg_complexity, 2),
+            "max_complexity": max_complexity,
+            "total_lines": total_lines
+        }
+        
+        for file_path, file_data in files_data.items():
+            if isinstance(file_data["issues"], defaultdict):
+                file_data["issues"] = dict(file_data["issues"])
+        
+        issues_summary = dict(issues_summary)
+        
+        response = {
+            "files": files_data,
+            "project_metrics": project_metrics,
+            "issues_summary": issues_summary
+        }
+        
+        results_cache[cache_key] = response
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"Error in analyze_path: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing path: {str(e)}")
+
+@app.get("/api/metrics/file/{file_path:path}")
+async def get_file_metrics(file_path: str):
+    """
+    Get detailed metrics for a specific file
+    
+    Args:
+        file_path: Path to the file
+        
+    Returns:
+        Detailed metrics for the file
+    """
+    try:
+        target_file = Path(file_path).resolve()
+        
+        if not target_file.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+            
+        if target_file.suffix.lower() != '.py':
+            raise HTTPException(status_code=400, detail="Only Python files can be analyzed")
+        
+        code_analyzer = EnhancedCodeAnalyzer()
+        metrics_aggregator = MetricsAggregator()
+        
+        file_results = code_analyzer.analyze_file(target_file)
+        metrics_aggregator.analyze_file(target_file)
+        
+        functions = []
+        classes = []
+        
+        for result in file_results:
+            if result["type"] == "function":
+                function_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                functions.append(function_detail)
+                
+            elif result["type"] == "class":
+                class_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                classes.append(class_detail)
+        
+        issues_by_category = defaultdict(list)
+        for category, issues in code_analyzer.quality_issues.items():
+            for issue in issues:
+                if isinstance(issue, dict) and issue.get('file_path') == str(target_file):
+                    issues_by_category[category].append(issue)
+        
+        try:
+            with open(target_file, 'r', encoding='utf-8') as f:
+                line_count = len(f.readlines())
+        except Exception as e:
+            logger.error(f"Error reading file {target_file}: {str(e)}")
+            line_count = 0
+            issues_by_category["file"].append({
+                "description": f"Could not read file: {str(e)}",
+                "file_path": str(target_file),
+                "line": None
+            })
+        
+        metrics_summary = {
+            "lines": line_count,
+            "functions": len(functions),
+            "classes": len(classes),
+            "complexity": sum(func["metrics"].get("complexity", 0) for func in functions),
+            "issues": sum(len(issues) for issues in issues_by_category.values()),
+        }
+        
+        if functions:
+            metrics_summary["avg_function_complexity"] = metrics_summary["complexity"] / len(functions)
+        
+        return {
+            "file_path": str(target_file),
+            "lines": line_count,
+            "functions": functions,
+            "classes": classes,
+            "issues": dict(issues_by_category),
+            "metrics_summary": metrics_summary
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"Error in get_file_metrics: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing file: {str(e)}")
+
+@app.get("/api/metrics/thresholds")
+async def get_metrics_thresholds():
+    """Get the metrics thresholds used for quality checks"""
+    try:
+        metrics_aggregator = MetricsAggregator()
+        return {"thresholds": metrics_aggregator.thresholds}
+    except Exception as e:
+        logger.error(f"Error in get_metrics_thresholds: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting thresholds: {str(e)}")
+
+@app.get("/api/clear-cache")
+async def clear_cache():
+    """Clear the cached analysis results"""
+    global results_cache
+    results_cache = {}
+    return {"message": "Cache cleared successfully"}
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):

@@ -8,12 +8,15 @@ File: ./api/app.py
 # treeline/api/app.py
 import json
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 import logging
+import re
+from collections import defaultdict
+import os
 
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -21,6 +24,8 @@ from pydantic import BaseModel, ValidationError
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.utils.report import ReportGenerator
+from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+from treeline.aggregator.metrics import MetricsAggregator
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -45,6 +50,91 @@ class AnalysisResponse(BaseModel):
     relationships: List[Dict]
     metrics: Dict
     insights: Dict
+
+class FunctionMetricsDetail(BaseModel):
+    name: str
+    line: int
+    lines: int
+    params: int
+    returns: Optional[int] = None
+    complexity: int
+    cognitive_complexity: Optional[int] = None
+    nested_depth: Optional[int] = None
+    has_docstring: Optional[bool] = None
+    docstring_length: Optional[int] = None
+    maintainability_index: Optional[float] = None
+    cognitive_load: Optional[int] = None
+    code_smells: List[Dict[str, Any]] = []
+
+class ClassMetricsDetail(BaseModel):
+    name: str
+    line: int
+    lines: int
+    method_count: int
+    public_methods: Optional[int] = None
+    private_methods: Optional[int] = None
+    complexity: Optional[int] = None
+    inheritance_depth: Optional[int] = None
+    has_docstring: Optional[bool] = None
+    docstring_length: Optional[int] = None
+    code_smells: List[Dict[str, Any]] = []
+    methods: List[FunctionMetricsDetail] = []
+
+class FileMetricsDetail(BaseModel):
+    path: str
+    lines: int
+    functions: List[FunctionMetricsDetail] = []
+    classes: List[ClassMetricsDetail] = []
+    imports: List[str] = []
+    issues_by_category: Dict[str, List[Dict[str, Any]]] = {}
+    metrics_summary: Dict[str, Any] = {}
+
+class DetailedAnalysisResponse(BaseModel):
+    files: Dict[str, FileMetricsDetail]
+    project_metrics: Dict[str, Any]
+    dependency_metrics: Dict[str, Any]
+    issues_summary: Dict[str, int]
+
+class ComplexityBreakdown(BaseModel):
+    if_statements: int = 0
+    for_loops: int = 0
+    while_loops: int = 0
+    except_blocks: int = 0
+    try_blocks: int = 0
+    boolean_operations: int = 0
+    and_operations: int = 0
+    or_operations: int = 0
+    comprehensions: int = 0
+    list_comprehensions: int = 0
+    dict_comprehensions: int = 0
+    set_comprehensions: int = 0
+    generator_expressions: int = 0
+    lambda_functions: int = 0
+    nested_functions: int = 0
+    nested_classes: int = 0
+
+class FileMetrics(BaseModel):
+    file_path: str
+    lines: int
+    functions: List[Dict[str, Any]] = []
+    classes: List[Dict[str, Any]] = []
+    issues: Dict[str, List[Dict[str, Any]]] = {}
+    metrics_summary: Dict[str, Any] = {}
+
+class ProjectMetrics(BaseModel):
+    total_files: int
+    total_functions: int
+    total_classes: int
+    total_issues: int
+    avg_complexity: float
+    max_complexity: int
+    total_lines: int
+
+class MetricsResponse(BaseModel):
+    files: Dict[str, FileMetrics]
+    project_metrics: ProjectMetrics
+    issues_summary: Dict[str, int]
+
 
 def load_cache(dir_path: Path) -> Optional[Dict[str, Any]]:
     cache_file = CACHE_DIR / f"{dir_path.name}.json"
@@ -138,9 +228,9 @@ async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dep
                 
                 save_cache(target_dir, graph_data)
             except Exception as e:
-                logger.error(f"Error analyzing directory: {str(e)}")
+                # logger.error(f"Error analyzing directory: {str(e)}")
                 traceback_str = traceback.format_exc()
-                logger.debug(f"Traceback:\n{traceback_str}")
+                # logger.debug(f"Traceback:\n{traceback_str}")
                 return HTMLResponse(
                     f"""
                     <html>
@@ -160,9 +250,9 @@ async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dep
         return HTMLResponse(html_content)
 
     except Exception as e:
-        logger.error(f"\nERROR: {str(e)}")
+        # logger.error(f"\nERROR: {str(e)}")
         traceback_str = traceback.format_exc()
-        logger.debug(f"Traceback:\n{traceback_str}")
+        # logger.debug(f"Traceback:\n{traceback_str}")
         
         return HTMLResponse(
             f"""
@@ -210,13 +300,13 @@ async def get_graph_data():
                 save_cache(target_dir, graph_data)
                 return graph_data
             except Exception as e:
-                logger.error(f"Error analyzing directory: {str(e)}")
+                # logger.error(f"Error analyzing directory: {str(e)}")
                 raise
                 
     except Exception as e:
-        logger.error(f"\nERROR: {str(e)}")
+        # logger.error(f"\nERROR: {str(e)}")
         tb = traceback.format_exc()
-        logger.debug(f"Traceback:\n{tb}")
+        # logger.debug(f"Traceback:\n{tb}")
         raise HTTPException(
             status_code=500, detail=f"Error generating graph data: {str(e)}"
         )
@@ -295,26 +385,60 @@ async def get_module_metrics(module_path: str):
         "quality": code_analyzer.analyze_file(Path(module_path)),
     }
 
+dependency_analyzer = None
+enhanced_analyzer = None
+current_directory = None
+
+def analyze_directory(directory: Path):
+    global dependency_analyzer, enhanced_analyzer, current_directory
+    if current_directory == directory and dependency_analyzer and enhanced_analyzer:
+        return dependency_analyzer, enhanced_analyzer
+    
+    dependency_analyzer = ModuleDependencyAnalyzer()
+    enhanced_analyzer = EnhancedCodeAnalyzer()
+    
+    dependency_analyzer.analyze_directory(directory)
+    python_files = list(directory.rglob("*.py"))
+    with ProcessPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
+        [f.result() for f in futures]
+    
+    current_directory = directory
+    return dependency_analyzer, enhanced_analyzer
+
 @app.get("/reports/complexity")
 async def get_complexity_report():
-    """Get complexity analysis report"""
-    if not dependency_analyzer.complex_functions:
-        return {"message": "No complex functions found"}
-
-    return {
-        "hotspots": [
-            {
-                "module": module,
-                "function": func,
+    try:
+        with open(".treeline_dir", "r") as f:
+            target_dir = Path(f.read().strip()).resolve()
+    except FileNotFoundError:
+        target_dir = Path(".").resolve()
+    
+    _, enh_analyzer = analyze_directory(target_dir)
+    
+    complexity_issues = [
+        issue for issue in enh_analyzer.quality_issues["complexity"]
+        if "cyclomatic complexity" in issue["description"]
+    ]
+    
+    hotspots = []
+    for issue in complexity_issues:
+        match = re.search(r"High cyclomatic complexity \((\d+) > (\d+)\) in (function|class) '(\w+)'", issue["description"])
+        if match:
+            complexity = int(match.group(1))
+            threshold = int(match.group(2))
+            func_name = match.group(4)
+            hotspots.append({
+                "module": Path(issue["file_path"]).relative_to(target_dir).as_posix().replace(".py", "").replace("/", "."),
+                "function": func_name,
                 "complexity": complexity,
-                "exceeds_threshold": complexity
-                > dependency_analyzer.QUALITY_METRICS["MAX_CYCLOMATIC_COMPLEXITY"],
-            }
-            for module, func, complexity in sorted(
-                dependency_analyzer.complex_functions, key=lambda x: x[2], reverse=True
-            )
-        ]
-    }
+                "exceeds_threshold": complexity > threshold,
+            })
+    
+    if not hotspots:
+        return {"message": "No complex functions found"}
+    
+    return {"hotspots": sorted(hotspots, key=lambda x: x["complexity"], reverse=True)}
 
 
 @app.get("/reports/structure")
@@ -433,7 +557,7 @@ async def get_node_details(node_id: str):
                     return nodes[item].get('id')
                 raise ValueError("Invalid link data")
             except Exception as e:
-                logger.error(f"Failed to extract ID: {str(e)}")
+                # logger.error(f"Failed to extract ID: {str(e)}")
                 return None
         
         for link in links:
@@ -446,7 +570,7 @@ async def get_node_details(node_id: str):
                 if str(target_id) == str(node_id):
                     incoming_links.append(link)
             except Exception as e:
-                logger.error(f"Error processing link: {e}")
+                # logger.error(f"Error processing link: {e}")
                 continue
         
         file_path = None
@@ -470,9 +594,9 @@ async def get_node_details(node_id: str):
         }
                 
     except Exception as e:
-        logger.error(f"\nERROR: {str(e)}")
+        # logger.error(f"\nERROR: {str(e)}")
         tb = traceback.format_exc()
-        logger.debug(f"Traceback:\n{tb}")
+        # logger.debug(f"Traceback:\n{tb}")
         return JSONResponse(
             status_code=500, 
             content={"detail": f"Error fetching node details: {str(e)}"}
@@ -521,182 +645,846 @@ async def generate_report(
 
     raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
 
+detailed_metrics_router = APIRouter(prefix="/api/detailed-metrics", tags=["detailed_metrics"])
+
+@detailed_metrics_router.get("/", response_model=DetailedAnalysisResponse)
+async def get_detailed_metrics(
+    directory: str = Query(".", description="Directory to analyze"),
+    max_depth: int = Query(1, description="Maximum depth for dependency analysis")
+):
+    """
+    Get comprehensive detailed metrics for the entire codebase.
+    Returns raw metrics for all files, functions, classes, and dependencies.
+    """
+    target_dir = Path(directory).resolve()  
+    
+    from treeline.dependency_analyzer import ModuleDependencyAnalyzer
+    from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+    
+    dep_analyzer = ModuleDependencyAnalyzer()
+    code_analyzer = EnhancedCodeAnalyzer()
+    
+    dep_analyzer.analyze_directory(target_dir)
+    file_results = code_analyzer.analyze_directory(target_dir)
+    
+    files_data = {}
+    issues_summary = defaultdict(int)
+    
+    for category, issues in code_analyzer.quality_issues.items():
+        for issue in issues:
+            if isinstance(issue, dict) and 'file_path' in issue:
+                file_path = issue['file_path']
+                if file_path not in files_data:
+                    files_data[file_path] = {
+                        "path": file_path,
+                        "lines": 0,
+                        "functions": [],
+                        "classes": [],
+                        "imports": [],
+                        "issues_by_category": defaultdict(list),
+                        "metrics_summary": {}
+                    }
+                
+                files_data[file_path]["issues_by_category"][category].append(issue)
+                issues_summary[category] += 1
+    
+    for result in file_results:
+        if result["type"] == "function":
+            file_path = result.get("file_path", "unknown")
+            if file_path not in files_data:
+                files_data[file_path] = {
+                    "path": file_path,
+                    "lines": 0,
+                    "functions": [],
+                    "classes": [],
+                    "imports": [],
+                    "issues_by_category": defaultdict(list),
+                    "metrics_summary": {}
+                }
+            
+            function_detail = {
+                "name": result["name"],
+                "line": result["line"],
+                "lines": result["metrics"].get("lines", 0),
+                "params": result["metrics"].get("params", 0),
+                "complexity": result["metrics"].get("complexity", 0),
+                "cognitive_complexity": result["metrics"].get("cognitive_complexity", 0),
+                "nested_depth": result["metrics"].get("nested_depth", 0),
+                "has_docstring": result["docstring"] is not None,
+                "docstring_length": len(result["docstring"] or ""),
+                "maintainability_index": result["metrics"].get("maintainability_index", 0),
+                "cognitive_load": result["metrics"].get("cognitive_load", 0),
+                "code_smells": result.get("code_smells", [])
+            }
+            
+            files_data[file_path]["functions"].append(function_detail)
+            
+        elif result["type"] == "class":
+            file_path = result.get("file_path", "unknown")
+            if file_path not in files_data:
+                files_data[file_path] = {
+                    "path": file_path,
+                    "lines": 0,
+                    "functions": [],
+                    "classes": [],
+                    "imports": [],
+                    "issues_by_category": defaultdict(list),
+                    "metrics_summary": {}
+                }
+            
+            class_methods = []
+            if "methods" in result:
+                for method_name, method_info in result["methods"].items():
+                    method_detail = {
+                        "name": method_name,
+                        "line": method_info.get("line", 0),
+                        "lines": method_info.get("lines", 0),
+                        "params": method_info.get("params", 0),
+                        "complexity": method_info.get("complexity", 0),
+                        "code_smells": []  
+                    }
+                    class_methods.append(method_detail)
+            
+            class_detail = {
+                "name": result["name"],
+                "line": result["line"],
+                "lines": result["metrics"].get("lines", 0),
+                "method_count": result["metrics"].get("methods", 0),
+                "public_methods": result["metrics"].get("public_methods", 0),
+                "private_methods": result["metrics"].get("private_methods", 0),
+                "complexity": result["metrics"].get("complexity", 0),
+                "inheritance_depth": result["metrics"].get("inheritance_depth", 0),
+                "has_docstring": result["docstring"] is not None,
+                "docstring_length": len(result["docstring"] or ""),
+                "code_smells": result.get("code_smells", []),
+                "methods": class_methods
+            }
+            
+            files_data[file_path]["classes"].append(class_detail)
+    
+    for file_path in files_data:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                files_data[file_path]["lines"] = len(f.readlines())
+        except (UnicodeDecodeError, IOError, FileNotFoundError) as e:
+            files_data[file_path]["lines"] = 0
+            if "issues_by_category" not in files_data[file_path]:
+                files_data[file_path]["issues_by_category"] = {}
+            if "file" not in files_data[file_path]["issues_by_category"]:
+                files_data[file_path]["issues_by_category"]["file"] = []
+            
+            files_data[file_path]["issues_by_category"]["file"].append({
+                "description": f"Could not read file: {str(e)}",
+                "file_path": file_path,
+                "line": None
+            })
+    
+    nodes, links = dep_analyzer.get_graph_data()
+    
+    entry_points = dep_analyzer.get_entry_points()
+    core_components = dep_analyzer.get_core_components()
+    
+    for module, imports in dep_analyzer.module_imports.items():
+        for file_path, file_data in files_data.items():
+            if module in file_path or os.path.basename(file_path).replace('.py', '') == module:
+                file_data["imports"] = list(imports)
+    
+    total_functions = sum(len(file_data["functions"]) for file_data in files_data.values())
+    total_classes = sum(len(file_data["classes"]) for file_data in files_data.values())
+    total_lines = sum(file_data["lines"] for file_data in files_data.values())
+    
+    complexity_values = [func["complexity"] for file_data in files_data.values() 
+                         for func in file_data["functions"] if "complexity" in func]
+    
+    avg_complexity = sum(complexity_values) / len(complexity_values) if complexity_values else 0
+    max_complexity = max(complexity_values) if complexity_values else 0
+    
+    project_metrics = {
+        "total_files": len(files_data),
+        "total_functions": total_functions,
+        "total_classes": total_classes,
+        "total_lines": total_lines,
+        "avg_complexity": round(avg_complexity, 2),
+        "complex_functions_count": len(dep_analyzer.complex_functions),
+        "max_complexity": max_complexity
+    }
+    
+    dependency_counts = [len(deps) for deps in dep_analyzer.module_imports.values()]
+    avg_dependencies = sum(dependency_counts) / len(dependency_counts) if dependency_counts else 0
+    max_dependencies = max(dependency_counts) if dependency_counts else 0
+    
+    dependency_metrics = {
+        "entry_points": entry_points,
+        "core_components": core_components,
+        "nodes": len(nodes),
+        "links": len(links),
+        "avg_dependencies": round(avg_dependencies, 2),
+        "max_dependencies": max_dependencies
+    }
+    
+    for file_path, file_data in files_data.items():
+        if isinstance(file_data["issues_by_category"], defaultdict):
+            file_data["issues_by_category"] = dict(file_data["issues_by_category"])
+    
+    return {
+        "files": files_data,
+        "project_metrics": project_metrics,
+        "dependency_metrics": dependency_metrics,
+        "issues_summary": dict(issues_summary)
+    }
+
+@app.get("/project-metrics")
+async def get_project_metrics():
+    """Return project-wide metrics dashboard data"""
+    try:
+        try:
+            with open(".treeline_dir", "r") as f:
+                target_dir = Path(f.read().strip()).resolve()
+        except FileNotFoundError:
+            target_dir = Path(".").resolve()
+            
+        dependency_analyzer, enhanced_analyzer = analyze_directory(target_dir)
+        
+        files_analyzed = list(target_dir.rglob("*.py"))
+        
+        complexity_values = []
+        for file_path in files_analyzed:
+            file_results = enhanced_analyzer.analyze_file(file_path)
+            for result in file_results:
+                if result.get("type") == "function" and "metrics" in result:
+                    if "complexity" in result["metrics"]:
+                        complexity_values.append(result["metrics"]["complexity"])
+        
+        return {
+            "total_files": len(files_analyzed),
+            "total_issues": sum(len(issues) for issues in enhanced_analyzer.quality_issues.values()),
+            "avg_complexity": sum(complexity_values) / len(complexity_values) if complexity_values else 0,
+            "max_complexity": max(complexity_values) if complexity_values else 0,
+            "issues_by_category": {
+                category: len(issues) for category, issues in enhanced_analyzer.quality_issues.items()
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating project metrics: {str(e)}")
+    
+@detailed_metrics_router.get("/file/{file_path:path}", response_model=FileMetricsDetail)
+async def get_file_detailed_metrics(
+    file_path: str = Path(description="File path to analyze")
+):
+    """
+    Get detailed metrics for a specific file.
+    """
+    target_file = Path(file_path).resolve()
+    
+    if not target_file.exists() or not target_file.is_file():
+        raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+    
+    from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+    
+    code_analyzer = EnhancedCodeAnalyzer()
+    
+    file_results = code_analyzer.analyze_file(target_file)
+    
+    functions = []
+    classes = []
+    issues_by_category = defaultdict(list)
+    
+    file_path_str = str(target_file)
+    for category, issues in code_analyzer.quality_issues.items():
+        for issue in issues:
+            if isinstance(issue, dict) and issue.get('file_path') == file_path_str:
+                issues_by_category[category].append(issue)
+    
+    for result in file_results:
+        if result["type"] == "function":
+            function_detail = {
+                "name": result["name"],
+                "line": result["line"],
+                "lines": result["metrics"].get("lines", 0),
+                "params": result["metrics"].get("params", 0),
+                "complexity": result["metrics"].get("complexity", 0),
+                "cognitive_complexity": result["metrics"].get("cognitive_complexity", 0),
+                "nested_depth": result["metrics"].get("nested_depth", 0),
+                "has_docstring": result["docstring"] is not None,
+                "docstring_length": len(result["docstring"] or ""),
+                "maintainability_index": result["metrics"].get("maintainability_index", 0),
+                "cognitive_load": result["metrics"].get("cognitive_load", 0),
+                "code_smells": result.get("code_smells", [])
+            }
+            functions.append(function_detail)
+            
+        elif result["type"] == "class":
+            class_methods = []
+            if "methods" in result:
+                for method_name, method_info in result["methods"].items():
+                    method_detail = {
+                        "name": method_name,
+                        "line": method_info.get("line", 0),
+                        "lines": method_info.get("lines", 0),
+                        "params": method_info.get("params", 0),
+                        "complexity": method_info.get("complexity", 0),
+                        "code_smells": []
+                    }
+                    class_methods.append(method_detail)
+            
+            class_detail = {
+                "name": result["name"],
+                "line": result["line"],
+                "lines": result["metrics"].get("lines", 0),
+                "method_count": result["metrics"].get("methods", 0),
+                "public_methods": result["metrics"].get("public_methods", 0),
+                "private_methods": result["metrics"].get("private_methods", 0),
+                "complexity": result["metrics"].get("complexity", 0),
+                "inheritance_depth": result["metrics"].get("inheritance_depth", 0),
+                "has_docstring": result["docstring"] is not None,
+                "docstring_length": len(result["docstring"] or ""),
+                "code_smells": result.get("code_smells", []),
+                "methods": class_methods
+            }
+            classes.append(class_detail)
+    
+    line_count = 0
+    imports = []
+    
+    try:
+        with open(target_file, 'r', encoding='utf-8') as f:
+            content = f.readlines()
+            line_count = len(content)
+            
+            for line in content:
+                if line.strip().startswith(('import ', 'from ')):
+                    imports.append(line.strip())
+    except Exception as e:
+        issues_by_category["file"].append({
+            "description": f"Could not read file: {str(e)}",
+            "file_path": file_path_str,
+            "line": None
+        })
+    
+    metrics_summary = {
+        "lines": line_count,
+        "functions": len(functions),
+        "classes": len(classes),
+        "imports": len(imports),
+        "issues": sum(len(issues) for issues in issues_by_category.values()),
+        "complexity": sum(func["complexity"] for func in functions),
+        "avg_function_complexity": sum(func["complexity"] for func in functions) / len(functions) if functions else 0,
+    }
+    
+    return {
+        "path": file_path_str,
+        "lines": line_count,
+        "functions": functions,
+        "classes": classes,
+        "imports": imports,
+        "issues_by_category": dict(issues_by_category),
+        "metrics_summary": metrics_summary
+    }
+
+@detailed_metrics_router.get("/complexity-breakdown", response_model=Dict[str, Union[ComplexityBreakdown, Dict[str, ComplexityBreakdown]]])
+async def get_complexity_breakdown(
+    directory: str = Query(".", description="Directory to analyze"),
+    by_file: bool = Query(False, description="Break down complexity by file")
+):
+    """
+    Get a detailed breakdown of what contributes to complexity in the codebase.
+    """
+    target_dir = Path(directory).resolve()
+    
+    # simple version first
+    
+    import ast
+    from collections import Counter
+    
+    class ComplexityBreakdownAnalyzer(ast.NodeVisitor):
+        def __init__(self):
+            self.breakdown = Counter()
+            
+        def visit_If(self, node):
+            self.breakdown['if_statements'] += 1
+            self.generic_visit(node)
+            
+        def visit_For(self, node):
+            self.breakdown['for_loops'] += 1
+            self.generic_visit(node)
+            
+        def visit_While(self, node):
+            self.breakdown['while_loops'] += 1
+            self.generic_visit(node)
+            
+        def visit_Try(self, node):
+            self.breakdown['try_blocks'] += 1
+            self.generic_visit(node)
+            
+        def visit_ExceptHandler(self, node):
+            self.breakdown['except_blocks'] += 1
+            self.generic_visit(node)
+            
+        def visit_BoolOp(self, node):
+            if isinstance(node.op, ast.And):
+                self.breakdown['and_operations'] += len(node.values) - 1
+                self.breakdown['boolean_operations'] += len(node.values) - 1
+            elif isinstance(node.op, ast.Or):
+                self.breakdown['or_operations'] += len(node.values) - 1
+                self.breakdown['boolean_operations'] += len(node.values) - 1
+            self.generic_visit(node)
+            
+        def visit_ListComp(self, node):
+            self.breakdown['list_comprehensions'] += 1
+            self.breakdown['comprehensions'] += 1
+            self.generic_visit(node)
+            
+        def visit_DictComp(self, node):
+            self.breakdown['dict_comprehensions'] += 1
+            self.breakdown['comprehensions'] += 1
+            self.generic_visit(node)
+            
+        def visit_SetComp(self, node):
+            self.breakdown['set_comprehensions'] += 1
+            self.breakdown['comprehensions'] += 1
+            self.generic_visit(node)
+            
+        def visit_GeneratorExp(self, node):
+            self.breakdown['generator_expressions'] += 1
+            self.generic_visit(node)
+            
+        def visit_Lambda(self, node):
+            self.breakdown['lambda_functions'] += 1
+            self.generic_visit(node)
+            
+        def visit_FunctionDef(self, node):
+            parent = getattr(node, 'parent', None)
+            if parent and isinstance(parent, ast.FunctionDef):
+                self.breakdown['nested_functions'] += 1
+            self.generic_visit(node)
+            
+        def visit_ClassDef(self, node):
+            parent = getattr(node, 'parent', None)
+            if parent and isinstance(parent, ast.ClassDef):
+                self.breakdown['nested_classes'] += 1
+            self.generic_visit(node)
+    
+    total_breakdown = Counter()
+    file_breakdowns = {}
+    
+    for file_path in target_dir.rglob("*.py"):
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            tree = ast.parse(content)
+            
+            for parent in ast.walk(tree):
+                for child in ast.iter_child_nodes(parent):
+                    child.parent = parent
+            
+            analyzer = ComplexityBreakdownAnalyzer()
+            analyzer.visit(tree)
+            
+            total_breakdown.update(analyzer.breakdown)
+            
+            if by_file:
+                rel_path = file_path.relative_to(target_dir)
+                file_breakdowns[str(rel_path)] = dict(analyzer.breakdown)
+                
+        except Exception as e:
+            print(f"Error analyzing {file_path}: {e}")
+    
+    if by_file:
+        return {
+            "total": dict(total_breakdown),
+            "by_file": file_breakdowns
+        }
+    
+    return {"total": dict(total_breakdown)}
+
+@detailed_metrics_router.get("/dependency-graph")
+async def get_detailed_dependency_graph(
+    directory: str = Query(".", description="Directory to analyze"),
+    include_details: bool = Query(False, description="Include detailed node information")
+):
+    """
+    Get detailed dependency graph including all connections between modules, classes, and functions.
+    """
+    target_dir = Path(directory).resolve()
+    
+    from treeline.dependency_analyzer import ModuleDependencyAnalyzer
+    
+    dep_analyzer = ModuleDependencyAnalyzer()
+    
+    dep_analyzer.analyze_directory(target_dir)
+    
+    nodes, links = dep_analyzer.get_graph_data()
+    
+    if include_details:
+        for node in nodes:
+            if node["type"] == "module":
+                node["metrics"] = dep_analyzer.module_metrics.get(node["name"], {})
+                
+                node["functions"] = []
+                node["classes"] = []
+                
+                for func_name, location in dep_analyzer.function_locations.items():
+                    if isinstance(location, dict) and location.get("module") == node["name"]:
+                        node["functions"].append({
+                            "name": func_name,
+                            "line": location.get("line", 0),
+                            "file": location.get("file", "")
+                        })
+                
+                for module_name, classes in dep_analyzer.class_info.items():
+                    if module_name == node["name"]:
+                        for class_name, info in classes.items():
+                            node["classes"].append({
+                                "name": class_name,
+                                "line": info.get("line", 0),
+                                "file": info.get("file", ""),
+                                "methods": list(info.get("methods", {}).keys())
+                            })
+    
+    return {
+        "nodes": nodes,
+        "links": links,
+        "entry_points": dep_analyzer.get_entry_points(),
+        "core_components": dep_analyzer.get_core_components(),
+        # Cycles detection would require additional code
+        "cycles": [],
+        "module_metrics": dep_analyzer.module_metrics
+    }
+
+@detailed_metrics_router.get("/issues-by-category")
+async def get_issues_by_category(
+    directory: str = Query(".", description="Directory to analyze")
+):
+    """
+    Get all quality issues grouped by category with detailed information.
+    """
+    target_dir = Path(directory).resolve()
+    
+    from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
+    
+    code_analyzer = EnhancedCodeAnalyzer()
+    
+    code_analyzer.analyze_directory(target_dir)
+    
+    issues_by_category = {}
+    
+    for category, issues in code_analyzer.quality_issues.items():
+        if issues:
+            issues_by_category[category] = issues
+    
+    file_issues_count = {}
+    
+    for category, issues in code_analyzer.quality_issues.items():
+        for issue in issues:
+            if isinstance(issue, dict) and 'file_path' in issue:
+                file_path = issue['file_path']
+                if file_path not in file_issues_count:
+                    file_issues_count[file_path] = defaultdict(int)
+                file_issues_count[file_path][category] += 1
+    
+    files_with_most_issues = sorted(
+        [(file_path, sum(counts.values())) for file_path, counts in file_issues_count.items()],
+        key=lambda x: x[1],
+        reverse=True
+    )[:10]
+    
+    return {
+        "issues_by_category": issues_by_category,
+        "total_issues": sum(len(issues) for issues in code_analyzer.quality_issues.values()),
+        "files_with_most_issues": [
+            {"file_path": file_path, "issue_count": count} 
+            for file_path, count in files_with_most_issues
+        ],
+        "category_counts": {
+            category: len(issues) for category, issues in code_analyzer.quality_issues.items()
+        }
+    }
+
+@app.get("/api/analyze/{path:path}", response_model=MetricsResponse)
+async def analyze_path(path: str):
+    """
+    Analyze a directory or file for code quality metrics
+    
+    Args:
+        path: Path to analyze (directory or file)
+        
+    Returns:
+        Comprehensive metrics analysis
+    """
+    try:
+        target_path = Path(path).resolve()
+        
+        if not target_path.exists():
+            raise HTTPException(status_code=404, detail=f"Path not found: {path}")
+        
+        cache_key = str(target_path)
+        if cache_key in results_cache:
+            logger.info(f"Using cached results for {cache_key}")
+            return results_cache[cache_key]
+        
+        code_analyzer = EnhancedCodeAnalyzer()
+        metrics_aggregator = MetricsAggregator()
+        
+        if target_path.is_dir():
+            logger.info(f"Analyzing directory: {target_path}")
+            
+            python_files = list(target_path.rglob("*.py"))
+            
+            file_results = []
+            with ProcessPoolExecutor(max_workers=min(8, len(python_files))) as executor:
+                futures = [executor.submit(analyze_file_wrapper, f, code_analyzer) for f in python_files]
+                for future in futures:
+                    result = future.result()
+                    if result:
+                        file_results.extend(result)
+                        
+            for file_path in python_files:
+                metrics_aggregator.analyze_file(file_path)
+                
+        else:  
+            logger.info(f"Analyzing file: {target_path}")
+            if target_path.suffix.lower() != '.py':
+                raise HTTPException(status_code=400, detail="Only Python files can be analyzed")
+                
+            file_results = code_analyzer.analyze_file(target_path)
+            metrics_aggregator.analyze_file(target_path)
+        
+        files_data = {}
+        issues_summary = defaultdict(int)
+        
+        for category, issues in code_analyzer.quality_issues.items():
+            for issue in issues:
+                if isinstance(issue, dict) and 'file_path' in issue:
+                    file_path = issue['file_path']
+                    if file_path not in files_data:
+                        files_data[file_path] = {
+                            "file_path": file_path,
+                            "lines": 0,
+                            "functions": [],
+                            "classes": [],
+                            "issues": defaultdict(list),
+                            "metrics_summary": {}
+                        }
+                    
+                    files_data[file_path]["issues"][category].append(issue)
+                    issues_summary[category] += 1
+        
+        for result in file_results:
+            file_path = getattr(result, 'file_path', None) or result.get('file_path', 'unknown')
+            
+            if file_path not in files_data:
+                files_data[file_path] = {
+                    "file_path": file_path,
+                    "lines": 0,
+                    "functions": [],
+                    "classes": [],
+                    "issues": defaultdict(list),
+                    "metrics_summary": {}
+                }
+            
+            if result.get("type") == "function":
+                function_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                files_data[file_path]["functions"].append(function_detail)
+                
+            elif result.get("type") == "class":
+                class_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                files_data[file_path]["classes"].append(class_detail)
+        
+        for file_path in files_data:
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    line_count = len(f.readlines())
+                    files_data[file_path]["lines"] = line_count
+            except Exception as e:
+                logger.error(f"Error reading file {file_path}: {str(e)}")
+                files_data[file_path]["lines"] = 0
+                files_data[file_path]["issues"]["file"].append({
+                    "description": f"Could not read file: {str(e)}",
+                    "file_path": file_path,
+                    "line": None
+                })
+        
+        total_files = len(files_data)
+        total_functions = sum(len(file_data["functions"]) for file_data in files_data.values())
+        total_classes = sum(len(file_data["classes"]) for file_data in files_data.values())
+        total_lines = sum(file_data["lines"] for file_data in files_data.values())
+        total_issues = sum(len(issues) for file_data in files_data.values() 
+                          for issues in file_data["issues"].values())
+        
+        complexity_values = []
+        for file_data in files_data.values():
+            for func in file_data["functions"]:
+                if "metrics" in func and "complexity" in func["metrics"]:
+                    complexity_values.append(func["metrics"]["complexity"])
+        
+        avg_complexity = sum(complexity_values) / len(complexity_values) if complexity_values else 0
+        max_complexity = max(complexity_values) if complexity_values else 0
+        
+        project_metrics = {
+            "total_files": total_files,
+            "total_functions": total_functions,
+            "total_classes": total_classes,
+            "total_issues": total_issues,
+            "avg_complexity": round(avg_complexity, 2),
+            "max_complexity": max_complexity,
+            "total_lines": total_lines
+        }
+        
+        for file_path, file_data in files_data.items():
+            if isinstance(file_data["issues"], defaultdict):
+                file_data["issues"] = dict(file_data["issues"])
+        
+        issues_summary = dict(issues_summary)
+        
+        response = {
+            "files": files_data,
+            "project_metrics": project_metrics,
+            "issues_summary": issues_summary
+        }
+        
+        results_cache[cache_key] = response
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"Error in analyze_path: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing path: {str(e)}")
+
+@app.get("/api/metrics/file/{file_path:path}")
+async def get_file_metrics(file_path: str):
+    """
+    Get detailed metrics for a specific file
+    
+    Args:
+        file_path: Path to the file
+        
+    Returns:
+        Detailed metrics for the file
+    """
+    try:
+        target_file = Path(file_path).resolve()
+        
+        if not target_file.exists():
+            raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
+            
+        if target_file.suffix.lower() != '.py':
+            raise HTTPException(status_code=400, detail="Only Python files can be analyzed")
+        
+        code_analyzer = EnhancedCodeAnalyzer()
+        metrics_aggregator = MetricsAggregator()
+        
+        file_results = code_analyzer.analyze_file(target_file)
+        metrics_aggregator.analyze_file(target_file)
+        
+        functions = []
+        classes = []
+        
+        for result in file_results:
+            if result["type"] == "function":
+                function_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                functions.append(function_detail)
+                
+            elif result["type"] == "class":
+                class_detail = {
+                    "name": result["name"],
+                    "line": result["line"],
+                    "metrics": result["metrics"],
+                    "code_smells": result.get("code_smells", [])
+                }
+                classes.append(class_detail)
+        
+        issues_by_category = defaultdict(list)
+        for category, issues in code_analyzer.quality_issues.items():
+            for issue in issues:
+                if isinstance(issue, dict) and issue.get('file_path') == str(target_file):
+                    issues_by_category[category].append(issue)
+        
+        try:
+            with open(target_file, 'r', encoding='utf-8') as f:
+                line_count = len(f.readlines())
+        except Exception as e:
+            logger.error(f"Error reading file {target_file}: {str(e)}")
+            line_count = 0
+            issues_by_category["file"].append({
+                "description": f"Could not read file: {str(e)}",
+                "file_path": str(target_file),
+                "line": None
+            })
+        
+        metrics_summary = {
+            "lines": line_count,
+            "functions": len(functions),
+            "classes": len(classes),
+            "complexity": sum(func["metrics"].get("complexity", 0) for func in functions),
+            "issues": sum(len(issues) for issues in issues_by_category.values()),
+        }
+        
+        if functions:
+            metrics_summary["avg_function_complexity"] = metrics_summary["complexity"] / len(functions)
+        
+        return {
+            "file_path": str(target_file),
+            "lines": line_count,
+            "functions": functions,
+            "classes": classes,
+            "issues": dict(issues_by_category),
+            "metrics_summary": metrics_summary
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        logger.error(f"Error in get_file_metrics: {str(e)}\n{tb}")
+        raise HTTPException(status_code=500, detail=f"Error analyzing file: {str(e)}")
+
+@app.get("/api/metrics/thresholds")
+async def get_metrics_thresholds():
+    """Get the metrics thresholds used for quality checks"""
+    try:
+        metrics_aggregator = MetricsAggregator()
+        return {"thresholds": metrics_aggregator.thresholds}
+    except Exception as e:
+        logger.error(f"Error in get_metrics_thresholds: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting thresholds: {str(e)}")
+
+@app.get("/api/clear-cache")
+async def clear_cache():
+    """Clear the cached analysis results"""
+    global results_cache
+    results_cache = {}
+    return {"message": "Cache cleared successfully"}
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
     error_detail = str(exc)
-    logger.error(f"ERROR: {error_detail}")
+    # logger.error(f"ERROR: {error_detail}")
     traceback_str = traceback.format_exc()
-    logger.debug(f"Traceback:\n{traceback_str}")
+    # logger.debug(f"Traceback:\n{traceback_str}")
     
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal server error occurred. Please try again later."}
     )
-========================================
-File: ./models/dependency_analyzer.py
-========================================
-from dataclasses import dataclass
 
-from ..type_checker import TypeChecked
+app.include_router(detailed_metrics_router)
 
-
-@dataclass
-class FunctionLocation(TypeChecked):
-    module: str
-    file: str
-    line: int
-
-
-@dataclass
-class FunctionCallInfo(TypeChecked):
-    from_module: str
-    from_function: str
-    line: int
-
-
-@dataclass
-class ClassMethod(TypeChecked):
-    line: int
-    calls: list[str]
-
-
-@dataclass
-class ClassInfo(TypeChecked):
-    module: str
-    file: str
-    line: int
-    methods: dict[str, ClassMethod]
-
-
-@dataclass
-class ModuleMetrics(TypeChecked):
-    functions: int
-    classes: int
-    complexity: int
-
-
-@dataclass
-class ComplexFunction(TypeChecked):
-    module: str
-    name: str
-    complexity: int
-
-
-@dataclass
-class MethodInfo(TypeChecked):
-    line: int
-    calls: list[str]
-
-
-@dataclass
-class Node:
-    id: int
-    name: str
-    type: str
-    metrics: dict = None
-    code_smells: list = None
-
-    def __post_init__(self):
-        if self.metrics is None:
-            self.metrics = {}
-        if self.code_smells is None:
-            self.code_smells = []
-
-
-@dataclass
-class Link:
-    source: int
-    target: int
-    type: str
-
-
-@dataclass
-class GraphData(TypeChecked):
-    nodes: list[Node]
-    links: list[Link]
-
-========================================
-File: ./checkers/code_smells.py
-========================================
-import ast
-from collections import defaultdict
-from pathlib import Path
-from typing import Dict
-
-from treeline.models.enhanced_analyzer import QualityIssue
-
-class CodeSmellChecker:
-    def __init__(self, config: Dict = None):
-        self.config = config or {}
-        self.max_params = self.config.get("MAX_PARAMS", 5)
-
-    def check(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
-        self._check_magic_numbers(tree, file_path, quality_issues)
-        self._check_long_parameter_lists(tree, file_path, quality_issues)
-
-    def _check_magic_numbers(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
-                quality_issues["code_smells"].append(QualityIssue(
-                    description="Magic number detected",
-                    file_path=str(file_path),
-                    line=node.lineno
-                ).__dict__)
-
-    def _check_long_parameter_lists(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
-        for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef) and len(node.args.args) > self.max_params:
-                quality_issues["code_smells"].append(QualityIssue(
-                    description=f"Function has too many parameters (>{self.max_params})",
-                    file_path=str(file_path),
-                    line=node.lineno
-                ).__dict__)
-========================================
-File: ./checkers/security.py
-========================================
-import ast
-from collections import defaultdict
-from pathlib import Path
-from typing import Dict
-
-from treeline.models.enhanced_analyzer import QualityIssue
-
-class SecurityAnalyzer:
-    def __init__(self, config: Dict = None):
-        self.config = config or {}
-
-    def check(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
-        self._check_hardcoded_credentials(tree, file_path, quality_issues)
-
-    def _check_hardcoded_credentials(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) and any(kw in node.value.lower() for kw in ["password", "key", "secret"]):
-                quality_issues["security"].append(QualityIssue(
-                    description="Possible hardcoded credential",
-                    file_path=str(file_path),
-                    line=node.lineno
-                ).__dict__)
-========================================
-File: ./checkers/sql_injection.py
-========================================
-from collections import defaultdict
-from pathlib import Path
-import ast
-from typing import Dict
-
-class SQLInjectionChecker:
-    def __init__(self, config: Dict = None):
-        self.config = config or {}
-
-    def check(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
-        for node in ast.walk(tree):
-            if (isinstance(node, ast.Call) and 
-                isinstance(node.func, ast.Attribute) and 
-                node.func.attr == "execute"):
-                if any(isinstance(arg, ast.Constant) and isinstance(arg.value, str) for arg in node.args):
-                    quality_issues["security"].append({
-                        "description": "Potential SQL injection risk",
-                        "file_path": str(file_path),
-                        "line": node.lineno
-                    })

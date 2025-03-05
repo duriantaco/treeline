@@ -3,14 +3,9 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from treeline.checkers.code_smells import CodeSmellChecker
-from treeline.checkers.complexity import ComplexityAnalyzer
-from treeline.checkers.duplication import DuplicationDetector
-from treeline.checkers.security import SecurityAnalyzer
+
 from treeline.models.enhanced_analyzer import QualityIssue
-from treeline.checkers.magic_numbers import MagicNumberChecker
-from treeline.checkers.sql_injection import SQLInjectionChecker
-from treeline.checkers.style_checker import StyleChecker
+from treeline.aggregator.metrics import MetricsAggregator
 
 class EnhancedCodeAnalyzer:
     def __init__(self, show_params: bool = True, config: Dict = None):
@@ -18,13 +13,8 @@ class EnhancedCodeAnalyzer:
         self.quality_issues = defaultdict(list)
         self.metrics_summary = defaultdict(dict)
         self.config = config or {}
-        self.code_smell_checker = CodeSmellChecker(self.config)
-        self.complexity_analyzer = ComplexityAnalyzer(self.config)
-        self.security_analyzer = SecurityAnalyzer(self.config)
-        self.duplication_detector = DuplicationDetector(self.config)
-        self.magic_number_checker = MagicNumberChecker(self.config)
-        self.sql_injection_checker = SQLInjectionChecker(self.config)
-        self.style_checker = StyleChecker(self.config)
+        
+        self.metrics_aggregator = MetricsAggregator(self.config)
 
     def analyze_file(self, file_path: Path) -> List[Dict]:
         """Analyze a file for code quality issues and structure"""
@@ -37,36 +27,6 @@ class EnhancedCodeAnalyzer:
             if not tree:
                 return []
 
-            # try:
-            #     self.code_smell_checker.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in code smell checker for {file_path}: {e}")
-                
-            # try:
-            #     self.complexity_analyzer.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in complexity analyzer for {file_path}: {e}")
-                
-            # try:
-            #     self.security_analyzer.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in security analyzer for {file_path}: {e}")
-                
-            # try:
-            #     self.magic_number_checker.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in magic number checker for {file_path}: {e}")
-                
-            # try:
-            #     self.sql_injection_checker.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in SQL injection checker for {file_path}: {e}")
-
-            # try:
-            #     self.style_checker.check(file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in style checker for {file_path}: {e}")
-
             results = self._analyze_code_elements(tree, content, file_path)
             
             for result in results:
@@ -77,7 +37,6 @@ class EnhancedCodeAnalyzer:
             
             return results
         except Exception as e:
-            print(f"Error analyzing file {file_path}: {e}")
             return []
 
     def _add_file_issues_to_elements(self, elements: List[Dict], file_path: Path):
@@ -126,7 +85,6 @@ class EnhancedCodeAnalyzer:
         results = []
         for file_path in directory.rglob("*.py"):
             results.extend(self.analyze_file(file_path))
-        self.duplication_detector.analyze_directory(directory, self.quality_issues)
         return results
 
     def generate_report(self) -> str:
@@ -159,18 +117,15 @@ class EnhancedCodeAnalyzer:
 
     def _analyze_code_elements(self, tree: ast.AST, content: str, file_path: Path) -> List[Dict]:
         results = []
-        
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                func_info = self._analyze_function(node, content)
-                self._add_quality_issues_to_element(func_info, node.lineno, file_path) 
+                func_info = self._analyze_function(node, content, file_path)  
+                self._add_quality_issues_to_element(func_info, node.lineno, file_path)
                 results.append(func_info)
-                
             elif isinstance(node, ast.ClassDef):
-                class_info = self._analyze_class(node, content)
+                class_info = self._analyze_class(node, content, file_path) 
                 self._add_quality_issues_to_element(class_info, node.lineno, file_path)
                 results.append(class_info)
-    
         return results
 
     def _add_quality_issues_to_element(self, element_info: Dict, line_number: int, file_path: Path):
@@ -191,40 +146,51 @@ class EnhancedCodeAnalyzer:
                         issue_text += f" (Line {issue.get('line')})"
                     element_info['code_smells'].append(issue_text)
 
-    def _analyze_function(self, node: ast.FunctionDef, content: str) -> Dict:
+    def _analyze_function(self, node: ast.FunctionDef, content: str, file_path: Path) -> Dict:        
         func_lines = content.splitlines()[node.lineno-1:node.end_lineno]
         line_count = len(func_lines)
         docstring = ast.get_docstring(node)
         param_count = len(node.args.args)
         complexity = self._calculate_complexity(node)
+        nested_depth = self._calculate_nested_depth(node)
+        returns = self._count_returns(node)
+        max_line_length = max(len(line.rstrip()) for line in func_lines) if func_lines else 0
+        doc_length = len(docstring) if docstring else 0
         
         return {
             "type": "function",
             "name": node.name,
             "line": node.lineno,
             "docstring": docstring,
+            "file_path": str(file_path),
             "metrics": {
                 "lines": line_count,
                 "params": param_count,
-                "complexity": complexity
+                "complexity": complexity,
+                "nested_depth": nested_depth,
+                "returns": returns,
+                "max_line_length": max_line_length,
+                "doc_length": doc_length,
             },
             "code_smells": []  
         }
 
-    def _analyze_class(self, node: ast.ClassDef, content: str) -> Dict:
+    def _analyze_class(self, node: ast.ClassDef, content: str, file_path: Path) -> Dict:
         class_lines = content.splitlines()[node.lineno-1:node.end_lineno]
         line_count = len(class_lines)
         docstring = ast.get_docstring(node)
         methods = [n.name for n in node.body if isinstance(n, ast.FunctionDef)]
+        methods_count = len(methods)
         
         return {
             "type": "class",
             "name": node.name,
             "line": node.lineno,
+            "file_path": str(file_path),
             "docstring": docstring,
             "metrics": {
                 "lines": line_count,
-                "methods": len(methods),
+                "methods_count": methods_count
             },
             "code_smells": []  
         }
@@ -238,3 +204,19 @@ class EnhancedCodeAnalyzer:
             elif isinstance(child, ast.BoolOp):
                 complexity += len(child.values) - 1
         return complexity
+    
+    def _calculate_nested_depth(self, node: ast.AST) -> int:
+        def walk_depth(current_node, current_depth):
+            max_depth = current_depth
+            for child in ast.iter_child_nodes(current_node):
+                if isinstance(child, (ast.If, ast.For, ast.While, ast.Try, ast.With)):
+                    child_depth = walk_depth(child, current_depth + 1)
+                    max_depth = max(max_depth, child_depth)
+                else:
+                    child_depth = walk_depth(child, current_depth)
+                    max_depth = max(max_depth, child_depth)
+            return max_depth
+        return walk_depth(node, 0)
+    
+    def _count_returns(self, node: ast.AST) -> int:
+        return sum(1 for child in ast.walk(node) if isinstance(child, ast.Return))

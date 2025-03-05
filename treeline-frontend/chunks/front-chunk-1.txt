@@ -1,0 +1,1120 @@
+================================================================================
+CHUNK 2 OF 5
+================================================================================
+
+========================================
+File: ./src/page/VisualizationPage.tsx
+========================================
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import * as d3 from 'd3';
+import { GraphData, CodeNode, CodeSmell } from '../types';
+import { fetchGraphData } from '../services/dataServices';
+import { debounce } from 'lodash';
+
+interface TreeNode {
+  id: string;
+  name: string;
+  children: TreeNode[];
+  [key: string]: any;
+}
+
+const VisualizationPage: React.FC = () => {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [data, setData] = useState<GraphData>({ nodes: [], links: [] });
+  const [isRadial, setIsRadial] = useState<boolean>(false);
+  const [isHierarchical, setIsHierarchical] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [width, setWidth] = useState<number>(window.innerWidth);
+  const [height, setHeight] = useState<number>(window.innerHeight);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  
+  const simulationRef = useRef<d3.Simulation<any, any> | null>(null);
+  const gRef = useRef<d3.Selection<SVGGElement, unknown, null, undefined> | null>(null);
+  const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null);
+  
+  const nodeDataByIdRef = useRef<Map<string, CodeNode>>(new Map());
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const getNodeSize = useCallback((node: CodeNode) => {
+    if (node.type === 'module') return 12;
+    if (node.type === 'class') return 10;
+    return 8;
+  }, []);
+
+  const getNodeFillColor = useCallback((node: CodeNode) => {
+    if (node.is_entry) return '#fbbf24';
+    if (node.metrics && (
+      (node.metrics.complexity && node.metrics.complexity > 10) ||
+      (node.metrics.cognitive_complexity && node.metrics.cognitive_complexity > 15) ||
+      (node.type === 'class' && node.metrics.complexity && node.metrics.complexity > 50)
+    )) return '#ef4444';
+    return '#fff';
+  }, []);
+  
+  const getNodeStrokeColor = useCallback((node: CodeNode) => {
+    if (node.type === 'module') return '#0284c7';
+    if (node.type === 'class') return '#0891b2';
+    return '#0d9488';
+  }, []);
+  
+  const getCategory = useCallback((smell: string | CodeSmell) => {
+    if (typeof smell === 'string') {
+      if (smell.startsWith('[')) {
+        const endIndex = smell.indexOf(']', 1);
+        if (endIndex !== -1) {
+          return smell.slice(1, endIndex).toLowerCase();
+        }
+      }
+      return 'unknown';
+    } else if (typeof smell === 'object' && smell.category) {
+      return smell.category.toLowerCase();
+    }
+    return 'unknown';
+  }, []);
+
+  const escapeHtml = (text: string) => {
+    return text.replace(/[&<>"']/g, (m) => {
+      switch (m) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        case "'": return '&#39;';
+        default: return m; 
+      }
+    });
+  };
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const graphData = await fetchGraphData();
+        
+        const nodeMap = new Map<string, CodeNode>();
+        graphData.nodes.forEach(node => {
+          nodeMap.set(node.id, node);
+        });
+        nodeDataByIdRef.current = nodeMap;
+        
+        setData(graphData);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading graph data:', err);
+        setError('Failed to load data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, []);
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setWidth(window.innerWidth);
+      setHeight(window.innerHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  const setHierarchicalLayout = () => {
+    setIsHierarchical(!isHierarchical);
+    
+    if (isHierarchical) {
+      if (simulationRef.current && gRef.current) {
+        gRef.current.transition().duration(750).attr('transform', '');
+        simulationRef.current.alpha(1).restart();
+      }
+      return;
+    }
+    
+    if (gRef.current && data.nodes.length > 0 && simulationRef.current) {
+      simulationRef.current.stop();
+      
+      const rootNodes = data.nodes.filter(n => n.type === 'module' && 
+        !data.links.some(l => l.type === 'contains' && 
+          (typeof l.target === 'object' ? l.target.id : l.target) === n.id
+        )
+      );
+      
+      function buildTree(node: CodeNode): TreeNode {
+        const children = data.links
+          .filter(l => l.type === 'contains' && 
+            (typeof l.source === 'object' ? l.source.id : l.source) === node.id
+          )
+          .map(l => {
+            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            return data.nodes.find(n => n.id === targetId) || {} as CodeNode;
+          });
+          
+        const result: TreeNode = {
+          id: node.id,
+          name: node.name,
+          children: children.map(buildTree)
+        };
+        
+        Object.keys(node).forEach(key => {
+          if (key !== 'id' && key !== 'name' && key !== 'children') {
+            result[key] = (node as any)[key];
+          }
+        });
+        
+        return result;
+      }
+      
+      
+      const hierarchicalData: TreeNode = { 
+        id: 'root', 
+        name: 'root', 
+        children: rootNodes.map(buildTree)
+      };
+      
+      const root = d3.hierarchy(hierarchicalData);
+      const treeLayout = d3.tree<TreeNode>().size([height * 3, width - 200]);
+      treeLayout(root);
+
+      root.descendants().forEach(d => {
+        if (!d.data.id) return;
+        const original = data.nodes.find(n => n.id === d.data.id);
+        if (original) {
+          original.x = d.y;
+          original.y = d.x;
+        }
+      });
+      
+      const nodeSelection = d3.select(svgRef.current)
+        .select('g')
+        .selectAll('.node');
+      
+      const linkSelection = d3.select(svgRef.current)
+        .select('g')
+        .selectAll('path');
+      
+      nodeSelection.transition()
+        .duration(750)
+        .attr('transform', d => `translate(${(d as any).x},${(d as any).y})`);
+      
+      linkSelection.transition()
+        .duration(750)
+        .attr('d', d => {
+          const source = typeof (d as any).source === 'object' ? (d as any).source : { x: 0, y: 0 };
+          const target = typeof (d as any).target === 'object' ? (d as any).target : { x: 0, y: 0 };
+          
+          if ((d as any).type === 'contains') {
+            return `M${source.x},${source.y}
+                    C${source.x},${(source.y + target.y) / 2}
+                    ${target.x},${(source.y + target.y) / 2}
+                    ${target.x},${target.y}`;
+          }
+          return `M${source.x},${source.y}L${target.x},${target.y}`;
+        });
+        
+      const bounds = {
+        left: Math.min(...data.nodes.map(n => n.x || 0)),
+        right: Math.max(...data.nodes.map(n => n.x || 0)),
+        top: Math.min(...data.nodes.map(n => n.y || 0)),
+        bottom: Math.max(...data.nodes.map(n => n.y || 0))
+      };
+      
+      const centerX = width / 2 - (bounds.left + (bounds.right - bounds.left) / 2);
+      const centerY = height / 2 - (bounds.top + (bounds.bottom - bounds.top) / 2);
+      
+      gRef.current.transition()
+        .duration(750)
+        .attr('transform', `translate(${centerX},${centerY})`);
+    }
+  };
+  
+  useEffect(() => {
+    if (!svgRef.current || data.nodes.length === 0) return;
+    
+    const svg = d3.select(svgRef.current)
+      .attr('width', width)
+      .attr('height', height);
+    
+    svg.selectAll('*').remove();
+    
+    const defs = svg.append('defs');
+    ['imports', 'contains', 'calls'].forEach(type => {
+      defs.append('marker')
+        .attr('id', `arrow-${type}`)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 15)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('fill', type === 'imports' ? '#7c3aed' : type === 'contains' ? '#059669' : '#ea580c')
+        .attr('d', 'M0,-5L10,0L0,5');
+    });
+    
+    const g = svg.append('g');
+    gRef.current = g;
+    
+    const zoom = d3.zoom<SVGSVGElement, unknown>()
+      .scaleExtent([0.1, 4])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform.toString());
+      });
+    
+    zoomRef.current = zoom;
+    svg.call(zoom);
+    
+    const tooltip = d3.select(containerRef.current)
+      .append('div')
+      .attr('class', 'absolute p-3 bg-white rounded-lg shadow-md pointer-events-none text-sm max-w-xs opacity-0 z-50')
+      .style('z-index', '1000');
+    
+
+    // const useCanvas = data.nodes.length > 1000;
+    // const ticksPerRender = data.nodes.length > 500 ? 10 : 1;
+    const initialAlphaDecay = data.nodes.length > 1000 ? 0.1 : 0.05;
+    const chargeStrength = Math.min(-400, -30000 / Math.sqrt(data.nodes.length));
+    
+
+    const simulation = d3.forceSimulation<any, any>()
+      .nodes(data.nodes)
+      .force('link', d3.forceLink().id((d: any) => d.id).distance(100).strength(0.5))
+      .force('charge', d3.forceManyBody().strength(chargeStrength).distanceMax(500))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(25))
+      .force('x', d3.forceX(width / 2).strength(0.05))
+      .force('y', d3.forceY(height / 2).strength(0.05))
+      .alphaDecay(initialAlphaDecay)
+      .velocityDecay(0.4);
+    
+    simulationRef.current = simulation;
+    
+    const linkSelection = g.append('g').selectAll('path')
+      .data(data.links)
+      .join('path')
+      .attr('class', d => `link link-${d.type}`)
+      .attr('marker-end', d => `url(#arrow-${d.type})`)
+      .attr('stroke-width', '1.5px')
+      .attr('fill', 'none')
+      .style('opacity', 0.7)
+      .style('stroke', d => {
+        if (d.type === 'imports') return '#7c3aed';
+        if (d.type === 'contains') return '#059669';
+        return '#ea580c';
+      });
+    
+    const nodeSelection = g.append('g').selectAll('.node')
+      .data(data.nodes)
+      .join('g')
+      .attr('class', d => `node node-${d.type}`)
+      .style('cursor', 'pointer');
+    
+    const dragBehavior = d3.drag<any, any>()
+      .on('start', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on('drag', (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on('end', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      });
+    
+    nodeSelection.call(dragBehavior);
+    
+    nodeSelection.append('rect')
+      .attr('class', 'text-background')
+      .attr('fill', 'white')
+      .attr('fill-opacity', 0.9)
+      .attr('rx', 3)
+      .attr('ry', 3);
+    
+    nodeSelection.append('circle')
+      .attr('r', getNodeSize)
+      .style('fill', getNodeFillColor)
+      .style('stroke', getNodeStrokeColor)
+      .style('stroke-width', '2px');
+    
+    nodeSelection.append('text')
+      .attr('dy', '.35em')
+      .attr('x', d => getNodeSize(d) + 8)
+      .attr('class', 'node-text')
+      .text(d => d.name)
+      .style('font', '12px "Segoe UI", sans-serif')
+      .style('font-weight', '500')
+      .style('text-anchor', 'start')
+      .style('fill', '#333')
+      .each(function() {
+        const bbox = (this as SVGTextElement).getBBox();
+        const parent = this.parentNode as Element;
+        d3.select(parent)
+          .select('rect.text-background')
+          .attr('x', bbox.x - 4)
+          .attr('y', bbox.y - 2)
+          .attr('width', bbox.width + 8)
+          .attr('height', bbox.height + 4);
+      });
+    
+    nodeSelection.on('mouseover', function(event, d) {
+      const connections = data.links.filter(l => 
+        (typeof l.source === 'object' ? l.source.id : l.source) === d.id || 
+        (typeof l.target === 'object' ? l.target.id : l.target) === d.id
+      );
+      
+      let tooltipContent = `<strong>${escapeHtml(d.name)}</strong> <span style="color: #666;">(${escapeHtml(d.type)})</span><br>`; 
+
+      const hasQualityIssues = d.code_smells && d.code_smells.length > 0;
+      const hasComplexity = d.metrics && (
+        (d.metrics.complexity && d.metrics.complexity > 10) || 
+        (d.metrics.cognitive_complexity && d.metrics.cognitive_complexity > 15)
+      );
+      const hasSqlInjection = d.code_smells && d.code_smells.some(smell => getCategory(smell) === 'sql_injection');
+      const hasSecurityIssues = d.code_smells && d.code_smells.some(smell => getCategory(smell) === 'security');
+      const hasStyleIssues = d.code_smells && d.code_smells.some(smell => getCategory(smell) === 'style');
+      
+      if (hasQualityIssues || hasComplexity || hasSqlInjection || hasSecurityIssues || hasStyleIssues) {
+        tooltipContent += '<div style="margin: 5px 0; padding: 5px; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 3px;">';
+        tooltipContent += '<strong style="color: #b91c1c;">⚠️ Issues Detected:</strong><br>';
+        
+        if (hasSecurityIssues) {
+          const count = d.code_smells?.filter(smell => getCategory(smell) === 'security').length || 0;
+          tooltipContent += `• <span style="color: #b91c1c;">${escapeHtml(String(count))} security vulnerability${count === 1 ? '' : 'ies'} detected!</span><br>`;        }
+        
+        if (hasSqlInjection) {
+          const count = d.code_smells?.filter(smell => getCategory(smell) === 'sql_injection').length || 0;
+          tooltipContent += `• <span style="color: #b91c1c;">${escapeHtml(String(count))} potential SQL injection risk${count === 1 ? '' : 's'}!</span><br>`;        }
+        
+        if (hasComplexity) {
+          let complexity = d.metrics?.complexity || 0;
+          let cognitiveComplexity = d.metrics?.cognitive_complexity || 0;
+          
+          if (complexity > 10) {
+            tooltipContent += `• <span style="color: #b91c1c;">High cyclomatic complexity (${complexity})</span><br>`;
+          }
+          
+          if (cognitiveComplexity > 15) {
+            tooltipContent += `• <span style="color: #b91c1c;">High cognitive complexity (${cognitiveComplexity})</span><br>`;
+          }
+        }
+        
+        if (hasStyleIssues) {
+          const count = d.code_smells?.filter(smell => getCategory(smell) === 'style').length || 0;
+          tooltipContent += `• <span style="color: #0369a1;">${escapeHtml(String(count))} style issue${count === 1 ? '' : 's'}</span><br>`;
+        }
+        
+        const otherIssues = d.code_smells ? d.code_smells.filter(smell => 
+          getCategory(smell) !== 'security' && 
+          getCategory(smell) !== 'sql_injection' && 
+          getCategory(smell) !== 'style') : [];
+          
+        if (otherIssues.length > 0) {
+          tooltipContent += `• <span style="color: #b91c1c;">${escapeHtml(String(otherIssues.length))} other code quality issues</span><br>`;
+        }
+        
+        tooltipContent += '</div>';
+      }
+      
+      if (d.docstring) {
+        tooltipContent += `<div style="color: #059669; margin: 5px 0;"><em>${escapeHtml(d.docstring)}</em></div>`;
+      }
+      
+      if (d.type === 'class' && d.methods) {
+        tooltipContent += `<br><strong style="color: #0891b2;">Methods:</strong><br>`;
+        let methodsShown = 0;
+        for (const [methodName, _] of Object.entries(d.methods)) {
+          if (methodsShown < 3) { 
+            tooltipContent += `• ${escapeHtml(methodName)}<br>`;
+            methodsShown++;
+          }
+        }
+        if (Object.keys(d.methods).length > 3) {
+          tooltipContent += `<em>...and ${Object.keys(d.methods).length - 3} more</em><br>`;
+        }
+      }
+      
+      if (d.metrics) {
+        tooltipContent += '<br><strong style="color: #0891b2;">Metrics Summary:</strong><br>';
+        if (d.metrics.lines) {
+          tooltipContent += `• Lines: ${escapeHtml(String(d.metrics.lines))}<br>`;
+        }
+        if (d.metrics.functions) {
+          tooltipContent += `• Functions: ${escapeHtml(String(d.metrics.functions))}<br>`;
+        }
+        if (d.metrics.classes) {
+          tooltipContent += `• Classes: ${escapeHtml(String(d.metrics.classes))}<br>`;
+        }
+      }
+      
+      if (connections.length > 0) {
+        tooltipContent += `<br><strong style="color: #0891b2;">Connections:</strong> ${connections.length} total<br>`;
+        tooltipContent += `<em style="font-size: 0.9em;">Click to view details</em>`;
+      }
+      
+      tooltip.html(tooltipContent)
+        .style('left', `${event.pageX + 10}px`)
+        .style('top', `${event.pageY - 10}px`)
+        .transition()
+        .duration(200)
+        .style('opacity', 0.9);
+      
+      nodeSelection.style('opacity', n => (n as any).id === d.id || connections.some(c => 
+        (typeof c.source === 'object' ? c.source.id : c.source) === (n as any).id || 
+        (typeof c.target === 'object' ? c.target.id : c.target) === (n as any).id
+      ) ? 1 : 0.1);
+      
+      linkSelection.style('opacity', l => 
+        (typeof l.source === 'object' ? l.source.id : l.source) === d.id || 
+        (typeof l.target === 'object' ? l.target.id : l.target) === d.id ? 1 : 0.1
+      );
+    })
+    .on('mouseout', function() {
+      tooltip.transition()
+        .duration(500)
+        .style('opacity', 0);
+      
+      nodeSelection.style('opacity', 1);
+      linkSelection.style('opacity', 0.7);
+    })
+    .on('click', (_, d) => {
+      navigate(`/node/${d.id}`);
+    });
+    
+    let tickCounter = 0;
+    const ticksPerRender = data.nodes.length > 500 ? 5 : 1;
+
+    const ticked = () => {
+      tickCounter++;
+      
+      const nodeCount = data.nodes.length;
+      const adaptiveTicksPerRender = 
+        nodeCount > 2000 ? 20 :
+        nodeCount > 1000 ? 15 :
+        nodeCount > 500 ? 10 :
+        nodeCount > 250 ? 5 : 1;
+      
+      if (tickCounter % adaptiveTicksPerRender !== 0) return;
+      
+      const alpha = simulationRef.current?.alpha() || 0;
+      if (nodeCount > 1000 && alpha > 0.1) return;
+      
+      const currentNodeSelection = nodeSelection;
+      const currentLinkSelection = linkSelection;
+      
+      if (!currentNodeSelection || !currentLinkSelection) return;
+      
+      if (!svgRef.current) return;
+      
+      window.requestAnimationFrame(() => {
+        if (!svgRef.current) return;
+        
+        try {
+          currentLinkSelection.attr('d', (d: any) => {
+            const source = typeof d.source === 'object' ? d.source : { x: 0, y: 0 };
+            const target = typeof d.target === 'object' ? d.target : { x: 0, y: 0 };
+            return `M${source.x},${source.y}L${target.x},${target.y}`;
+          });
+          
+          currentNodeSelection.attr('transform', (d: any) => `translate(${d.x},${d.y})`);
+        } catch (e) {
+          console.debug('D3 update skipped - component may be updating');
+        }
+      });
+    };
+
+    if (data.nodes.length > 500 && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+  
+      if (ctx) {
+        canvas.width = width;
+        canvas.height = height;
+  
+        const canvasTicked = () => {
+          tickCounter++;
+          if (tickCounter % ticksPerRender !== 0) return;
+  
+          ctx.clearRect(0, 0, width, height);
+  
+          const transform = d3.zoomTransform(svg.node() as Element);
+          ctx.save();
+          ctx.translate(transform.x, transform.y);
+          ctx.scale(transform.k, transform.k);
+  
+          data.links.forEach(link => {
+            const source = typeof link.source === 'object' ? link.source : { x: 0, y: 0 };
+            const target = typeof link.target === 'object' ? link.target : { x: 0, y: 0 };
+  
+            ctx.beginPath();
+            ctx.moveTo(source.x ?? 0, source.y ?? 0);
+            ctx.lineTo(target.x ?? 0, target.y ?? 0);
+  
+            ctx.strokeStyle = link.type === 'imports' ? '#7c3aed' :
+                             link.type === 'contains' ? '#059669' : '#ea580c';
+            ctx.globalAlpha = 0.7;
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          });
+  
+          data.nodes.forEach(node => {
+            const size = getNodeSize(node);
+  
+            ctx.beginPath();
+            ctx.arc(node.x ?? 0, node.y ?? 0, size, 0, Math.PI * 2);
+            ctx.fillStyle = getNodeFillColor(node);
+            ctx.fill();
+            ctx.strokeStyle = getNodeStrokeColor(node);
+            ctx.lineWidth = 2;
+            ctx.stroke();
+  
+            if (node.type === 'module' || node.is_entry) {
+              ctx.font = '10px "Segoe UI", sans-serif';
+              ctx.fillStyle = '#333';
+              ctx.fillText(node.name, node.x ?? 0 + size + 5, node.y ?? 0 + 4);
+            }
+          });
+  
+          ctx.restore();
+        };
+  
+        simulation.on('tick', canvasTicked);
+  
+        canvas.addEventListener('click', (event) => {
+          const transform = d3.zoomTransform(svg.node() as Element);
+          const x = (event.offsetX - transform.x) / transform.k;
+          const y = (event.offsetY - transform.y) / transform.k;
+  
+          const clickedNode = data.nodes.find(node => {
+            const size = getNodeSize(node) + 5; 
+            return Math.abs(node.x ?? 0 - x) < size && Math.abs(node.y ?? 0 - y) < size;
+          });
+  
+          if (clickedNode) {
+            navigate(`/node/${clickedNode.id}`);
+          }
+        });
+  
+        svg.style('pointer-events', 'none');
+        canvas.style.display = 'block';
+        canvas.style.pointerEvents = 'auto';
+        g.style('display', 'none');
+  
+        zoom.on('zoom', (event) => {
+          g.attr('transform', event.transform.toString());
+          canvasTicked(); 
+        });
+      }
+    } else {
+      simulation.on('tick', ticked);
+      if (canvasRef.current) {
+        canvasRef.current.style.display = 'none';
+      }
+      svg.style('pointer-events', 'auto');
+      g.style('display', 'block');
+    }
+
+    simulation
+      .nodes(data.nodes)
+      .on('tick', ticked);
+    
+    const linkForce = simulation.force('link') as d3.ForceLink<any, any>;
+    if (linkForce) {
+      linkForce.links(data.links);
+    }
+    
+    const collisionForce = simulation.force('collision') as d3.ForceCollide<any>;
+    if (collisionForce) {
+      collisionForce.radius((d: any) => {
+        return d.type === 'module' ? 60 : d.type === 'class' ? 50 : 40;
+      }).strength(0.8);
+    }
+    
+    return () => {
+      tooltip.remove();
+      if (simulationRef.current) {
+        simulationRef.current.stop();
+      }
+    };
+  }, [data, width, height, navigate]);
+  
+  const resetZoom = () => {
+    if (svgRef.current && zoomRef.current && gRef.current) {
+      const zoom = zoomRef.current as unknown as d3.ZoomBehavior<Element, unknown>;
+      d3.select(svgRef.current)
+        .transition()
+        .duration(750)
+        .call(zoom.transform as any, d3.zoomIdentity);
+    }
+  };
+  
+  const toggleLayout = () => {
+    setIsRadial(!isRadial);
+    
+    if (simulationRef.current) {
+      const simulation = simulationRef.current;
+      
+      if (!isRadial) {
+        simulation.force('x', null);
+        simulation.force('y', null);
+        simulation.force('r', d3.forceRadial(250, width / 2, height / 2));
+        simulation.force('charge', d3.forceManyBody().strength(-100));
+      } else {
+        simulation.force('r', null);
+        simulation.force('x', d3.forceX(width / 2).strength(0.1));
+        simulation.force('y', d3.forceY(height / 2).strength(0.1));
+        simulation.force('charge', d3.forceManyBody().strength(-1000));
+      }
+      
+      simulation.alpha(1).restart();
+    }
+  };
+  
+  const debouncedSearch = useCallback(
+    debounce((term: string) => {
+      if (!svgRef.current) return;
+      
+      const svg = d3.select(svgRef.current);
+      const nodeSelection = svg.selectAll('.node');
+      const linkSelection = svg.selectAll('path');
+      
+      if (term === "") {
+        nodeSelection.style("opacity", 1);
+        linkSelection.style("opacity", 0.7);
+        return;
+      }
+      
+      const lowerTerm = term.toLowerCase();
+      const matchedNodes = new Set<string>();
+      
+      data.nodes.forEach(node => {
+        if (node.name.toLowerCase().includes(lowerTerm)) {
+          matchedNodes.add(node.id);
+          
+          data.links.forEach(l => {
+            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+            
+            if (sourceId === node.id) matchedNodes.add(targetId);
+            if (targetId === node.id) matchedNodes.add(sourceId);
+          });
+        }
+      });
+      
+      nodeSelection.style("opacity", (d: any) => matchedNodes.has((d as CodeNode).id) ? 1 : 0.1);
+      
+      linkSelection.style("opacity", (d: any) => {
+        const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
+        const targetId = typeof d.target === 'object' ? d.target.id : d.target;
+        
+        return matchedNodes.has(sourceId) && matchedNodes.has(targetId) ? 0.7 : 0.1;
+      });
+    }, 200),
+    [data]
+  );
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    debouncedSearch(term);
+  };
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-xl">Loading visualization data...</div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen flex-col">
+        <div className="text-xl text-red-600 mb-4">Error loading data</div>
+        <div className="text-gray-700">{error}</div>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+  
+  return (
+    <div ref={containerRef} className="relative w-full h-screen overflow-hidden bg-gray-50">
+      <div className="fixed top-5 left-5 bg-white p-4 rounded-xl shadow-md z-10 flex flex-wrap gap-4 items-center">
+        <div>
+          <input 
+            type="text" 
+            id="search"
+            placeholder="Search nodes..." 
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-64 p-2 border border-gray-200 rounded-md text-sm"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={resetZoom}
+            className="bg-blue-700 text-white border-none px-4 py-2 rounded-md cursor-pointer text-sm transition-colors hover:bg-blue-800"
+          >
+            Reset View
+          </button>
+          <button 
+            onClick={toggleLayout}
+            className="bg-blue-700 text-white border-none px-4 py-2 rounded-md cursor-pointer text-sm transition-colors hover:bg-blue-800"
+          >
+            Toggle Layout
+          </button>
+          <button 
+            onClick={setHierarchicalLayout}
+            className="bg-blue-700 text-white border-none px-4 py-2 rounded-md cursor-pointer text-sm transition-colors hover:bg-blue-800"
+          >
+            {isHierarchical ? 'Force Layout' : 'Hierarchical View'}
+          </button>
+        </div>
+      </div>
+      
+      <div className="fixed bottom-5 left-5 bg-white p-4 rounded-xl shadow-md z-10">
+        <h3 className="mt-0 mb-3 text-base text-gray-900">Legend</h3>
+        <div className="flex items-center mb-2 text-sm">
+          <div className="w-4 h-4 rounded bg-blue-600 mr-2"></div>
+          <span>Module</span>
+        </div>
+        <div className="flex items-center mb-2 text-sm">
+          <div className="w-4 h-4 rounded bg-amber-400 mr-2"></div>
+          <span>Entry Point</span>
+        </div>
+        <div className="flex items-center mb-2 text-sm">
+          <div className="w-4 h-4 rounded bg-cyan-600 mr-2"></div>
+          <span>Class</span>
+        </div>
+        <div className="flex items-center mb-2 text-sm">
+          <div className="w-4 h-4 rounded bg-teal-600 mr-2"></div>
+          <span>Function</span>
+        </div>
+        <div className="mt-4 border-t border-gray-200 pt-3">
+          <div className="flex items-center mb-2 text-sm">
+            <div className="w-10 h-0.5 bg-purple-600 mr-2"></div>
+            <span>Imports</span>
+          </div>
+          <div className="flex items-center mb-2 text-sm">
+            <div className="w-10 h-0.5 bg-green-600 mr-2"></div>
+            <span>Contains</span>
+          </div>
+          <div className="flex items-center mb-2 text-sm">
+            <div className="w-10 h-0.5 bg-orange-600 mr-2"></div>
+            <span>Calls</span>
+          </div>
+        </div>
+      </div>
+      
+      <canvas 
+        ref={canvasRef}
+        style={{ 
+          display: data.nodes.length > 500 ? 'block' : 'none',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none'
+        }}
+      />
+
+      <svg ref={svgRef} id="visualization" className="w-full h-screen"></svg>
+      <div className="fixed top-5 right-5 z-10">
+      <button
+        onClick={() => navigate('/project-metrics')}
+        className="bg-white text-indigo-700 border border-indigo-300 px-4 py-2 rounded-lg shadow-md hover:bg-indigo-50 transition-colors duration-200 flex items-center gap-2 font-medium"
+        aria-label="View Project Metrics"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+        </svg>
+        View Project Metrics
+      </button>
+</div>
+    </div>
+  );
+};
+
+export default VisualizationPage;
+========================================
+File: ./src/assets/react.svg
+========================================
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="35.93" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 228"><path fill="#00D8FF" d="M210.483 73.824a171.49 171.49 0 0 0-8.24-2.597c.465-1.9.893-3.777 1.273-5.621c6.238-30.281 2.16-54.676-11.769-62.708c-13.355-7.7-35.196.329-57.254 19.526a171.23 171.23 0 0 0-6.375 5.848a155.866 155.866 0 0 0-4.241-3.917C100.759 3.829 77.587-4.822 63.673 3.233C50.33 10.957 46.379 33.89 51.995 62.588a170.974 170.974 0 0 0 1.892 8.48c-3.28.932-6.445 1.924-9.474 2.98C17.309 83.498 0 98.307 0 113.668c0 15.865 18.582 31.778 46.812 41.427a145.52 145.52 0 0 0 6.921 2.165a167.467 167.467 0 0 0-2.01 9.138c-5.354 28.2-1.173 50.591 12.134 58.266c13.744 7.926 36.812-.22 59.273-19.855a145.567 145.567 0 0 0 5.342-4.923a168.064 168.064 0 0 0 6.92 6.314c21.758 18.722 43.246 26.282 56.54 18.586c13.731-7.949 18.194-32.003 12.4-61.268a145.016 145.016 0 0 0-1.535-6.842c1.62-.48 3.21-.974 4.76-1.488c29.348-9.723 48.443-25.443 48.443-41.52c0-15.417-17.868-30.326-45.517-39.844Zm-6.365 70.984c-1.4.463-2.836.91-4.3 1.345c-3.24-10.257-7.612-21.163-12.963-32.432c5.106-11 9.31-21.767 12.459-31.957c2.619.758 5.16 1.557 7.61 2.4c23.69 8.156 38.14 20.213 38.14 29.504c0 9.896-15.606 22.743-40.946 31.14Zm-10.514 20.834c2.562 12.94 2.927 24.64 1.23 33.787c-1.524 8.219-4.59 13.698-8.382 15.893c-8.067 4.67-25.32-1.4-43.927-17.412a156.726 156.726 0 0 1-6.437-5.87c7.214-7.889 14.423-17.06 21.459-27.246c12.376-1.098 24.068-2.894 34.671-5.345a134.17 134.17 0 0 1 1.386 6.193ZM87.276 214.515c-7.882 2.783-14.16 2.863-17.955.675c-8.075-4.657-11.432-22.636-6.853-46.752a156.923 156.923 0 0 1 1.869-8.499c10.486 2.32 22.093 3.988 34.498 4.994c7.084 9.967 14.501 19.128 21.976 27.15a134.668 134.668 0 0 1-4.877 4.492c-9.933 8.682-19.886 14.842-28.658 17.94ZM50.35 144.747c-12.483-4.267-22.792-9.812-29.858-15.863c-6.35-5.437-9.555-10.836-9.555-15.216c0-9.322 13.897-21.212 37.076-29.293c2.813-.98 5.757-1.905 8.812-2.773c3.204 10.42 7.406 21.315 12.477 32.332c-5.137 11.18-9.399 22.249-12.634 32.792a134.718 134.718 0 0 1-6.318-1.979Zm12.378-84.26c-4.811-24.587-1.616-43.134 6.425-47.789c8.564-4.958 27.502 2.111 47.463 19.835a144.318 144.318 0 0 1 3.841 3.545c-7.438 7.987-14.787 17.08-21.808 26.988c-12.04 1.116-23.565 2.908-34.161 5.309a160.342 160.342 0 0 1-1.76-7.887Zm110.427 27.268a347.8 347.8 0 0 0-7.785-12.803c8.168 1.033 15.994 2.404 23.343 4.08c-2.206 7.072-4.956 14.465-8.193 22.045a381.151 381.151 0 0 0-7.365-13.322Zm-45.032-43.861c5.044 5.465 10.096 11.566 15.065 18.186a322.04 322.04 0 0 0-30.257-.006c4.974-6.559 10.069-12.652 15.192-18.18ZM82.802 87.83a323.167 323.167 0 0 0-7.227 13.238c-3.184-7.553-5.909-14.98-8.134-22.152c7.304-1.634 15.093-2.97 23.209-3.984a321.524 321.524 0 0 0-7.848 12.897Zm8.081 65.352c-8.385-.936-16.291-2.203-23.593-3.793c2.26-7.3 5.045-14.885 8.298-22.6a321.187 321.187 0 0 0 7.257 13.246c2.594 4.48 5.28 8.868 8.038 13.147Zm37.542 31.03c-5.184-5.592-10.354-11.779-15.403-18.433c4.902.192 9.899.29 14.978.29c5.218 0 10.376-.117 15.453-.343c-4.985 6.774-10.018 12.97-15.028 18.486Zm52.198-57.817c3.422 7.8 6.306 15.345 8.596 22.52c-7.422 1.694-15.436 3.058-23.88 4.071a382.417 382.417 0 0 0 7.859-13.026a347.403 347.403 0 0 0 7.425-13.565Zm-16.898 8.101a358.557 358.557 0 0 1-12.281 19.815a329.4 329.4 0 0 1-23.444.823c-7.967 0-15.716-.248-23.178-.732a310.202 310.202 0 0 1-12.513-19.846h.001a307.41 307.41 0 0 1-10.923-20.627a310.278 310.278 0 0 1 10.89-20.637l-.001.001a307.318 307.318 0 0 1 12.413-19.761c7.613-.576 15.42-.876 23.31-.876H128c7.926 0 15.743.303 23.354.883a329.357 329.357 0 0 1 12.335 19.695a358.489 358.489 0 0 1 11.036 20.54a329.472 329.472 0 0 1-11 20.722Zm22.56-122.124c8.572 4.944 11.906 24.881 6.52 51.026c-.344 1.668-.73 3.367-1.15 5.09c-10.622-2.452-22.155-4.275-34.23-5.408c-7.034-10.017-14.323-19.124-21.64-27.008a160.789 160.789 0 0 1 5.888-5.4c18.9-16.447 36.564-22.941 44.612-18.3ZM128 90.808c12.625 0 22.86 10.235 22.86 22.86s-10.235 22.86-22.86 22.86s-22.86-10.235-22.86-22.86s10.235-22.86 22.86-22.86Z"></path></svg>
+========================================
+File: ./src/components/IssueCategory.tsx
+========================================
+import React from 'react';
+
+interface Issue {
+  description: string;
+  line?: number;
+  file_path?: string;
+  category?: string;
+  [key: string]: any;
+}
+
+interface IssueCategoryDisplayProps {
+  category: string;
+  issues: Issue[];
+  maxDisplay?: number;
+  showFilePaths?: boolean;
+  onIssueClick?: (issue: Issue) => void;
+}
+
+/**
+ * Displays a list of code quality issues for a specific category
+ * 
+ * @param category - The category name of issues (e.g. 'security', 'style')
+ * @param issues - Array of issue objects to display
+ * @param maxDisplay - Maximum number of issues to show before truncating
+ * @param showFilePaths - Whether to display file paths for each issue
+ * @param onIssueClick - Optional callback when an issue is clicked
+ */
+
+const IssueCategoryDisplay: React.FC<IssueCategoryDisplayProps> = ({
+  category,
+  issues,
+  maxDisplay = 5,
+  showFilePaths = false,
+  onIssueClick
+}) => {
+  if (!issues || issues.length === 0) return null;
+  
+  // Category styling configuration
+  const categoryColors: {[key: string]: string} = {
+    'security': '#ef4444',
+    'style': '#3b82f6', 
+    'duplication': '#10b981',
+    'code_smells': '#f59e0b',
+    'complexity': '#8b5cf6',
+    'sql_injection': '#ec4899'
+  };
+  
+  const categoryIcons: {[key: string]: string} = {
+    'security': '🔒',
+    'style': '🎨',
+    'duplication': '🔄',
+    'code_smells': '👃',
+    'complexity': '🧩',
+    'sql_injection': '💉'
+  };
+
+  const formattedCategoryName = category.replace(/_/g, ' ');
+  const borderColor = categoryColors[category] || '#718096';
+  const icon = categoryIcons[category] || '⚠️';
+  
+  const handleIssueClick = (issue: Issue) => {
+    if (onIssueClick) {
+      onIssueClick(issue);
+    }
+  };
+
+  return (
+    <div 
+      className="border-l-4 p-4 rounded-r-md bg-white shadow-sm hover:shadow transition-shadow duration-200"
+      style={{ borderColor }}
+    >
+      <h4 className="font-medium flex items-center text-gray-800">
+        <span className="mr-2">{icon}</span>
+        <span className="capitalize">{formattedCategoryName}</span>
+        <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-sm text-gray-600">
+          {issues.length}
+        </span>
+      </h4>
+      
+      <ul className="mt-3 space-y-2">
+        {issues.slice(0, maxDisplay).map((issue, index) => (
+          <li 
+            key={index} 
+            className="flex items-start hover:bg-gray-50 p-1 rounded cursor-pointer"
+            onClick={() => handleIssueClick(issue)}
+          >
+            <span className="mr-2 text-gray-400">•</span>
+            <div className="flex-1">
+              <span className="text-sm">{issue.description}</span>
+              {(showFilePaths && issue.file_path) || issue.line ? (
+                <div className="flex justify-between mt-1 text-xs text-gray-500">
+                  {showFilePaths && issue.file_path && (
+                    <span className="truncate mr-4 max-w-xs">
+                      {issue.file_path.split('/').pop()}
+                    </span>
+                  )}
+                  {issue.line && <span>Line {issue.line}</span>}
+                </div>
+              ) : null}
+            </div>
+          </li>
+        ))}
+        
+        {issues.length > maxDisplay && (
+          <li className="text-gray-500 italic text-sm mt-2 pl-2">
+            ...and {issues.length - maxDisplay} more issues
+          </li>
+        )}
+      </ul>
+    </div>
+  );
+};
+
+export default IssueCategoryDisplay;
+========================================
+File: ./src/components/Legend.tsx
+========================================
+import React from 'react';
+
+const Legend: React.FC = () => {
+  return (
+    <div className="legend p-4 bg-white shadow-md rounded-lg">
+      <h3 className="text-lg font-bold mb-2">Legend</h3>
+      <h3 className="text-red-500">Legend</h3>
+      <h3 className="text-red-500">Legend</h3>
+
+      <div className="space-y-2">
+        <div className="flex items-center">
+          <div className="legend-color module-color mr-2"></div>
+          <span>Module</span>
+        </div>
+        <div className="flex items-center">
+          <div className="legend-color entry-point-color mr-2"></div>
+          <span>Entry Point</span>
+        </div>
+        <div className="flex items-center">
+          <div className="legend-color class-color mr-2"></div>
+          <span>Class</span>
+        </div>
+        <div className="flex items-center">
+          <div className="legend-color function-color mr-2"></div>
+          <span>Function</span>
+        </div>
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center">
+            <div className="legend-line imports-line mr-2"></div>
+            <span>Imports</span>
+          </div>
+          <div className="flex items-center">
+            <div className="legend-line contains-line mr-2"></div>
+            <span>Contains</span>
+          </div>
+          <div className="flex items-center">
+            <div className="legend-line calls-line mr-2"></div>
+            <span>Calls</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Legend;
+========================================
+File: ./src/App.css
+========================================
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+========================================
+File: ./tsconfig.app.json
+========================================
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src"]
+}
+
+========================================
+File: ./src/index.tsx
+========================================
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+========================================
+File: ./postcss.config.cjs
+========================================
+module.exports = {
+    plugins: {
+      tailwindcss: {},
+      autoprefixer: {},
+    }
+  }

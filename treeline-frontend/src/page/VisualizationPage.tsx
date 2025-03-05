@@ -825,6 +825,18 @@ const VisualizationPage: React.FC = () => {
       />
 
       <svg ref={svgRef} id="visualization" className="w-full h-screen"></svg>
+      <div className="fixed top-5 right-5 z-10">
+      <button
+        onClick={() => navigate('/project-metrics')}
+        className="bg-white text-indigo-700 border border-indigo-300 px-4 py-2 rounded-lg shadow-md hover:bg-indigo-50 transition-colors duration-200 flex items-center gap-2 font-medium"
+        aria-label="View Project Metrics"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+        </svg>
+        View Project Metrics
+      </button>
+</div>
     </div>
   );
 };

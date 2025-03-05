@@ -1,0 +1,1396 @@
+================================================================================
+CHUNK 4 OF 5
+================================================================================
+
+========================================
+File: ./src/page/NodeDetailsPage.tsx
+========================================
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { fetchNodeData } from '../services/dataServices';
+import ComplexityTimeline from '../components/ComplexityTimeline';
+import ImpactAnalysis from '../components/ImpactAnalysis';
+
+interface NodeDetails {
+  node: any;
+  connections: {
+    incoming: any[];
+    outgoing: any[];
+  };
+  file_content: string | null;
+}
+
+const THRESHOLDS = {
+  MAX_CYCLOMATIC_COMPLEXITY: 10,
+  MAX_COGNITIVE_COMPLEXITY: 15,
+  MAX_NESTED_DEPTH: 4,
+  MAX_FUNCTION_LINES: 50,
+  MAX_PARAMS: 5,
+  MAX_RETURNS: 4,
+  MAX_LINE_LENGTH: 80,
+  MAX_DOC_LENGTH: 80,
+  MIN_MAINTAINABILITY_INDEX: 20, 
+  MAX_FUNC_COGNITIVE_LOAD: 15,
+};
+
+const getMetricDisplayNames = (nodeType: string): Record<string, string> => {
+  const baseMetrics = {
+    lines: nodeType === 'function' ? 'Function Lines' : 'Lines of Code',
+    params: 'Number of Parameters',
+    complexity: nodeType === 'module' ? 'Total Complexity' : 'Cyclomatic Complexity',
+    nested_depth: 'Maximum Nested Depth',
+    returns: 'Number of Return Statements',
+    max_line_length: 'Maximum Line Length',
+    doc_length: 'Docstring Length',
+    methods: 'Number of Methods', 
+    functions: 'Number of Functions', 
+    classes: 'Number of Classes', 
+  };
+  return baseMetrics;
+};
+
+const isWarning = (key: string, value: any): boolean => {
+  if (typeof value !== 'number') return false;
+
+  switch (key) {
+    case 'complexity':
+      return value > THRESHOLDS.MAX_CYCLOMATIC_COMPLEXITY;
+    case 'cognitive_complexity':
+      return value > THRESHOLDS.MAX_COGNITIVE_COMPLEXITY;
+    case 'nested_depth':
+      return value > THRESHOLDS.MAX_NESTED_DEPTH;
+    case 'lines':
+      return value > THRESHOLDS.MAX_FUNCTION_LINES;
+    case 'params':
+      return value > THRESHOLDS.MAX_PARAMS;
+    case 'returns':
+      return value > THRESHOLDS.MAX_RETURNS;
+    case 'max_line_length':
+      return value > THRESHOLDS.MAX_LINE_LENGTH;
+    case 'doc_length':
+      return value > THRESHOLDS.MAX_DOC_LENGTH;
+    case 'maintainability_index':
+      return value < THRESHOLDS.MIN_MAINTAINABILITY_INDEX;
+    case 'func_cognitive_load':
+      return value > THRESHOLDS.MAX_FUNC_COGNITIVE_LOAD;
+    default:
+      return false;
+  }
+};
+
+const NodeDetailsPage: React.FC = () => {
+  const { nodeId } = useParams<{ nodeId: string }>();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nodeData, setNodeData] = useState<NodeDetails | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('overview');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadNodeData = async () => {
+      if (!nodeId) return;
+      
+      try {
+        setLoading(true);
+        const data = await fetchNodeData(nodeId);
+        setNodeData(data);
+        setError(null);
+      } catch (err) {
+        console.error('Error loading node data:', err);
+        setError('Failed to load node details. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadNodeData();
+  }, [nodeId]);
+
+  const getNodeTypePillClass = (type: string) => {
+    switch (type) {
+      case 'module': return 'bg-blue-100 text-blue-800';
+      case 'class': return 'bg-cyan-100 text-cyan-800';
+      case 'function': return 'bg-teal-100 text-teal-800';
+      default: return '';
+    }
+  };
+
+  const formatIssues = (issues: any[]) => {
+    if (!issues || issues.length === 0) {
+      return null;
+    }
+
+    return (
+      <div className="mb-6">
+        <h3 className="text-red-600 font-semibold text-lg flex items-center mb-2">
+          <span className="mr-2">⚠️</span>
+          Issues ({issues.length})
+        </h3>
+        <ul className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-md">
+          {issues.map((issue, index) => (
+            <li key={index} className="mb-2 last:mb-0 flex items-start">
+              <span className="mr-2">•</span>
+              <span>{typeof issue === 'string' ? issue : issue.description || issue.message}</span>
+              {(issue.line || issue.lineno) && 
+                <span className="text-gray-600 text-sm ml-auto">Line {issue.line || issue.lineno}</span>
+              }
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+  
+  const formatMetrics = (metrics: any, nodeType: string) => {    
+    console.log('Metrics data:', metrics);
+    if (!metrics) return null;
+  
+    const metricDisplayNames = getMetricDisplayNames(nodeType);
+
+    return (
+      <div className="mb-6">
+        <h3 className="text-blue-600 font-semibold text-lg flex items-center mb-2">
+          <span className="mr-2">📊</span>
+          Metrics
+        </h3>
+        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-md">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className="py-2 text-left">Metric</th>
+                <th className="py-2 text-right">Value</th>
+                <th className="py-2 text-right">Threshold</th>
+                <th className="py-2 text-right">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(metrics)
+                .filter(([key]) => !key.startsWith('_') && metricDisplayNames[key])
+                .map(([key, value]) => {
+                  const displayName = metricDisplayNames[key] || key;
+                  const warning = isWarning(key, value);
+                  const threshold =
+                    key === 'maintainability_index'
+                      ? THRESHOLDS.MIN_MAINTAINABILITY_INDEX
+                      : THRESHOLDS[`MAX_${key.toUpperCase()}` as keyof typeof THRESHOLDS] ||
+                        THRESHOLDS[`MAX_${key.replace(/_/g, '_').toUpperCase()}` as keyof typeof THRESHOLDS];
+  
+                  return (
+                    <tr key={key} className={warning ? 'bg-amber-50' : ''}>
+                      <td className="py-1 font-medium">{displayName}</td>
+                      <td className={`py-1 text-right ${warning ? 'text-amber-700' : ''}`}>
+                        {String(value)}
+                      </td>
+                      <td className="py-1 text-right">{threshold !== undefined ? String(threshold) : 'N/A'}</td>
+                      <td className="py-1 text-right">
+                        {warning ? (
+                          <span className="text-amber-700">⚠️ Exceeds</span>
+                        ) : (
+                          <span className="text-green-600">✅ Within</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+  
+  const formatConnections = (connections: { incoming: any[], outgoing: any[] }) => {
+    if (!connections || (connections.incoming.length === 0 && connections.outgoing.length === 0)) {
+      return null;
+    }
+    
+    return (
+      <div className="mb-6">
+        <h3 className="text-green-600 font-semibold text-lg flex items-center mb-2">
+          <span className="mr-2">🔄</span>
+          Dependencies
+        </h3>
+        
+        {connections.incoming.length > 0 && (
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Incoming ({connections.incoming.length})</h4>
+            <ul className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-md">
+              {connections.incoming.map((link, index) => {
+                const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+                const sourceName = typeof link.source === 'object' ? link.source.name : link.source;
+                
+                return (
+                  <li key={index} className="mb-2 last:mb-0">
+                    <span className={`inline-block px-2.5 py-0.5 rounded text-xs mr-2 ${
+                      link.type === 'imports' ? 'bg-purple-100 text-purple-800' :
+                      link.type === 'contains' ? 'bg-green-100 text-green-800' :
+                      'bg-orange-100 text-orange-800'
+                    }`}>
+                      {link.type}
+                    </span>
+                    from{' '}
+                    <button 
+                      onClick={() => navigate(`/node/${sourceId}`)}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      {sourceName}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+        
+        {connections.outgoing.length > 0 && (
+          <div>
+            <h4 className="font-medium mb-2">Outgoing ({connections.outgoing.length})</h4>
+            <ul className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-md">
+              {connections.outgoing.map((link, index) => {
+                const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+                const targetName = typeof link.target === 'object' ? link.target.name : link.target;
+                
+                return (
+                  <li key={index} className="mb-2 last:mb-0">
+                    <span className={`inline-block px-2.5 py-0.5 rounded text-xs mr-2 ${
+                      link.type === 'imports' ? 'bg-purple-100 text-purple-800' :
+                      link.type === 'contains' ? 'bg-green-100 text-green-800' :
+                      'bg-orange-100 text-orange-800'
+                    }`}>
+                      {link.type}
+                    </span>
+                    to{' '}
+                    <button 
+                      onClick={() => navigate(`/node/${targetId}`)}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      {targetName}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  const formatFileContent = (content: string | null) => {
+    if (!content) return null;
+    
+    return (
+      <div className="mb-6">
+        <h3 className="text-gray-700 font-semibold text-lg flex items-center mb-2">
+          <span className="mr-2">📄</span>
+          Source Code
+        </h3>
+        <div className="bg-gray-800 text-gray-200 p-4 rounded-md overflow-x-auto">
+          <pre className="text-sm">
+            <code>{content}</code>
+          </pre>
+        </div>
+      </div>
+    );
+  };
+
+  const renderComplexityTimeline = (metrics: any) => {
+    if (!metrics || !metrics.complexity || !metrics.cognitive_complexity) {
+      return (
+        <div className="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-r-md mb-6">
+          <p className="text-gray-700">Not enough complexity metrics available for timeline analysis.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white shadow-md rounded-xl p-6 mb-6">
+        <h3 className="text-blue-600 font-semibold text-lg flex items-center mb-4">
+          <span className="mr-2">📉</span>
+          Refactoring Impact Analysis
+        </h3>
+        <ComplexityTimeline 
+          currentComplexity={metrics.complexity}
+          currentCognitiveComplexity={metrics.cognitive_complexity}
+          currentNestedDepth={metrics.nested_depth}
+          className="w-full overflow-x-auto"
+        />
+      </div>
+    );
+  };
+
+  const renderImpactAnalysis = (nodeData: NodeDetails) => {
+    if (!nodeData || !nodeData.connections) {
+      return (
+        <div className="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-r-md mb-6">
+          <p className="text-gray-700">No connection data available for impact analysis.</p>
+        </div>
+      );
+    }
+
+    const { node, connections } = nodeData;
+    
+    return (
+      <div className="bg-white shadow-md rounded-xl p-6 mb-6">
+        <h3 className="text-indigo-600 font-semibold text-lg flex items-center mb-4">
+          <span className="mr-2">🔄</span>
+          Change Impact Analysis
+        </h3>
+        <ImpactAnalysis 
+          nodeId={nodeId || ''}
+          nodeName={node.name}
+          nodeType={node.type}
+          connections={connections}
+          hasIssues={node.code_smells && node.code_smells.length > 0}
+          highComplexity={node.metrics && (
+            (node.metrics.complexity && node.metrics.complexity > 10) || 
+            (node.metrics.cognitive_complexity && node.metrics.cognitive_complexity > 15)
+          )}
+        />
+      </div>
+    );
+  };
+
+  const renderTabs = () => {
+    return (
+      <div className="border-b border-gray-200 mb-6">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'overview' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Overview
+          </button>
+
+          <button
+            onClick={() => setActiveTab('visualizations')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'visualizations' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Visualizations
+          </button>
+
+          <button
+            onClick={() => setActiveTab('metrics')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'metrics' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Metrics
+          </button>
+          <button
+            onClick={() => setActiveTab('connections')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'connections' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Dependencies
+          </button>
+          <button
+            onClick={() => setActiveTab('refactoring')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'refactoring' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Refactoring
+          </button>
+          <button
+            onClick={() => setActiveTab('impact')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'impact' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Impact Analysis
+          </button>
+          <button
+            onClick={() => setActiveTab('source')}
+            className={`px-4 py-2 font-medium rounded-t-lg ${
+              activeTab === 'source' 
+                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            Source Code
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-xl">Loading node details...</div>
+      </div>
+    );
+  }
+
+  if (error || !nodeData) {
+    return (
+      <div className="flex items-center justify-center h-screen flex-col">
+        <div className="text-xl text-red-600 mb-4">Error loading node details</div>
+        <div className="text-gray-700">{error}</div>
+        <button 
+          onClick={() => navigate('/')}
+          className="mt-6 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          Back to Visualization
+        </button>
+      </div>
+    );
+  }
+
+  const { node, connections, file_content } = nodeData;
+  const hasIssues = node.code_smells && node.code_smells.length > 0;
+  const highComplexity = node.metrics && (
+    (node.metrics.complexity && node.metrics.complexity > 10) || 
+    (node.metrics.cognitive_complexity && node.metrics.cognitive_complexity > 15)
+  );
+
+  return (
+    <div className="container mx-auto py-8 px-4 max-w-6xl">
+      <div className="mb-6 flex items-center justify-between">
+        <button 
+          onClick={() => navigate('/')}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+        >
+          ← Back to Visualization
+        </button>
+        
+        <div className="flex gap-2">
+          {hasIssues && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-red-100 text-red-800 border border-red-300">
+              <span className="mr-1">⚠️</span>
+              {node.code_smells.length} issue{node.code_smells.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          
+          {highComplexity && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-800 border border-amber-300">
+              <span className="mr-1">🔄</span>
+              High complexity
+            </span>
+          )}
+          
+          {node.is_entry && (
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-amber-100 text-amber-800 border border-amber-300">
+              <span className="mr-1">🚪</span>
+              Entry point
+            </span>
+          )}
+        </div>
+      </div>
+      
+      <div className="bg-white shadow-md rounded-xl p-6 mb-8">
+        <h1 className="text-2xl font-bold flex flex-wrap items-center gap-2 mb-4">
+          {node.name}
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${getNodeTypePillClass(node.type)}`}>
+            {node.type}
+          </span>
+        </h1>
+        
+        {node.docstring && (
+          <div className="mb-0 bg-gray-50 p-4 border-l-4 border-gray-300 rounded-r-md">
+            <p className="italic text-gray-600">{node.docstring}</p>
+          </div>
+        )}
+      </div>
+      
+      {renderTabs()}
+      
+      <div className="bg-white shadow-md rounded-xl p-6">
+        {activeTab === 'overview' && (
+          <div>
+            {hasIssues && formatIssues(node.code_smells)}
+            
+            {node.metrics && (
+              <div className="mb-6">
+                <h3 className="text-blue-600 font-semibold text-lg flex items-center mb-4">
+                  <span className="mr-2">📊</span>
+                  Summary
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {node.metrics.complexity && (
+                    <div className={`p-4 rounded-lg border ${
+                      node.metrics.complexity > 10 
+                        ? 'bg-red-50 border-red-300' 
+                        : 'bg-blue-50 border-blue-300'
+                    }`}>
+                      <div className="text-sm text-gray-600">Complexity</div>
+                      <div className={`text-2xl font-bold ${
+                        node.metrics.complexity > 10 ? 'text-red-700' : 'text-blue-700'
+                      }`}>
+                        {node.metrics.complexity}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {node.metrics.cognitive_complexity && (
+                    <div className={`p-4 rounded-lg border ${
+                      node.metrics.cognitive_complexity > 15 
+                        ? 'bg-red-50 border-red-300' 
+                        : 'bg-blue-50 border-blue-300'
+                    }`}>
+                      <div className="text-sm text-gray-600">Cognitive Complexity</div>
+                      <div className={`text-2xl font-bold ${
+                        node.metrics.cognitive_complexity > 15 ? 'text-red-700' : 'text-blue-700'
+                      }`}>
+                        {node.metrics.cognitive_complexity}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {node.metrics.lines && (
+                    <div className="p-4 rounded-lg border bg-blue-50 border-blue-300">
+                      <div className="text-sm text-gray-600">Lines</div>
+                      <div className="text-2xl font-bold text-blue-700">
+                        {node.metrics.lines}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="p-4 rounded-lg border bg-blue-50 border-blue-300">
+                    <div className="text-sm text-gray-600">Dependencies</div>
+                    <div className="text-2xl font-bold text-blue-700">
+                      {(connections.incoming.length + connections.outgoing.length)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-green-600 font-semibold text-lg flex items-center mb-4">
+                  <span className="mr-2">🔄</span>
+                  Dependencies Overview
+                </h3>
+                <div className="bg-green-50 border-green-300 border p-4 rounded-md">
+                  {connections.incoming.length === 0 && 
+                   connections.outgoing.length === 0 ? (
+                    <p className="text-gray-700">No dependencies found.</p>
+                  ) : (
+                    <div>
+                      <div className="flex justify-between border-b pb-2 mb-2">
+                        <span className="font-medium">Incoming:</span>
+                        <span className="font-bold text-blue-700">{connections.incoming.length}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-medium">Outgoing:</span>
+                        <span className="font-bold text-green-700">{connections.outgoing.length}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {node.metrics && (
+                <div>
+                  <h3 className="text-blue-600 font-semibold text-lg flex items-center mb-4">
+                    <span className="mr-2">📊</span>
+                    Key Metrics
+                  </h3>
+                  <div className="bg-blue-50 border-blue-300 border p-4 rounded-md">
+                    <div className="grid grid-cols-2 gap-4">
+                      {node.metrics.functions && (
+                        <div>
+                          <div className="text-sm text-gray-600">Functions</div>
+                          <div className="font-bold">{node.metrics.functions}</div>
+                        </div>
+                      )}
+                      
+                      {node.metrics.classes && (
+                        <div>
+                          <div className="text-sm text-gray-600">Classes</div>
+                          <div className="font-bold">{node.metrics.classes}</div>
+                        </div>
+                      )}
+                      
+                      {node.metrics.params && (
+                        <div>
+                          <div className="text-sm text-gray-600">Parameters</div>
+                          <div className="font-bold">{node.metrics.params}</div>
+                        </div>
+                      )}
+                      
+                      {node.metrics.nested_depth && (
+                        <div>
+                          <div className="text-sm text-gray-600">Nesting Depth</div>
+                          <div className="font-bold">{node.metrics.nested_depth}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        
+        {activeTab === 'metrics' && (
+          <div>
+            {formatMetrics(node.metrics, node.type)}
+          </div>
+        )}
+                
+        {activeTab === 'connections' && (
+          <div>
+            {formatConnections(connections)}
+          </div>
+        )}
+        
+        {activeTab === 'refactoring' && (
+          <div>
+            {renderComplexityTimeline(node.metrics)}
+          </div>
+        )}
+        
+        {activeTab === 'impact' && (
+          <div>
+            {renderImpactAnalysis(nodeData)}
+          </div>
+        )}
+        
+        {activeTab === 'source' && (
+          <div>
+            {formatFileContent(file_content)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default NodeDetailsPage;
+========================================
+File: ./src/components/ImpactAnalysis.tsx
+========================================
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+import { CodeLink } from '../types';
+
+interface ImpactAnalysisProps {
+  nodeId: string;
+  nodeName: string;
+  nodeType: string;
+  connections: {
+    incoming: CodeLink[];
+    outgoing: CodeLink[];
+  };
+  hasIssues: boolean;
+  highComplexity: boolean;
+}
+
+const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
+  nodeId,
+  nodeName,
+  nodeType,
+  connections,
+  hasIssues,
+  highComplexity,
+}) => {
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    d3.select(svgRef.current).selectAll('*').remove();
+
+    const width = 600;
+    const height = 400;
+
+    const svg = d3.select(svgRef.current)
+      .attr('width', width)
+      .attr('height', height);
+
+    const nodes: any[] = [];
+    const links: any[] = [];
+    
+    const addedNodes = new Set<string>([nodeId]);
+    const secondaryNodes = new Set<string>();
+    
+    nodes.push({
+      id: nodeId,
+      name: nodeName,
+      type: nodeType,
+      level: 0,
+      isCenter: true,
+      hasIssues,
+      highComplexity
+    });
+    connections.incoming.forEach(connection => {
+      const sourceId = typeof connection.source === 'object' ? connection.source.id : connection.source;
+      const sourceName = typeof connection.source === 'object' ? connection.source.name : `Node ${sourceId}`;
+      const sourceType = typeof connection.source === 'object' ? connection.source.type : 'unknown';
+      
+      if (!addedNodes.has(sourceId)) {
+        nodes.push({
+          id: sourceId,
+          name: sourceName,
+          type: sourceType,
+          level: 1,
+          direction: 'incoming'
+        });
+        addedNodes.add(sourceId);
+        secondaryNodes.add(sourceId);
+      }
+      
+      links.push({
+        source: sourceId,
+        target: nodeId,
+        type: connection.type,
+        direction: 'incoming'
+      });
+    });
+    
+    connections.outgoing.forEach(connection => {
+      const targetId = typeof connection.target === 'object' ? connection.target.id : connection.target;
+      const targetName = typeof connection.target === 'object' ? connection.target.name : `Node ${targetId}`;
+      const targetType = typeof connection.target === 'object' ? connection.target.type : 'unknown';
+      
+      if (!addedNodes.has(targetId)) {
+        nodes.push({
+          id: targetId,
+          name: targetName,
+          type: targetType,
+          level: 1,
+          direction: 'outgoing'
+        });
+        addedNodes.add(targetId);
+        secondaryNodes.add(targetId);
+      }
+      
+      links.push({
+        source: nodeId,
+        target: targetId,
+        type: connection.type,
+        direction: 'outgoing'
+      });
+    });
+    
+
+    const impactScores = new Map<string, number>();
+    
+    impactScores.set(nodeId, 10);
+    
+    nodes.forEach(node => {
+      if (node.id === nodeId) return;
+      
+      let score = 5;
+      
+      const directConnections = links.filter(link => 
+        link.source === node.id || link.target === node.id
+      );
+      
+      directConnections.forEach(link => {
+        if (link.type === 'contains') score += 3;
+        else if (link.type === 'imports') score += 2;
+        else if (link.type === 'calls') score += 1;
+      });
+      
+      if (node.type === 'module') score += 3;
+      else if (node.type === 'class') score += 2;
+      else if (node.type === 'function') score += 1;
+      
+      score = Math.min(10, Math.max(0, score));
+      
+      impactScores.set(node.id, score);
+    });
+    
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(80))
+      .force('charge', d3.forceManyBody().strength(-300))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(30));
+    
+    const defs = svg.append('defs');
+    ['imports', 'contains', 'calls'].forEach(type => {
+      defs.append('marker')
+        .attr('id', `impact-arrow-${type}`)
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 20)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('fill', type === 'imports' ? '#7c3aed' : type === 'contains' ? '#059669' : '#ea580c')
+        .attr('d', 'M0,-5L10,0L0,5');
+    });
+    
+    const link = svg.append('g')
+      .selectAll('path')
+      .data(links)
+      .enter()
+      .append('path')
+      .attr('stroke', d => {
+        if (d.type === 'imports') return '#7c3aed';
+        if (d.type === 'contains') return '#059669';
+        return '#ea580c';
+      })
+      .attr('stroke-width', d => {
+        if (d.source === nodeId || d.target === nodeId) return 2;
+        return 1.5;
+      })
+      .attr('stroke-opacity', d => {
+        if (d.source === nodeId || d.target === nodeId) return 0.8;
+        return 0.6;
+      })
+      .attr('marker-end', d => `url(#impact-arrow-${d.type})`)
+      .attr('fill', 'none');
+    
+    const node = svg.append('g')
+      .selectAll('.node')
+      .data(nodes)
+      .enter()
+      .append('g')
+      .attr('class', 'node')
+      .call(d3.drag<any, any>()
+        .on('start', dragstarted)
+        .on('drag', dragged)
+        .on('end', dragended));
+    
+    node.append('circle')
+      .attr('r', d => {
+        if (d.isCenter) return 15;
+        return 10;
+      })
+      .attr('fill', d => {
+        if (d.isCenter) return highComplexity ? '#ef4444' : (hasIssues ? '#f59e0b' : '#3b82f6');
+        if (d.type === 'module') return '#93c5fd';
+        if (d.type === 'class') return '#67e8f9';
+        if (d.type === 'function') return '#6ee7b7';
+        return '#d1d5db';
+      })
+      .attr('stroke', d => {
+        if (d.isCenter) return '#3b82f6';
+        if (d.type === 'module') return '#1d4ed8';
+        if (d.type === 'class') return '#0e7490';
+        if (d.type === 'function') return '#047857';
+        return '#6b7280';
+      })
+      .attr('stroke-width', d => d.isCenter ? 3 : 1.5);
+    
+    node.append('circle')
+      .attr('r', d => {
+        const score = impactScores.get(d.id) || 0;
+        return score * 2; 
+      })
+      .attr('fill', 'none')
+      .attr('stroke', d => {
+        const score = impactScores.get(d.id) || 0;
+        if (score >= 7) return '#ef4444';
+        if (score >= 4) return '#f59e0b';
+        return '#10b981';
+      })
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '3,3')
+      .attr('stroke-opacity', 0.7);
+    
+    node.append('text')
+      .attr('dx', 15)
+      .attr('dy', 5)
+      .text(d => d.name)
+      .attr('font-size', d => d.isCenter ? '14px' : '12px')
+      .attr('font-weight', d => d.isCenter ? 'bold' : 'normal');
+    
+    node.select('text')
+      .each(function() {
+        const textElement = this as SVGTextElement;
+        const bbox = textElement.getBBox();
+        
+        const parent = textElement.parentNode as SVGGElement;
+        d3.select(parent)
+          .insert('rect', 'text')
+          .attr('x', bbox.x - 2)
+          .attr('y', bbox.y - 2)
+          .attr('width', bbox.width + 4)
+          .attr('height', bbox.height + 4)
+          .attr('fill', 'white')
+          .attr('fill-opacity', 0.8)
+          .attr('rx', 3);
+      });
+    
+    node.append('title')
+      .text(d => {
+        const score = impactScores.get(d.id) || 0;
+        return `${d.name} (${d.type})\nImpact Score: ${score.toFixed(1)}/10`;
+      });
+    
+    simulation.on('tick', () => {
+      link.attr('d', d => {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const dr = Math.sqrt(dx * dx + dy * dy);
+        return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+      });
+      
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+    
+    const legend = svg.append('g')
+      .attr('transform', `translate(10, 20)`);
+    
+    legend.append('text')
+      .attr('x', 0)
+      .attr('y', 0)
+      .text('Impact Analysis')
+      .attr('font-size', '16px')
+      .attr('font-weight', 'bold');
+    
+    const legendItems = [
+      { color: '#3b82f6', label: 'Current Node' },
+      { color: '#ef4444', label: 'High Impact' },
+      { color: '#f59e0b', label: 'Medium Impact' },
+      { color: '#10b981', label: 'Low Impact' }
+    ];
+    
+    legendItems.forEach((item, i) => {
+      legend.append('rect')
+        .attr('x', 0)
+        .attr('y', 25 + i * 20)
+        .attr('width', 15)
+        .attr('height', 15)
+        .attr('fill', item.color);
+      
+      legend.append('text')
+        .attr('x', 25)
+        .attr('y', 25 + i * 20 + 12)
+        .text(item.label)
+        .attr('font-size', '12px');
+    });
+    
+    function dragstarted(event: any, d: any) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+    }
+    
+    function dragged(event: any, d: any) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+    
+    function dragended(event: any, d: any) {
+      if (!event.active) simulation.alphaTarget(0);
+      d.fx = null;
+      d.fy = null;
+    }
+  }, [nodeId, nodeName, nodeType, connections, hasIssues, highComplexity]);
+
+  return (
+    <div className="impact-analysis">
+      <svg ref={svgRef}></svg>
+      <div className="mt-4 text-sm text-gray-600">
+        <p>This visualization shows the potential impact of changes to this component on other parts of the codebase.</p>
+        <p>Larger dotted circles indicate higher potential impact. Nodes can be dragged to rearrange the visualization.</p>
+      </div>
+    </div>
+  );
+};
+
+export default ImpactAnalysis;
+========================================
+File: ./node_modules/flatted/python/flatted.py
+========================================
+# ISC License
+#
+# Copyright (c) 2018-2025, Andrea Giammarchi, @WebReflection
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+# REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+# AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+# INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+# LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
+# OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+# PERFORMANCE OF THIS SOFTWARE.
+
+import json as _json
+
+class _Known:
+    def __init__(self):
+        self.key = []
+        self.value = []
+
+class _String:
+    def __init__(self, value):
+        self.value = value
+
+
+def _array_keys(value):
+    keys = []
+    i = 0
+    for _ in value:
+        keys.append(i)
+        i += 1
+    return keys
+
+def _object_keys(value):
+    keys = []
+    for key in value:
+        keys.append(key)
+    return keys
+
+def _is_array(value):
+    return isinstance(value, (list, tuple))
+
+def _is_object(value):
+    return isinstance(value, dict)
+
+def _is_string(value):
+    return isinstance(value, str)
+
+def _index(known, input, value):
+    input.append(value)
+    index = str(len(input) - 1)
+    known.key.append(value)
+    known.value.append(index)
+    return index
+
+def _loop(keys, input, known, output):
+    for key in keys:
+        value = output[key]
+        if isinstance(value, _String):
+            _ref(key, input[int(value.value)], input, known, output)
+
+    return output
+
+def _ref(key, value, input, known, output):
+    if _is_array(value) and value not in known:
+        known.append(value)
+        value = _loop(_array_keys(value), input, known, value)
+    elif _is_object(value) and value not in known:
+        known.append(value)
+        value = _loop(_object_keys(value), input, known, value)
+
+    output[key] = value
+
+def _relate(known, input, value):
+    if _is_string(value) or _is_array(value) or _is_object(value):
+        try:
+            return known.value[known.key.index(value)]
+        except:
+            return _index(known, input, value)
+
+    return value
+
+def _transform(known, input, value):
+    if _is_array(value):
+        output = []
+        for val in value:
+            output.append(_relate(known, input, val))
+        return output
+
+    if _is_object(value):
+        obj = {}
+        for key in value:
+            obj[key] = _relate(known, input, value[key])
+        return obj
+
+    return value
+
+def _wrap(value):
+    if _is_string(value):
+        return _String(value)
+
+    if _is_array(value):
+        i = 0
+        for val in value:
+            value[i] = _wrap(val)
+            i += 1
+
+    elif _is_object(value):
+        for key in value:
+            value[key] = _wrap(value[key])
+
+    return value
+
+def parse(value, *args, **kwargs):
+    json = _json.loads(value, *args, **kwargs)
+    wrapped = []
+    for value in json:
+        wrapped.append(_wrap(value))
+
+    input = []
+    for value in wrapped:
+        if isinstance(value, _String):
+            input.append(value.value)
+        else:
+            input.append(value)
+
+    value = input[0]
+
+    if _is_array(value):
+        return _loop(_array_keys(value), input, [value], value)
+
+    if _is_object(value):
+        return _loop(_object_keys(value), input, [value], value)
+
+    return value
+
+
+def stringify(value, *args, **kwargs):
+    known = _Known()
+    input = []
+    output = []
+    i = int(_index(known, input, value))
+    while i < len(input):
+        output.append(_transform(known, input, input[i]))
+        i += 1
+    return _json.dumps(output, *args, **kwargs)
+
+========================================
+File: ./README.md
+========================================
+# React + TypeScript + Vite
+
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+
+Currently, two official plugins are available:
+
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
+```
+
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
+```
+
+========================================
+File: ./src/types.ts
+========================================
+export interface CodeNode {
+    id: string;
+    name: string;
+    type: 'module' | 'class' | 'function';
+    is_entry?: boolean;
+    docstring?: string;
+    code_smells?: Array<string | CodeSmell>;
+    security_issues?: Array<string | CodeSmell>;
+    complexity_issues?: Array<string | CodeSmell>;
+    duplication_issues?: Array<string | CodeSmell>;
+    radius?: number;
+    file_path?: string;
+    metrics?: {
+      complexity?: number;
+      cognitive_complexity?: number;
+      lines?: number;
+      functions?: number;
+      classes?: number;
+      params?: number;
+      methods?: number;
+      nested_depth?: number;
+      [key: string]: any;
+    };
+    methods?: {
+      [key: string]: any;
+    };
+    x?: number;
+    y?: number;
+    vx?: number;
+    vy?: number;
+    fx?: number | null;
+    fy?: number | null;
+  }
+  
+  export interface CodeLink {
+    source: string | CodeNode;
+    target: string | CodeNode;
+    type: 'imports' | 'contains' | 'calls';
+  }
+  
+  export interface CodeSmell {
+    category?: string;
+    description?: string;
+    message?: string;
+    line?: number | null;
+    lineno?: number | null;
+  }
+  
+  export interface GraphData {
+    nodes: CodeNode[];
+    links: CodeLink[];
+  }
+  
+  export interface Issue {
+    category: string;
+    description: string;
+    line: number | null;
+    source: string;
+  }
+========================================
+File: ./src/components/Controls.tsx
+========================================
+import React, { useState } from 'react';
+
+interface ControlsProps {
+  onResetZoom: () => void;
+  onToggleLayout: () => void;
+  onSearchChange: (term: string) => void;
+  isHierarchical: boolean;
+  onToggleHierarchical: () => void;
+}
+
+const Controls: React.FC<ControlsProps> = ({ 
+  onResetZoom, 
+  onToggleLayout, 
+  onSearchChange,
+  isHierarchical,
+  onToggleHierarchical
+}) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTerm = e.target.value;
+    setSearchTerm(newTerm);
+    onSearchChange(newTerm);
+  };
+  
+  return (
+    <div id="controls">
+      <div>
+        <input 
+          type="text" 
+          id="search" 
+          placeholder="Search nodes..." 
+          value={searchTerm}
+          onChange={handleSearchChange}
+        />
+      </div>
+      <div className="controls-buttons">
+        <button onClick={onResetZoom}>Reset View</button>
+        <button onClick={onToggleLayout}>Toggle Layout</button>
+        <button onClick={onToggleHierarchical}>
+          {isHierarchical ? 'Force Layout' : 'Hierarchical View'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default Controls;
+========================================
+File: ./src/App.tsx
+========================================
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import VisualizationPage from './page/VisualizationPage';
+import NodeDetailsPage from './page/NodeDetailsPage';
+import MetricsDashboardPage from './components/MetricsDashboard';
+
+const App: React.FC = () => {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<VisualizationPage />} />
+        <Route path="/node/:nodeId" element={<NodeDetailsPage />} />
+        <Route path="/project-metrics" element={<MetricsDashboardPage />} />
+        <Route path="*" element={<div>Not Found</div>} />
+      </Routes>
+    </Router>
+  );
+};
+
+export default App;
+========================================
+File: ./tsconfig.node.json
+========================================
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["vite.config.ts"]
+}
+
+========================================
+File: ./src/main.tsx
+========================================
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css';  
+import App from './App.tsx'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)

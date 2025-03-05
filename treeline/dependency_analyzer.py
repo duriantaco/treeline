@@ -328,62 +328,82 @@ class ModuleDependencyAnalyzer:
     def get_graph_data_with_quality(self, enhanced_analyzer=None):
         nodes, links = self.get_graph_data()
         
-        if enhanced_analyzer and hasattr(enhanced_analyzer, 'quality_issues') and enhanced_analyzer.quality_issues:
-            print(f"Found {sum(len(issues) for issues in enhanced_analyzer.quality_issues.values())} quality issues")
+        if enhanced_analyzer:
+            if hasattr(enhanced_analyzer, 'quality_issues') and enhanced_analyzer.quality_issues:
+                file_to_module = {}
             
-            file_to_module = {}
+                for node in nodes:
+                    if node['type'] == 'module':
+                        for func_name, location in self.function_locations.items():
+                            if location.get('module') == node['name'] and 'file' in location:
+                                file_to_module[location['file']] = node['name']
+                        for module_name, classes in self.class_info.items():
+                            if module_name == node['name']:
+                                for class_name, info in classes.items():
+                                    if 'file' in info:
+                                        file_to_module[info['file']] = node['name']
             
+                file_basenames = {Path(file_path).name: module_name for file_path, module_name in file_to_module.items()}
+                
+                for category, issues in enhanced_analyzer.quality_issues.items():
+                    for issue in issues:
+                        if isinstance(issue, dict) and 'file_path' in issue:
+                            file_path = issue['file_path']
+                            module_name = file_to_module.get(file_path) or file_basenames.get(Path(file_path).name)
+                            
+                            if not module_name:
+                                for path, mod in file_to_module.items():
+                                    if path.endswith(file_path) or file_path.endswith(path):
+                                        module_name = mod
+                                        break
+                            
+                            if module_name:
+                                for node in nodes:
+                                    if node['type'] == 'module' and node['name'] == module_name:
+                                        node.setdefault('code_smells', [])
+                                        issue_text = f"[{category}] {issue.get('description', 'Unknown issue')}"
+                                        if issue.get('line'):
+                                            issue_text += f" (Line {issue['line']})"
+                                        if issue_text not in node['code_smells']:
+                                            node['code_smells'].append(issue_text)
+                                        break
+                            else:
+                                print(f"Could not map file {file_path} to any module")
+
             for node in nodes:
-                if node['type'] == 'module':
-                    for func_name, location in self.function_locations.items():
-                        if location.get('module') == node['name'] and 'file' in location:
-                            file_to_module[location.get('file')] = node['name']
-                    
-                    for module_name, classes in self.class_info.items():
-                        if module_name == node['name']:
-                            for class_name, info in classes.items():
-                                if 'file' in info:
-                                    file_to_module[info.get('file')] = node['name']
-            
-            file_basenames = {}
-            for file_path, module_name in file_to_module.items():
-                base_name = Path(file_path).name
-                file_basenames[base_name] = module_name
-            
-            for category, issues in enhanced_analyzer.quality_issues.items():
-                for issue in issues:
-                    if isinstance(issue, dict) and 'file_path' in issue:
-                        file_path = issue['file_path']
-                        
-                        module_name = file_to_module.get(file_path)
-                        
-                        if not module_name:
-                            basename = Path(file_path).name
-                            module_name = file_basenames.get(basename)
-                        
-                        if not module_name:
-                            for path, mod in file_to_module.items():
-                                if path.endswith(file_path) or file_path.endswith(path):
-                                    module_name = mod
-                                    break
-                        
-                        if module_name:
-                            for node in nodes:
-                                if node['type'] == 'module' and node['name'] == module_name:
-                                    if 'code_smells' not in node:
-                                        node['code_smells'] = []
-                                    
-                                    issue_text = f"[{category}] {issue.get('description', 'Unknown issue')}"
-                                    if issue.get('line'):
-                                        issue_text += f" (Line {issue['line']})"
-                                    
-                                    if issue_text not in node['code_smells']:
-                                        node['code_smells'].append(issue_text)
-                                        print(f"Added issue to {module_name}: {issue_text}")
-                                    break
-                        else:
-                            print(f"Could not map file {file_path} to any module")
-        
+                if node['type'] in ['function', 'class']:
+                    file_path = node.get('file_path') 
+                    if not file_path:
+                        continue
+
+                    if node['type'] == 'function' and file_path in enhanced_analyzer.function_metrics:
+                        func_data = enhanced_analyzer.function_metrics[file_path].get(node['name'])
+                        if func_data:  
+                            node['metrics'] = func_data[0]['metrics']
+                            node['code_smells'] = func_data[0]['code_smells']
+
+                    elif node['type'] == 'class' and file_path in enhanced_analyzer.class_metrics:
+                        class_data = enhanced_analyzer.class_metrics[file_path].get(node['name'])
+                        if class_data:
+                            node['metrics'] = class_data[0]['metrics']
+                            node['code_smells'] = class_data[0]['code_smells']
+
+                    if hasattr(enhanced_analyzer, 'quality_issues') and enhanced_analyzer.quality_issues:
+                        for category, issues in enhanced_analyzer.quality_issues.items():
+                            for issue in issues:
+                                if (isinstance(issue, dict) and 'file_path' in issue and 
+                                    issue['file_path'] == file_path and 'line' in issue):
+                                    if node['type'] == 'function' and node.get('line') == issue['line']:
+                                        node.setdefault('code_smells', [])
+                                        issue_text = f"[{category}] {issue.get('description', 'Unknown issue')} (Line {issue['line']})"
+                                        if issue_text not in node['code_smells']:
+                                            node['code_smells'].append(issue_text)
+                                    elif node['type'] == 'class' and node.get('line') <= issue['line'] <= node.get('end_line', issue['line']):
+                                        node.setdefault('code_smells', [])
+                                        issue_text = f"[{category}] {issue.get('description', 'Unknown issue')} (Line {issue['line']})"
+                                        if issue_text not in node['code_smells']:
+                                            node['code_smells'].append(issue_text)
+
         return nodes, links
 
     def get_common_flows(self):
