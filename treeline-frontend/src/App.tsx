@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import VisualizationPage from './page/VisualizationPage';
 import NodeDetailsPage from './page/NodeDetailsPage';
+import ProjectMetricsPage from './page/ProjectMetricsPage';
 
 const App: React.FC = () => {
   return (
@@ -9,6 +10,7 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/" element={<VisualizationPage />} />
         <Route path="/node/:nodeId" element={<NodeDetailsPage />} />
+        <Route path="/project-metrics" element={<ProjectMetricsPage />} />
         <Route path="*" element={<div>Not Found</div>} />
       </Routes>
     </Router>
