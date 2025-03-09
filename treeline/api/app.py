@@ -504,6 +504,8 @@ async def get_node_details(node_id: str):
         links = cached_data.get('links', [])
 
         node_lookup = {str(n.get('id')): n for n in nodes}
+        print('Node lookup:', {k: v.get('name', 'NO_NAME') for k, v in node_lookup.items()})
+
         
         if str(node_id) not in node_lookup:
             return JSONResponse(
@@ -541,7 +543,41 @@ async def get_node_details(node_id: str):
             except Exception as e:
                 # logger.error(f"Error processing link: {e}")
                 continue
-        
+
+        incoming_links_with_names = [
+            {
+                "source": {
+                    "id": link['source'],
+                    "name": node_lookup.get(str(link['source']), {}).get('name', 'Unknown'),
+                    "type": node_lookup.get(str(link['source']), {}).get('type', 'unknown')
+                },
+                "target": {
+                    "id": link['target'],
+                    "name": node_lookup.get(str(link['target']), {}).get('name', 'Unknown'),  # <-- FIXED
+                    "type": node_lookup.get(str(link['target']), {}).get('type', 'unknown')   # <-- FIXED
+                },
+                "type": link['type']
+            }
+            for link in incoming_links
+        ]
+
+        outgoing_links_with_names = [
+            {
+                "source": {
+                    "id": link['source'],
+                    "name": node_lookup.get(str(link['source']), {}).get('name', 'Unknown'),
+                    "type": node_lookup.get(str(link['source']), {}).get('type', 'unknown')
+                },
+                "target": {
+                    "id": link['target'],
+                    "name": node_lookup.get(str(link['target']), {}).get('name', 'Unknown'),  # <-- FIXED
+                    "type": node_lookup.get(str(link['target']), {}).get('type', 'unknown')   # <-- FIXED
+                },
+                "type": link['type']
+            }
+            for link in outgoing_links
+        ]
+                
         file_path = None
         if 'file_path' in node:
             file_path = node['file_path']
@@ -553,11 +589,17 @@ async def get_node_details(node_id: str):
         else:
             file_content = None
         
+        print('nodeType:', node.get('type'))
+        print('Connections:', {
+            "incoming": incoming_links_with_names,
+            "outgoing": outgoing_links_with_names
+        })
+
         return {
             "node": node,
             "connections": {
-                "incoming": incoming_links,
-                "outgoing": outgoing_links
+                "incoming": incoming_links_with_names,
+                "outgoing": outgoing_links_with_names
             },
             "file_content": file_content
         }

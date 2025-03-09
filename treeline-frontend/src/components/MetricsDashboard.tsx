@@ -816,8 +816,8 @@ const MetricsDashboardPage: React.FC = () => {
                   nodeName={activeFile.split('/').pop() || ''}
                   nodeType="file"
                   connections={{
-                    incoming: [],  // You would need to fetch these from your dependency graph
-                    outgoing: []   // You would need to fetch these from your dependency graph
+                    incoming: [],  
+                    outgoing: []   
                   }}
                   hasIssues={Object.values(fileMetrics.issues_by_category || {}).some((issues: any) => issues.length > 0)}
                   highComplexity={fileMetrics.functions.some((f: any) => (f.complexity || 0) > 10)}

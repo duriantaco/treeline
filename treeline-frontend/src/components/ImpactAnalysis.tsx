@@ -1,14 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
-import { CodeLink } from '../types';
 
 interface ImpactAnalysisProps {
   nodeId: string;
   nodeName: string;
   nodeType: string;
   connections: {
-    incoming: CodeLink[];
-    outgoing: CodeLink[];
+    incoming: Array<any>;
+    outgoing: Array<any>;
   };
   hasIssues: boolean;
   highComplexity: boolean;
@@ -36,113 +35,223 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
       .attr('width', width)
       .attr('height', height);
 
-    const nodes: any[] = [];
-    const links: any[] = [];
-    
-    const addedNodes = new Set<string>([nodeId]);
-    const secondaryNodes = new Set<string>();
-    
-    nodes.push({
+    const allNodes: any[] = [];
+    const allLinks: any[] = [];
+
+    allNodes.push({
       id: nodeId,
       name: nodeName,
       type: nodeType,
       level: 0,
       isCenter: true,
       hasIssues,
-      highComplexity
+      highComplexity,
+      x: width / 2,
+      y: height / 2,
     });
-    connections.incoming.forEach(connection => {
-      const sourceId = typeof connection.source === 'object' ? connection.source.id : connection.source;
-      const sourceName = typeof connection.source === 'object' ? connection.source.name : `Node ${sourceId}`;
-      const sourceType = typeof connection.source === 'object' ? connection.source.type : 'unknown';
-      
-      if (!addedNodes.has(sourceId)) {
-        nodes.push({
-          id: sourceId,
-          name: sourceName,
-          type: sourceType,
-          level: 1,
-          direction: 'incoming'
-        });
-        addedNodes.add(sourceId);
-        secondaryNodes.add(sourceId);
+
+    const addedNodeIds = new Set([nodeId]);
+
+    const extractNodeData = (node: any, fallbackId: string) => {
+      if (typeof node === 'string') {
+        return { id: node, name: node, type: 'unknown' };
+      } else if (node && typeof node === 'object') {
+        return {
+          id: node.id || node.source_id || node.target_id || fallbackId,
+          name: node.name || node.source_name || node.target_name || (node.id || fallbackId),
+          type: node.type || node.source_type || node.target_type || 'unknown',
+        };
       }
-      
-      links.push({
-        source: sourceId,
-        target: nodeId,
-        type: connection.type,
-        direction: 'incoming'
+      return { id: '', name: '', type: 'unknown' };
+    };
+
+    ////// INCOMING /////// 
+    if (connections.incoming && Array.isArray(connections.incoming)) {
+      const validIncoming = connections.incoming.filter(conn => {
+        const sourceData = extractNodeData(conn.source || conn, '');
+        const targetData = extractNodeData(conn.target || conn, '');
+        if (!sourceData.id || !targetData.id) {
+          return false;
+        }
+        return true;
       });
-    });
-    
-    connections.outgoing.forEach(connection => {
-      const targetId = typeof connection.target === 'object' ? connection.target.id : connection.target;
-      const targetName = typeof connection.target === 'object' ? connection.target.name : `Node ${targetId}`;
-      const targetType = typeof connection.target === 'object' ? connection.target.type : 'unknown';
-      
-      if (!addedNodes.has(targetId)) {
-        nodes.push({
-          id: targetId,
-          name: targetName,
-          type: targetType,
-          level: 1,
-          direction: 'outgoing'
+
+      validIncoming.forEach((conn, index) => {
+        const sourceData = extractNodeData(conn.source || conn, '');
+        const sourceId = sourceData.id;
+        const sourceName = sourceData.name;
+        const sourceType = sourceData.type;
+
+        if (!addedNodeIds.has(sourceId)) {
+          const angle = (Math.PI / (validIncoming.length + 1)) * (index + 1);
+          const radius = 150;
+          const x = width / 2 - radius * Math.cos(angle);
+          const y = height / 2 - radius * Math.sin(angle);
+
+          allNodes.push({
+            id: sourceId,
+            name: sourceName,
+            type: sourceType,
+            level: 1,
+            direction: 'incoming',
+            x,
+            y,
+          });
+          addedNodeIds.add(sourceId);
+        }
+
+        allLinks.push({
+          source: sourceId,
+          target: nodeId,
+          type: conn.type || 'unknown',
+          direction: 'incoming',
         });
-        addedNodes.add(targetId);
-        secondaryNodes.add(targetId);
-      }
-      
-      links.push({
-        source: nodeId,
-        target: targetId,
-        type: connection.type,
-        direction: 'outgoing'
       });
-    });
-    
+    }
+
+    /////// OUTGOING ///////
+    if (connections.outgoing && Array.isArray(connections.outgoing)) {
+      const validOutgoing = connections.outgoing.filter(conn => {
+        const sourceData = extractNodeData(conn.source || conn, '');
+        const targetData = extractNodeData(conn.target || conn, '');
+        if (!sourceData.id || !targetData.id) {
+          return false;
+        }
+        return true;
+      });
+
+      validOutgoing.forEach((conn, index) => {
+        const targetData = extractNodeData(conn.target || conn, '');
+        const targetId = targetData.id;
+        const targetName = targetData.name;
+        const targetType = targetData.type;
+
+        if (!addedNodeIds.has(targetId)) {
+          const angle = (Math.PI / (validOutgoing.length + 1)) * (index + 1);
+          const radius = 150;
+          const x = width / 2 + radius * Math.cos(angle);
+          const y = height / 2 - radius * Math.sin(angle);
+
+          allNodes.push({
+            id: targetId,
+            name: targetName,
+            type: targetType,
+            level: 1,
+            direction: 'outgoing',
+            x,
+            y,
+          });
+          addedNodeIds.add(targetId);
+        }
+
+        allLinks.push({
+          source: nodeId,
+          target: targetId,
+          type: conn.type || 'unknown',
+          direction: 'outgoing',
+        });
+      });
+    }
 
     const impactScores = new Map<string, number>();
-    
     impactScores.set(nodeId, 10);
-    
-    nodes.forEach(node => {
+
+    allNodes.forEach(node => {
       if (node.id === nodeId) return;
-      
       let score = 5;
-      
-      const directConnections = links.filter(link => 
-        link.source === node.id || link.target === node.id
+      const directConnections = allLinks.filter(link =>
+        String(link.source) === String(node.id) || String(link.target) === String(node.id)
       );
-      
       directConnections.forEach(link => {
         if (link.type === 'contains') score += 3;
         else if (link.type === 'imports') score += 2;
         else if (link.type === 'calls') score += 1;
       });
-      
       if (node.type === 'module') score += 3;
       else if (node.type === 'class') score += 2;
-      else if (node.type === 'function') score += 1;
-      
+      else if (node.type === 'function' || node.type === 'method') score += 1;
       score = Math.min(10, Math.max(0, score));
-      
       impactScores.set(node.id, score);
     });
-    
-    const simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id((d: any) => d.id).distance(80))
-      .force('charge', d3.forceManyBody().strength(-300))
+
+    const simulation = d3.forceSimulation(allNodes)
+      .force('link', d3.forceLink(allLinks).id((d: any) => d.id).distance(120))
+      .force('charge', d3.forceManyBody().strength(-600))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30));
-    
+      .force('collision', d3.forceCollide().radius(40));
+
+    const link = svg.append('g')
+      .selectAll('path')
+      .data(allLinks)
+      .enter()
+      .append('path')
+      .attr('stroke', d => {
+        if (d.type === 'imports') return '#7c3aed';
+        if (d.type === 'contains') return '#059669';
+        if (d.type === 'calls') return '#ea580c';
+        return '#888888';
+      })
+      .attr('stroke-width', 2)
+      .attr('marker-end', d => `url(#impact-arrow-${d.type})`)
+      .attr('fill', 'none');
+
+    const node = svg.append('g')
+      .selectAll('.node')
+      .data(allNodes)
+      .enter()
+      .append('g')
+      .attr('class', 'node')
+      .call(d3.drag<any, any>()
+        .on('start', (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.3).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on('drag', (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on('end', (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        }));
+
+    node.append('circle')
+      .attr('r', d => (d.isCenter ? 15 : 10))
+      .attr('fill', d => (d.isCenter ? (highComplexity ? '#ef4444' : hasIssues ? '#f59e0b' : '#3b82f6') : '#d1d5db'));
+
+    node.append('circle')
+      .attr('r', d => (impactScores.get(d.id) || 0) * 2)
+      .attr('fill', 'none')
+      .attr('stroke', d => {
+        const score = impactScores.get(d.id) || 0;
+        return score >= 7 ? '#ef4444' : score >= 4 ? '#f59e0b' : '#10b981';
+      })
+      .attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '3,3');
+
+    node.append('text')
+      .attr('dx', 15)
+      .attr('dy', 5)
+      .text(d => d.name);
+
+    simulation.on('tick', () => {
+      link.attr('d', d => {
+        const dx = d.target.x - d.source.x;
+        const dy = d.target.y - d.source.y;
+        const dr = Math.sqrt(dx * dx + dy * dy) * 1.5;
+        return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
+      });
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
     const defs = svg.append('defs');
-    ['imports', 'contains', 'calls'].forEach(type => {
+    ['imports', 'contains', 'calls', 'unknown'].forEach(type => {
       defs.append('marker')
         .attr('id', `impact-arrow-${type}`)
         .attr('viewBox', '0 -5 10 10')
         .attr('refX', 20)
-        .attr('refY', 0)
         .attr('markerWidth', 6)
         .attr('markerHeight', 6)
         .attr('orient', 'auto')
@@ -150,165 +259,11 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         .attr('fill', type === 'imports' ? '#7c3aed' : type === 'contains' ? '#059669' : '#ea580c')
         .attr('d', 'M0,-5L10,0L0,5');
     });
-    
-    const link = svg.append('g')
-      .selectAll('path')
-      .data(links)
-      .enter()
-      .append('path')
-      .attr('stroke', d => {
-        if (d.type === 'imports') return '#7c3aed';
-        if (d.type === 'contains') return '#059669';
-        return '#ea580c';
-      })
-      .attr('stroke-width', d => {
-        if (d.source === nodeId || d.target === nodeId) return 2;
-        return 1.5;
-      })
-      .attr('stroke-opacity', d => {
-        if (d.source === nodeId || d.target === nodeId) return 0.8;
-        return 0.6;
-      })
-      .attr('marker-end', d => `url(#impact-arrow-${d.type})`)
-      .attr('fill', 'none');
-    
-    const node = svg.append('g')
-      .selectAll('.node')
-      .data(nodes)
-      .enter()
-      .append('g')
-      .attr('class', 'node')
-      .call(d3.drag<any, any>()
-        .on('start', dragstarted)
-        .on('drag', dragged)
-        .on('end', dragended));
-    
-    node.append('circle')
-      .attr('r', d => {
-        if (d.isCenter) return 15;
-        return 10;
-      })
-      .attr('fill', d => {
-        if (d.isCenter) return highComplexity ? '#ef4444' : (hasIssues ? '#f59e0b' : '#3b82f6');
-        if (d.type === 'module') return '#93c5fd';
-        if (d.type === 'class') return '#67e8f9';
-        if (d.type === 'function') return '#6ee7b7';
-        return '#d1d5db';
-      })
-      .attr('stroke', d => {
-        if (d.isCenter) return '#3b82f6';
-        if (d.type === 'module') return '#1d4ed8';
-        if (d.type === 'class') return '#0e7490';
-        if (d.type === 'function') return '#047857';
-        return '#6b7280';
-      })
-      .attr('stroke-width', d => d.isCenter ? 3 : 1.5);
-    
-    node.append('circle')
-      .attr('r', d => {
-        const score = impactScores.get(d.id) || 0;
-        return score * 2; 
-      })
-      .attr('fill', 'none')
-      .attr('stroke', d => {
-        const score = impactScores.get(d.id) || 0;
-        if (score >= 7) return '#ef4444';
-        if (score >= 4) return '#f59e0b';
-        return '#10b981';
-      })
-      .attr('stroke-width', 1.5)
-      .attr('stroke-dasharray', '3,3')
-      .attr('stroke-opacity', 0.7);
-    
-    node.append('text')
-      .attr('dx', 15)
-      .attr('dy', 5)
-      .text(d => d.name)
-      .attr('font-size', d => d.isCenter ? '14px' : '12px')
-      .attr('font-weight', d => d.isCenter ? 'bold' : 'normal');
-    
-    node.select('text')
-      .each(function() {
-        const textElement = this as SVGTextElement;
-        const bbox = textElement.getBBox();
-        
-        const parent = textElement.parentNode as SVGGElement;
-        d3.select(parent)
-          .insert('rect', 'text')
-          .attr('x', bbox.x - 2)
-          .attr('y', bbox.y - 2)
-          .attr('width', bbox.width + 4)
-          .attr('height', bbox.height + 4)
-          .attr('fill', 'white')
-          .attr('fill-opacity', 0.8)
-          .attr('rx', 3);
-      });
-    
-    node.append('title')
-      .text(d => {
-        const score = impactScores.get(d.id) || 0;
-        return `${d.name} (${d.type})\nImpact Score: ${score.toFixed(1)}/10`;
-      });
-    
-    simulation.on('tick', () => {
-      link.attr('d', d => {
-        const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
-        const dr = Math.sqrt(dx * dx + dy * dy);
-        return `M${d.source.x},${d.source.y}A${dr},${dr} 0 0,1 ${d.target.x},${d.target.y}`;
-      });
-      
-      node.attr('transform', d => `translate(${d.x},${d.y})`);
-    });
-    
-    const legend = svg.append('g')
-      .attr('transform', `translate(10, 20)`);
-    
-    legend.append('text')
-      .attr('x', 0)
-      .attr('y', 0)
-      .text('Impact Analysis')
-      .attr('font-size', '16px')
-      .attr('font-weight', 'bold');
-    
-    const legendItems = [
-      { color: '#3b82f6', label: 'Current Node' },
-      { color: '#ef4444', label: 'High Impact' },
-      { color: '#f59e0b', label: 'Medium Impact' },
-      { color: '#10b981', label: 'Low Impact' }
-    ];
-    
-    legendItems.forEach((item, i) => {
-      legend.append('rect')
-        .attr('x', 0)
-        .attr('y', 25 + i * 20)
-        .attr('width', 15)
-        .attr('height', 15)
-        .attr('fill', item.color);
-      
-      legend.append('text')
-        .attr('x', 25)
-        .attr('y', 25 + i * 20 + 12)
-        .text(item.label)
-        .attr('font-size', '12px');
-    });
-    
-    function dragstarted(event: any, d: any) {
-      if (!event.active) simulation.alphaTarget(0.3).restart();
-      d.fx = d.x;
-      d.fy = d.y;
-    }
-    
-    function dragged(event: any, d: any) {
-      d.fx = event.x;
-      d.fy = event.y;
-    }
-    
-    function dragended(event: any, d: any) {
-      if (!event.active) simulation.alphaTarget(0);
-      d.fx = null;
-      d.fy = null;
-    }
+
+    svg.append('text')
+      .attr('x', 10)
+      .attr('y', 380)
+      .text(`Total nodes: ${allNodes.length}, Total links: ${allLinks.length}`);
   }, [nodeId, nodeName, nodeType, connections, hasIssues, highComplexity]);
 
   return (

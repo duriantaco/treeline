@@ -673,40 +673,40 @@ const VisualizationPage: React.FC = () => {
   const debouncedSearch = useCallback(
     debounce((term: string) => {
       if (!svgRef.current) return;
-      
+  
       const svg = d3.select(svgRef.current);
       const nodeSelection = svg.selectAll('.node');
       const linkSelection = svg.selectAll('path');
-      
+  
       if (term === "") {
         nodeSelection.style("opacity", 1);
         linkSelection.style("opacity", 0.7);
         return;
       }
-      
+  
       const lowerTerm = term.toLowerCase();
       const matchedNodes = new Set<string>();
-      
+  
       data.nodes.forEach(node => {
         if (node.name.toLowerCase().includes(lowerTerm)) {
           matchedNodes.add(node.id);
-          
+  
           data.links.forEach(l => {
-            const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
-            const targetId = typeof l.target === 'object' ? l.target.id : l.target;
-            
+            const sourceId = typeof l.source === 'object' ? l.source.id ?? 'unknown' : l.source;
+            const targetId = typeof l.target === 'object' ? l.target.id ?? 'unknown' : l.target;
+  
             if (sourceId === node.id) matchedNodes.add(targetId);
             if (targetId === node.id) matchedNodes.add(sourceId);
           });
         }
       });
-      
+  
       nodeSelection.style("opacity", (d: any) => matchedNodes.has((d as CodeNode).id) ? 1 : 0.1);
-      
+  
       linkSelection.style("opacity", (d: any) => {
         const sourceId = typeof d.source === 'object' ? d.source.id : d.source;
         const targetId = typeof d.target === 'object' ? d.target.id : d.target;
-        
+  
         return matchedNodes.has(sourceId) && matchedNodes.has(targetId) ? 0.7 : 0.1;
       });
     }, 200),
@@ -775,6 +775,7 @@ const VisualizationPage: React.FC = () => {
             {isHierarchical ? 'Force Layout' : 'Hierarchical View'}
           </button>
         </div>
+ 
       </div>
       
       <div className="fixed bottom-5 left-5 bg-white p-4 rounded-xl shadow-md z-10">
@@ -823,8 +824,19 @@ const VisualizationPage: React.FC = () => {
           pointerEvents: 'none'
         }}
       />
-
       <svg ref={svgRef} id="visualization" className="w-full h-screen"></svg>
+      <div className="fixed top-5 right-5 z-10">
+        <button
+          onClick={() => navigate('/project-metrics')}
+          className="bg-white text-indigo-700 border border-indigo-300 px-4 py-2 rounded-lg shadow-md hover:bg-indigo-50 transition-colors duration-200 flex items-center gap-2 font-medium"
+          aria-label="View Project Metrics"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+          </svg>
+          View Project Metrics
+        </button>
+      </div>
     </div>
   );
 };
