@@ -504,9 +504,7 @@ async def get_node_details(node_id: str):
         links = cached_data.get('links', [])
 
         node_lookup = {str(n.get('id')): n for n in nodes}
-        print('Node lookup:', {k: v.get('name', 'NO_NAME') for k, v in node_lookup.items()})
 
-        
         if str(node_id) not in node_lookup:
             return JSONResponse(
                 status_code=404,

@@ -37,35 +37,35 @@ class EnhancedCodeAnalyzer:
             if not tree:
                 return []
 
-            # try:
-            #     self.code_smell_checker.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in code smell checker for {file_path}: {e}")
+            try:
+                self.code_smell_checker.check(tree, file_path, self.quality_issues)
+            except Exception as e:
+                print(f"Error in code smell checker for {file_path}: {e}")
                 
-            # try:
-            #     self.complexity_analyzer.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in complexity analyzer for {file_path}: {e}")
+            try:
+                self.complexity_analyzer.check(tree, file_path, self.quality_issues)
+            except Exception as e:
+                print(f"Error in complexity analyzer for {file_path}: {e}")
                 
-            # try:
-            #     self.security_analyzer.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in security analyzer for {file_path}: {e}")
+            try:
+                self.security_analyzer.check(tree, file_path, self.quality_issues)
+            except Exception as e:
+                print(f"Error in security analyzer for {file_path}: {e}")
                 
-            # try:
-            #     self.magic_number_checker.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in magic number checker for {file_path}: {e}")
+            try:
+                self.magic_number_checker.check(tree, file_path, self.quality_issues)
+            except Exception as e:
+                print(f"Error in magic number checker for {file_path}: {e}")
                 
-            # try:
-            #     self.sql_injection_checker.check(tree, file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in SQL injection checker for {file_path}: {e}")
+            try:
+                self.sql_injection_checker.check(tree, file_path, self.quality_issues)
+            except Exception as e:
+                print(f"Error in SQL injection checker for {file_path}: {e}")
 
-            # try:
-            #     self.style_checker.check(file_path, self.quality_issues)
-            # except Exception as e:
-            #     print(f"Error in style checker for {file_path}: {e}")
+            try:
+                self.style_checker.check(file_path, self.quality_issues)
+            except Exception as e:
+                print(f"Error in style checker for {file_path}: {e}")
 
             results = self._analyze_code_elements(tree, content, file_path)
             

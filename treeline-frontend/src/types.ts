@@ -30,12 +30,15 @@ export interface CodeNode {
     vy?: number;
     fx?: number | null;
     fy?: number | null;
+    _cachedTooltip?: string;
   }
   
   export interface CodeLink {
     source: string | CodeNode;
     target: string | CodeNode;
     type: 'imports' | 'contains' | 'calls';
+    value?: number;
+    _path?: string;
   }
   
   export interface CodeSmell {
