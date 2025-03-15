@@ -3,6 +3,7 @@ import re
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict
+from treeline.utils.metrics import calculate_cyclomatic_complexity
 
 from treeline.ignore import read_ignore_patterns, should_ignore
 from treeline.models.dependency_analyzer import (
@@ -34,7 +35,7 @@ class ModuleDependencyAnalyzer:
             }
         )
         self.QUALITY_METRICS = {
-            "MAX_LINE_LENGTH": self.config.get("MAX_LINE_LENGTH", 80),
+            "MAX_LINE_LENGTH": self.config.get("MAX_LINE_LENGTH", 100),
             "MAX_DOC_LENGTH": self.config.get("MAX_DOC_LENGTH", 80),
             "MAX_CYCLOMATIC_COMPLEXITY": self.config.get("MAX_CYCLOMATIC_COMPLEXITY", 10),
             "MAX_COGNITIVE_COMPLEXITY": self.config.get("MAX_COGNITIVE_COMPLEXITY", 15),
@@ -76,7 +77,7 @@ class ModuleDependencyAnalyzer:
                 self._analyze_module(tree, module_name, str(file_path))
             except Exception as e:
                 print(f"Error analyzing {file_path}: {e}")
-
+    
     def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str):
         for parent in ast.walk(tree):
             for child in ast.iter_child_nodes(parent):
@@ -153,13 +154,7 @@ class ModuleDependencyAnalyzer:
         self.module_metrics[module_name] = metrics.__dict__
 
     def _calculate_complexity(self, node: ast.AST) -> int:
-        complexity = 1
-        for child in ast.walk(node):
-            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
-                complexity += 1
-            elif isinstance(child, ast.BoolOp):
-                complexity += len(child.values) - 1
-        return complexity
+        return calculate_cyclomatic_complexity(node)
 
     def get_graph_data(self):
         all_modules = set()
@@ -307,6 +302,19 @@ class ModuleDependencyAnalyzer:
             if not any(module in imports for imports in self.module_imports.values()):
                 entry_points.append(module)
         return entry_points
+    
+    def categorize_functions(self, function_dependencies):
+        categories = {'entry_points': [], 'core_functions': [], 'leaf_functions': []}
+        for func, calls in self.function_calls.items():
+            fan_in = len(calls)
+            fan_out = len(function_dependencies.get(func, {}).get('calls', []))
+            if fan_in == 0:
+                categories['entry_points'].append(func)
+            elif fan_in > 5 or fan_out > 5:
+                categories['core_functions'].append(func)
+            elif fan_out == 0 and fan_in > 0:
+                categories['leaf_functions'].append(func)
+        return categories
 
     def get_core_components(self):
         components = []
