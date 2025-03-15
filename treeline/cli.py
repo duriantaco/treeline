@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 from pathlib import Path
 
 import click
@@ -10,9 +9,9 @@ from rich.table import Table
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
 from treeline.utils.report import ReportGenerator
+from treeline.config_manager import get_config, ConfigManager
 
 console = Console()
-
 
 @click.group()
 def cli():
@@ -21,17 +20,18 @@ def cli():
 
     A CLI to analyze and visualize Python codebases. Provides commands to:
     - Analyze structural dependencies
-    - Check code quality
+    - Check code quality  
     - Generate reports
     - Launch a web interface
+    - Manage configuration
     """
     pass
-
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True))
 @click.option("--depth", default=1, help="Analysis depth for dependencies")
-def analyze(directory, depth):
+@click.option("--config", type=click.Path(), help="Path to configuration file")
+def analyze(directory, depth, config):
     """
     Analyze your codebase structure and quality metrics.
 
@@ -39,11 +39,14 @@ def analyze(directory, depth):
     Examples:
       treeline analyze /path/to/codebase
       treeline analyze . --depth 2
+      treeline analyze . --config ./my_config.json
     """
+    config_manager = get_config(config)
+    
     with console.status("[bold green]Analyzing codebase..."):
         try:
-            dep_analyzer = ModuleDependencyAnalyzer()
-            code_analyzer = EnhancedCodeAnalyzer()
+            dep_analyzer = ModuleDependencyAnalyzer(config=config_manager.as_dict())
+            code_analyzer = EnhancedCodeAnalyzer(config=config_manager.as_dict())
 
             dep_analyzer.analyze_directory(Path(directory))
 
@@ -85,6 +88,106 @@ def analyze(directory, depth):
                 style="bold red"
             )
 
+@cli.group()
+def config():
+    """Manage Treeline configuration settings."""
+    pass
+
+@config.command("init")
+@click.option("--path", type=click.Path(), default="./treeline.json", 
+              help="Path to create the configuration file")
+def init_config(path):
+    """
+    Create a default configuration file.
+    
+    \b
+    Examples:
+      treeline config init
+      treeline config init --path ~/.treeline/config.json
+    """
+    try:
+        ConfigManager.create_default_config(path)
+        console.print(f"[green]Default configuration created at {path}[/]")
+    except Exception as e:
+        console.print(f"[red]Error creating configuration:[/] {str(e)}", style="bold red")
+
+
+@config.command("show")
+@click.option("--path", type=click.Path(exists=True), 
+              help="Path to configuration file (optional)")
+def show_config(path):
+    """
+    Display current configuration settings.
+    
+    \b
+    Examples:
+      treeline config show
+      treeline config show --path ./my_config.json
+    """
+    try:
+        config_manager = get_config(path)
+        config_dict = config_manager.as_dict()
+        
+        console.print("[bold]Current Configuration:[/]")
+        table = Table(show_header=True)
+        table.add_column("Setting")
+        table.add_column("Value")
+        
+        for key, value in sorted(config_dict.items()):
+            table.add_row(key, str(value))
+            
+        console.print(table)
+        
+        if hasattr(config_manager, "_config_path") and config_manager._config_path:
+            console.print(f"\nLoaded from: [cyan]{config_manager._config_path}[/]")
+        else:
+            console.print("\nUsing default configuration (no file loaded)")
+            
+    except Exception as e:
+        console.print(f"[red]Error displaying configuration:[/] {str(e)}", style="bold red")
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+@click.option("--path", type=click.Path(), 
+              help="Path to save configuration (defaults to existing or ./treeline.json)")
+def set_config(key, value, path):
+    """
+    Set a configuration value and save it.
+    
+    \b
+    Examples:
+      treeline config set MAX_LINE_LENGTH 120
+      treeline config set MAX_PARAMS 6 --path ./my_config.json
+    """
+    try:
+        config_manager = get_config(path)
+        
+        if key not in ConfigManager.DEFAULT_CONFIG:
+            console.print(f"[yellow]Warning:[/] '{key}' is not a standard configuration key")
+        
+        if value.lower() in ("true", "yes", "y"):
+            parsed_value = True
+        elif value.lower() in ("false", "no", "n"):
+            parsed_value = False
+        else:
+            try:
+                if "." in value:
+                    parsed_value = float(value)
+                else:
+                    parsed_value = int(value)
+            except ValueError:
+                parsed_value = value
+        
+        config_manager.set(key, parsed_value)
+        
+        config_manager.save_user_config(path)
+        
+        console.print(f"[green]Set {key} = {parsed_value} and saved configuration[/]")
+        
+    except Exception as e:
+        console.print(f"[red]Error setting configuration:[/] {str(e)}", style="bold red")
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True))
@@ -174,24 +277,27 @@ def serve():
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True), default=".")
 @click.option("--output", default=None, help="Output markdown filename (default: treeline_report.md)")
-def report(directory, output):
+@click.option("--json", is_flag=True, help="Output report in JSON format instead of Markdown")
+
+def report(directory, output, json):
     """
-    Generate a markdown report summarizing analysis results.
+    Generate a report summarizing analysis results.
 
     \b
     Examples:
       treeline report /path/to/codebase
       treeline report . --output custom_report.md
+      treeline report . --json
     """
-    with console.status("[bold green]Generating markdown report..."):
+    with console.status("[bold green]Generating report..."):
         try:
             report_gen = ReportGenerator(Path(directory))
             report_gen.analyze()
 
-            filename = output or "treeline_report.md"
-            report_path = report_gen.save_report(filename=filename)
+            format_str = "json" if json else "md"
+            report_path = report_gen.save_report(filename=output, format=format_str)
 
-            console.print(f"\n[green]Markdown report saved to {report_path}[/]")
+            console.print(f"\n[green]Report saved to {report_path}[/]")
         except Exception as e:
             console.print(f"\n[red]Error during report generation:[/] {str(e)}", style="bold red")
 

@@ -8,21 +8,24 @@ from treeline.checkers.complexity import ComplexityAnalyzer
 from treeline.checkers.duplication import DuplicationDetector
 from treeline.checkers.security import SecurityAnalyzer
 from treeline.models.enhanced_analyzer import QualityIssue
-from treeline.checkers.magic_numbers import MagicNumberChecker
 from treeline.checkers.sql_injection import SQLInjectionChecker
 from treeline.checkers.style_checker import StyleChecker
+from treeline.utils.metrics import calculate_cyclomatic_complexity
+from treeline.config_manager import get_config
 
 class EnhancedCodeAnalyzer:
     def __init__(self, show_params: bool = True, config: Dict = None):
         self.show_params = show_params
         self.quality_issues = defaultdict(list)
         self.metrics_summary = defaultdict(dict)
+        
+        self.config = config or get_config().as_dict()
+
         self.config = config or {}
         self.code_smell_checker = CodeSmellChecker(self.config)
         self.complexity_analyzer = ComplexityAnalyzer(self.config)
         self.security_analyzer = SecurityAnalyzer(self.config)
         self.duplication_detector = DuplicationDetector(self.config)
-        self.magic_number_checker = MagicNumberChecker(self.config)
         self.sql_injection_checker = SQLInjectionChecker(self.config)
         self.style_checker = StyleChecker(self.config)
 
@@ -51,11 +54,6 @@ class EnhancedCodeAnalyzer:
                 self.security_analyzer.check(tree, file_path, self.quality_issues)
             except Exception as e:
                 print(f"Error in security analyzer for {file_path}: {e}")
-                
-            try:
-                self.magic_number_checker.check(tree, file_path, self.quality_issues)
-            except Exception as e:
-                print(f"Error in magic number checker for {file_path}: {e}")
                 
             try:
                 self.sql_injection_checker.check(tree, file_path, self.quality_issues)
@@ -129,15 +127,6 @@ class EnhancedCodeAnalyzer:
         self.duplication_detector.analyze_directory(directory, self.quality_issues)
         return results
 
-    def generate_report(self) -> str:
-        report = ["# Code Quality Analysis Report"]
-        for category, issues in self.quality_issues.items():
-            report.append(f"## {category.title()}")
-            for issue in issues:
-                line_info = f" (Line {issue['line']})" if issue.get('line') else ""
-                report.append(f"- {issue['description']}{line_info}")
-        return "\n".join(report)
-
     def _read_file(self, file_path: Path) -> Optional[str]:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -163,7 +152,7 @@ class EnhancedCodeAnalyzer:
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 func_info = self._analyze_function(node, content)
-                self._add_quality_issues_to_element(func_info, node.lineno, file_path) 
+                self._add_quality_issues_to_element(func_info, node.lineno, file_path)
                 results.append(func_info)
                 
             elif isinstance(node, ast.ClassDef):
@@ -181,8 +170,8 @@ class EnhancedCodeAnalyzer:
         
         for category, issues in self.quality_issues.items():
             for issue in issues:
-                if (isinstance(issue, dict) and 
-                    issue.get('file_path') == file_path_str and 
+                if (isinstance(issue, dict) and
+                    issue.get('file_path') == file_path_str and
                     issue.get('line') is not None and
                     abs(issue.get('line') - line_number) <= 10):
                     
@@ -208,7 +197,7 @@ class EnhancedCodeAnalyzer:
                 "params": param_count,
                 "complexity": complexity
             },
-            "code_smells": []  
+            "code_smells": []
         }
 
     def _analyze_class(self, node: ast.ClassDef, content: str) -> Dict:
@@ -226,15 +215,10 @@ class EnhancedCodeAnalyzer:
                 "lines": line_count,
                 "methods": len(methods),
             },
-            "code_smells": []  
+            "code_smells": []
         }
         
     def _calculate_complexity(self, node: ast.AST) -> int:
         """Calculate cyclomatic complexity."""
-        complexity = 1
-        for child in ast.walk(node):
-            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
-                complexity += 1
-            elif isinstance(child, ast.BoolOp):
-                complexity += len(child.values) - 1
-        return complexity
+        return calculate_cyclomatic_complexity(node)
+    

@@ -2,13 +2,14 @@ import ast
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict
+from treeline.config_manager import get_config
 
 from treeline.models.enhanced_analyzer import QualityIssue
 
 class DuplicationDetector:
     def __init__(self, config: Dict = None):
-        self.config = config or {}
-        self.max_duplicated_lines = self.config.get("MAX_DUPLICATED_LINES", 5)
+        self.config = config or get_config().as_dict()
+        self.max_duplicated_lines = self.config.get("MAX_DUPLICATED_LINES", 6)
 
     def analyze_directory(self, directory: Path, quality_issues: defaultdict):
         all_lines = {}
