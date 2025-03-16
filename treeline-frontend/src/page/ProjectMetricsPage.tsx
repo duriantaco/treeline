@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as d3 from 'd3';
-import { fetchDetailedMetrics, fetchIssuesByCategory, fetchComplexityBreakdown } from '../services/dataServices';
+import { 
+  fetchDetailedMetrics, 
+  fetchIssuesByCategory, 
+  fetchComplexityBreakdown,
+} from '../services/dataServices';
 
 const ProjectMetricsPage: React.FC = () => {
   const [projectMetrics, setProjectMetrics] = useState<any>(null);
@@ -309,8 +313,11 @@ const ProjectMetricsPage: React.FC = () => {
                         <tr
                           key={index}
                           className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => navigate(`/node/${file.path}`)}
-                        >
+                          onClick={() => {
+                            const encodedPath = encodeURIComponent(file.path);
+                            navigate(`/file/${encodedPath}`);
+                          }}
+                          >
                           <td className="py-2 px-4">{file.name}</td>
                           <td className="py-2 px-4 text-right">{file.lines}</td>
                           <td className="py-2 px-4 text-right">{file.functions}</td>

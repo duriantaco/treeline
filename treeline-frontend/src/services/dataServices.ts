@@ -11,6 +11,9 @@ export interface GraphDataParams {
   includeEntryPointsOnly?: boolean;
 }
 
+interface StructureItem {
+  type: string;
+}
 export async function fetchGraphData(params: GraphDataParams = {}): Promise<GraphData> {
   try {
     const queryParams = new URLSearchParams();
@@ -40,14 +43,82 @@ export async function fetchGraphData(params: GraphDataParams = {}): Promise<Grap
   }
 }
 
+export async function fetchNodeByFilePath(filePath: string): Promise<any> {
+  try {
+    console.log(`Fetching node by path: ${filePath}`);
+    const encodedPath = encodeURIComponent(filePath);
+    const url = `${API_BASE_URL}/api/node-by-path/${encodedPath}`;
+    
+    try {
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        return await response.json();
+      }
+      
+      if (response.status === 404) {
+        console.log("Node not found in graph, trying direct file access");
+        const fileContentUrl = `${API_BASE_URL}/api/file-content?path=${encodedPath}`;
+        const fileResponse = await fetch(fileContentUrl);
+        
+        if (!fileResponse.ok) {
+          throw new Error(`File not found or inaccessible: ${filePath}`);
+        }
+        
+        const fileData = await fileResponse.json();
+               
+        return {
+          node: {
+            id: filePath,
+            name: fileData.name,
+            type: "file",
+            file_path: filePath,
+            metrics: {
+              lines: fileData.content.split('\n').length,
+              functions: fileData.structure.filter((item: StructureItem) => item.type === 'function').length,
+              classes: fileData.structure.filter((item: StructureItem) => item.type === 'class').length
+            },
+            code_smells: [],
+            structure: fileData.structure
+          },
+          connections: {
+            incoming: [],
+            outgoing: []
+          },
+          file_content: fileData.content
+        };
+      }
+      
+      // Handle other error cases
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Error ${response.status}`);
+    } catch (fetchError) {
+      throw fetchError;
+    }
+  } catch (error) {
+    console.error(`Error fetching data for file ${filePath}:`, error);
+    throw error;
+  }
+}
+
 export async function fetchNodeData(nodeId: string): Promise<any> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/node/${nodeId}`);
+    const pathToEncode = nodeId.startsWith('/') ? nodeId.substring(1) : nodeId;
+    const encodedNodeId = encodeURIComponent(pathToEncode);
+    
+    console.log(`Fetching node data for ID: ${nodeId}`);
+    const response = await fetch(`${API_BASE_URL}/api/node/${encodedNodeId}`);
     
     if (!response.ok) {
       if (response.status === 404) {
-        const errorData = await response.json();
-        throw new Error(`Node not found: ${errorData.detail || 'The requested node does not exist'}`);
+        console.error(`404 for node ID: ${nodeId}`);
+        console.error(`Full URL that failed: ${API_BASE_URL}/api/node/${encodedNodeId}`);
+        try {
+          const errorData = await response.json();
+          throw new Error(`Node not found: ${errorData.detail || 'The requested node does not exist'}`);
+        } catch (e) {
+          throw new Error(`Node not found: The requested node does not exist`);
+        }
       }
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
@@ -311,7 +382,7 @@ export async function fetchDetailedMetrics(): Promise<any> {
             complexityFactors.high_nesting++;
           }
           
-          // rough estimation since can't directly count each factor
+          // rough estimation since can't directly count each factor. RIP
           if (node.metrics.complexity) {
             const complexity = node.metrics.complexity;
             complexityFactors.if_statements += Math.floor(complexity * 0.4);
@@ -380,7 +451,6 @@ export async function fetchDetailedMetrics(): Promise<any> {
           }
         }
         
-        // Track metrics
         if (node.metrics) {
           if (node.metrics.lines) {
             totalLines += node.metrics.lines;

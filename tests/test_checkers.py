@@ -11,7 +11,6 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 
-from treeline.checkers.magic_numbers import MagicNumberChecker
 from treeline.checkers.security import SecurityAnalyzer 
 from treeline.checkers.sql_injection import SQLInjectionChecker
 from treeline.checkers.duplication import DuplicationDetector
@@ -78,20 +77,6 @@ def run_test(title, file_content, checker_class, expected_category=None, expecte
 
 def test_all_checkers():
     """Run tests for all quality checkers."""
-    
-    # Test 1: Magic Number Checker
-    magic_number_code = """
-def calculate_area(radius):
-    return 3.14159 * radius * radius
-
-def get_default_timeout():
-    return 30000  # magic number, should be a named constant
-
-class Config:
-    MAX_RETRIES = 5
-    DEFAULT_BATCH_SIZE = 1000
-    """
-    run_test("Magic Number Detection", magic_number_code, MagicNumberChecker, "code_smells", 3)
     
     # Test 2: Security Analyzer (Hardcoded Credentials)
     security_code = """

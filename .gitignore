@@ -56,3 +56,4 @@ output/
 !docs/**/*.html
 
 chunks
+static

@@ -14,27 +14,29 @@ from treeline.models.dependency_analyzer import (
     ModuleMetrics,
 )
 
+def default_call_graph():
+    return {
+        "callers": defaultdict(int),
+        "callees": defaultdict(int),
+        "module": "",
+        "total_calls": 0,
+        "entry_point": False,
+        "terminal": False,
+        "recursive": False,
+        "call_depth": 0,
+    }
+
 class ModuleDependencyAnalyzer:
     def __init__(self, config: Dict = None):
         self.config = config or {}
-        self.module_imports = defaultdict(set)
-        self.module_metrics = defaultdict(dict)
-        self.complex_functions = []
-        self.function_locations = defaultdict(dict)
-        self.function_calls = defaultdict(list)
-        self.class_info = defaultdict(dict)
-        self.call_graph = defaultdict(
-            lambda: {
-                "callers": defaultdict(int),
-                "callees": defaultdict(int),
-                "module": "",
-                "total_calls": 0,
-                "entry_point": False,
-                "terminal": False,
-                "recursive": False,
-                "call_depth": 0,
-            }
-        )
+        self.module_imports = {}
+        self.module_metrics = {}
+        self.complex_functions = {}
+        self.function_locations = {}
+        self.function_calls = defaultdict(list)  
+        self.class_info = {}
+        self.call_graph = defaultdict(default_call_graph)
+        
         self.QUALITY_METRICS = {
             "MAX_LINE_LENGTH": self.config.get("MAX_LINE_LENGTH", 100),
             "MAX_DOC_LENGTH": self.config.get("MAX_DOC_LENGTH", 80),
@@ -66,8 +68,7 @@ class ModuleDependencyAnalyzer:
         }
 
     def analyze_directory(self, directory: Path):
-        self.directory = directory  
-        self.function_calls = []  
+        self.directory = directory
         ignore_patterns = read_ignore_patterns()
         python_files = [fp for fp in directory.rglob("*.py") if not should_ignore(fp, ignore_patterns)]
         
@@ -77,10 +78,19 @@ class ModuleDependencyAnalyzer:
                 result = future.result()
                 if result:
                     module_name = result["module_name"]
+                    if module_name not in self.module_imports:
+                        self.module_imports[module_name] = set()
                     self.module_imports[module_name].update(result["imports"])
                     self.module_metrics[module_name] = result["metrics"]
                     self.function_locations.update(result["function_locations"])
-                    self.function_calls.extend(result["function_calls"])
+
+                    for call in result["function_calls"]:
+                        to_func_id = f"{call['to_module']}.{call['to_function']}"
+                        self.function_calls[to_func_id].append(call)
+
+                    if module_name not in self.class_info:
+                        self.class_info[module_name] = {}
+
                     self.class_info[module_name].update(result["class_info"])
 
     def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str) -> dict:
@@ -218,41 +228,30 @@ class ModuleDependencyAnalyzer:
         return calculate_cyclomatic_complexity(node)
 
     def get_graph_data(self):
-        all_modules = set()
-        all_modules.update(self.module_imports.keys())
-        all_modules.update(self.module_metrics.keys())
-        all_modules.update(
-            m.get("module", "") for m in self.function_locations.values()
-        )
-        all_modules.update(self.class_info.keys())
-        all_modules.discard("")
 
         nodes = []
         links = []
         node_lookup = {}
+        all_modules = set(self.module_imports.keys())
 
         for module in all_modules:
             node_id = len(nodes)
             node_lookup[module] = node_id
-            is_entry = not any(
-                module in imports for imports in self.module_imports.values()
-            )
-
-            nodes.append(
-                {
-                    "id": node_id,
-                    "name": module,
-                    "type": "module",
-                    "is_entry": is_entry,
-                    "metrics": self.module_metrics.get(module, {}),
-                    "code_smells": [],
-                }
-            )
+            is_entry = not any(module in imports for imports in self.module_imports.values())
+            file_path = str(self.directory / (module.replace('.', '/') + '.py'))
+            nodes.append({
+                "id": node_id,
+                "name": module,
+                "type": "module",
+                "is_entry": is_entry,
+                "file_path": file_path,  
+                "metrics": self.module_metrics.get(module, {}),
+                "code_smells": [],
+            })
 
         for module, classes in self.class_info.items():
             if module not in node_lookup:
                 continue
-
             for class_name, info in classes.items():
                 node_id = len(nodes)
                 node_key = f"{module}.{class_name}"
@@ -269,20 +268,13 @@ class ModuleDependencyAnalyzer:
                         "code_smells": [],
                     }
                 )
-
                 links.append(
-                    {
-                        "source": node_lookup[module],
-                        "target": class_node_id,
-                        "type": "contains",
-                    }
+                    {"source": node_lookup[module], "target": class_node_id, "type": "contains"}
                 )
-
                 for method_name, method_info in info["methods"].items():
                     method_node_id = len(nodes)
                     method_key = f"{node_key}.{method_name}"
                     node_lookup[method_key] = method_node_id
-
                     nodes.append(
                         {
                             "id": method_node_id,
@@ -293,24 +285,17 @@ class ModuleDependencyAnalyzer:
                             "docstring": None,
                         }
                     )
-
                     links.append(
-                        {
-                            "source": class_node_id,
-                            "target": method_node_id,
-                            "type": "contains",
-                        }
+                        {"source": class_node_id, "target": method_node_id, "type": "contains"}
                     )
 
         for func_name, location in self.function_locations.items():
             if "module" not in location:
                 continue
-
             module = location["module"]
             func_id = f"{module}.{func_name}"
             node_id = len(nodes)
             node_lookup[func_id] = node_id
-
             nodes.append(
                 {
                     "id": node_id,
@@ -320,18 +305,15 @@ class ModuleDependencyAnalyzer:
                     "code_smells": [],
                 }
             )
-
             links.append(
                 {"source": node_lookup[module], "target": node_id, "type": "contains"}
             )
 
-        for func_name, calls in self.function_calls.items():
-            if func_name not in self.function_locations:
+        for to_func_id, calls in self.function_calls.items():
+            if to_func_id not in self.function_locations:
                 continue
-
-            target_module = self.function_locations[func_name]["module"]
-            target_key = f"{target_module}.{func_name}"
-
+            target_module = self.function_locations[to_func_id]["module"]
+            target_key = to_func_id  
             for call in calls:
                 source_key = f"{call['from_module']}.{call['from_function']}"
                 if source_key in node_lookup and target_key in node_lookup:
@@ -348,11 +330,7 @@ class ModuleDependencyAnalyzer:
                 for imp in imports:
                     if imp in node_lookup:
                         links.append(
-                            {
-                                "source": node_lookup[module],
-                                "target": node_lookup[imp],
-                                "type": "imports",
-                            }
+                            {"source": node_lookup[module], "target": node_lookup[imp], "type": "imports"}
                         )
 
         return nodes, links

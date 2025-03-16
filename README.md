@@ -63,6 +63,42 @@ treeline report /path/to/codebase
 Generates a Markdown report summarizing issues and hotspots in the specified directory (defaults to .).
 
 ```
+
+### Configuration Management
+
+Treeline now includes CLI commands to manage your configuration:
+
+```bash
+# Create a default configuration file
+treeline config init [--path=CONFIG_PATH]
+
+# Show current configuration settings
+treeline config show [--path=CONFIG_PATH]
+
+# Set a specific configuration value
+treeline config set KEY VALUE [--path=CONFIG_PATH]
+```
+
+Examples:
+
+```bash
+# Create a default config file in the current directory
+treeline config init
+
+# Create a config file in a specific location
+treeline config init --path ~/.treeline/config.json
+
+# View all current settings
+treeline config show
+
+# Increase the maximum allowed line length
+treeline config set MAX_LINE_LENGTH 120
+
+# Disable security checks
+treeline config set ENABLE_SECURITY_CHECKS false
+```
+
+
 ### As a python module
 
 ```python
@@ -106,6 +142,22 @@ treeline --no-params
 ```
 
 ## Configuration
+
+Treeline looks for configuration in the following order:
+
+1. Command-line `--config` parameter
+2. `TREELINE_CONFIG` environment variable
+3. `./treeline.json` or `./treeline_config.json` in the current directory
+4. `~/.treeline/config.json` in the user's home directory
+5. Default built-in values
+
+### Creating a configuration file
+
+1. Using the CLI:
+
+```bash
+treeline config init [--path=CONFIG_PATH]
+```
 
 ### .treeline-ignore
 
