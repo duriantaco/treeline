@@ -22,15 +22,9 @@ def calculate_cyclomatic_complexity(node: ast.AST) -> int:
     return complexity
 
 def calculate_cognitive_complexity(node: ast.AST) -> int:
-    """
-    Calculate cognitive complexity for an AST node.
+    """    
+    Cognitive complexity measures how difficult code is to understand.
     
-    Cognitive complexity measures how difficult code is to understand, focusing on
-    nested structures and logical flow.
-    
-    Args:
-        node: An AST node (typically a function or class definition)
-        
     Returns:
         int: The cognitive complexity score
     """

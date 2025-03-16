@@ -5,6 +5,9 @@ from typing import Dict
 from treeline.config_manager import get_config
 
 class StyleChecker:
+    """
+    Check for style issues in a Python file
+    """
     def __init__(self, config: Dict = None):
         self.config = config or get_config().as_dict()
         self.max_line_length = self.config.get("MAX_LINE_LENGTH", 100)
