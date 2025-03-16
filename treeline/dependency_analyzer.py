@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict
 from treeline.utils.metrics import calculate_cyclomatic_complexity
+from concurrent.futures import ProcessPoolExecutor
 
 from treeline.ignore import read_ignore_patterns, should_ignore
 from treeline.models.dependency_analyzer import (
@@ -65,70 +66,130 @@ class ModuleDependencyAnalyzer:
         }
 
     def analyze_directory(self, directory: Path):
+        self.directory = directory  
+        self.function_calls = []  
         ignore_patterns = read_ignore_patterns()
-        for file_path in directory.rglob("*.py"):
-            if should_ignore(file_path, ignore_patterns):
-                continue
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                    tree = ast.parse(content)
-                module_name = str(file_path.relative_to(directory)).replace("/", ".").replace(".py", "")
-                self._analyze_module(tree, module_name, str(file_path))
-            except Exception as e:
-                print(f"Error analyzing {file_path}: {e}")
-    
-    def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str):
+        python_files = [fp for fp in directory.rglob("*.py") if not should_ignore(fp, ignore_patterns)]
+        
+        with ProcessPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(self._analyze_file, fp) for fp in python_files]
+            for future in futures:
+                result = future.result()
+                if result:
+                    module_name = result["module_name"]
+                    self.module_imports[module_name].update(result["imports"])
+                    self.module_metrics[module_name] = result["metrics"]
+                    self.function_locations.update(result["function_locations"])
+                    self.function_calls.extend(result["function_calls"])
+                    self.class_info[module_name].update(result["class_info"])
+
+    def _analyze_module(self, tree: ast.AST, module_name: str, file_path: str) -> dict:
         for parent in ast.walk(tree):
             for child in ast.iter_child_nodes(parent):
                 setattr(child, "parent", parent)
 
-        self._analyze_imports(tree, module_name)
-        self._collect_metrics(tree, module_name)
+        imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for name in node.names:
+                    imports.add(name.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imports.add(node.module)
+
+        functions = []
+        classes = []
+        total_complexity = 0
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                complexity = self._calculate_complexity(node)
+                total_complexity += complexity
+                functions.append(node.name)
+            elif isinstance(node, ast.ClassDef):
+                classes.append(node.name)
+        metrics = ModuleMetrics(functions=len(functions), classes=len(classes), complexity=total_complexity)
+
+        function_locations = {}
+        function_calls = []
+        local_functions = set()
+        imported_functions = {}
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.FunctionDef):
+                if isinstance(getattr(node, "parent", None), ast.Module):
+                    local_functions.add(node.name)
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    for name in node.names:
+                        alias = name.asname or name.name
+                        imported_functions[alias] = f"{node.module}.{name.name}"
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 parent = getattr(node, "parent", None)
                 if isinstance(parent, ast.Module):
-                    location = FunctionLocation(
-                        module=module_name, file=file_path, line=node.lineno
-                    )
-                    self.function_locations[node.name] = location.__dict__
+                    func_id = f"{module_name}.{node.name}"
+                    location = FunctionLocation(module=module_name, file=file_path, line=node.lineno)
+                    function_locations[func_id] = location.__dict__
 
                     for child in ast.walk(node):
-                        if isinstance(child, ast.Call) and isinstance(
-                            child.func, ast.Name
-                        ):
+                        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
+                            called_func = child.func.id
+                            if called_func in local_functions:
+                                target_module = module_name
+                                target_func = called_func
+                            elif called_func in imported_functions:
+                                target_module, target_func = imported_functions[called_func].rsplit(".", 1)
+                            else:
+                                continue  
                             call_info = FunctionCallInfo(
                                 from_module=module_name,
                                 from_function=node.name,
-                                line=child.lineno,
+                                to_module=target_module,
+                                to_function=target_func,
+                                line=child.lineno
                             )
-                            self.function_calls[child.func.id].append(
-                                call_info.__dict__
-                            )
+                            function_calls.append(call_info.__dict__)
 
-            elif isinstance(node, ast.ClassDef):
-                class_info = {
+        class_info = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                class_data = {
                     "module": module_name,
                     "file": file_path,
                     "line": node.lineno,
                     "methods": {},
                 }
-
                 for item in node.body:
                     if isinstance(item, ast.FunctionDef):
                         calls = []
                         for child in ast.walk(item):
-                            if isinstance(child, ast.Call) and isinstance(
-                                child.func, ast.Name
-                            ):
+                            if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
                                 calls.append(child.func.id)
-
                         method_info = MethodInfo(line=item.lineno, calls=calls)
-                        class_info["methods"][item.name] = method_info.__dict__
+                        class_data["methods"][item.name] = method_info.__dict__
+                class_info[node.name] = class_data
 
-                self.class_info[module_name][node.name] = class_info
+        return {
+            "imports": imports,
+            "metrics": metrics.__dict__,
+            "function_locations": function_locations,
+            "function_calls": function_calls,
+            "class_info": class_info,
+            "module_name": module_name
+        }
+    
+    def _analyze_file(self, file_path: Path) -> dict:
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                content = f.read()
+                tree = ast.parse(content)
+            module_name = str(file_path.relative_to(self.directory)).replace("/", ".").replace(".py", "")
+            analysis = self._analyze_module(tree, module_name, str(file_path))
+            return analysis
+        except Exception as e:
+            print(f"Error analyzing {file_path}: {e}")
+            return None
 
     def _analyze_imports(self, tree: ast.AST, module_name: str):
         for node in ast.walk(tree):
@@ -303,11 +364,11 @@ class ModuleDependencyAnalyzer:
                 entry_points.append(module)
         return entry_points
     
-    def categorize_functions(self, function_dependencies):
+    def categorize_functions(self):
         categories = {'entry_points': [], 'core_functions': [], 'leaf_functions': []}
         for func, calls in self.function_calls.items():
             fan_in = len(calls)
-            fan_out = len(function_dependencies.get(func, {}).get('calls', []))
+            fan_out = len(self.function_dependencies.get(func, {}).get('calls', []))
             if fan_in == 0:
                 categories['entry_points'].append(func)
             elif fan_in > 5 or fan_out > 5:
@@ -337,8 +398,6 @@ class ModuleDependencyAnalyzer:
         nodes, links = self.get_graph_data()
         
         if enhanced_analyzer and hasattr(enhanced_analyzer, 'quality_issues') and enhanced_analyzer.quality_issues:
-            print(f"Found {sum(len(issues) for issues in enhanced_analyzer.quality_issues.values())} quality issues")
-            
             file_to_module = {}
             
             for node in nodes:
@@ -353,21 +412,13 @@ class ModuleDependencyAnalyzer:
                                 if 'file' in info:
                                     file_to_module[info.get('file')] = node['name']
             
-            file_basenames = {}
-            for file_path, module_name in file_to_module.items():
-                base_name = Path(file_path).name
-                file_basenames[base_name] = module_name
+            file_basenames = {Path(file_path).name: module_name for file_path, module_name in file_to_module.items()}
             
             for category, issues in enhanced_analyzer.quality_issues.items():
                 for issue in issues:
                     if isinstance(issue, dict) and 'file_path' in issue:
                         file_path = issue['file_path']
-                        
-                        module_name = file_to_module.get(file_path)
-                        
-                        if not module_name:
-                            basename = Path(file_path).name
-                            module_name = file_basenames.get(basename)
+                        module_name = file_to_module.get(file_path) or file_basenames.get(Path(file_path).name)
                         
                         if not module_name:
                             for path, mod in file_to_module.items():
@@ -380,17 +431,15 @@ class ModuleDependencyAnalyzer:
                                 if node['type'] == 'module' and node['name'] == module_name:
                                     if 'code_smells' not in node:
                                         node['code_smells'] = []
-                                    
-                                    issue_text = f"[{category}] {issue.get('description', 'Unknown issue')}"
-                                    if issue.get('line'):
-                                        issue_text += f" (Line {issue['line']})"
-                                    
-                                    if issue_text not in node['code_smells']:
-                                        node['code_smells'].append(issue_text)
-                                        print(f"Added issue to {module_name}: {issue_text}")
+                                    new_issue = {
+                                        'type': category,
+                                        'description': issue.get('description', 'Unknown issue'),
+                                        'line': issue.get('line'),
+                                        'severity': issue.get('severity', 'medium')
+                                    }
+                                    if new_issue not in node['code_smells']:
+                                        node['code_smells'].append(new_issue)
                                     break
-                        else:
-                            print(f"Could not map file {file_path} to any module")
         
         return nodes, links
 

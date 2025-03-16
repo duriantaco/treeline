@@ -170,46 +170,23 @@ async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dep
             target_dir = Path(".").resolve()
 
         if not dependency_analyzer:
-            logger.info("Initializing dependency analyzer...")
             dependency_analyzer = ModuleDependencyAnalyzer()
 
         cached_data = load_cache(target_dir)
-        
         if cached_data:
-            logger.info("Using cached graph data")
             graph_data = cached_data
         else:
-            try:
-                from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
-                enhanced_analyzer = EnhancedCodeAnalyzer()
-                
-                python_files = list(target_dir.rglob("*.py"))
-                with ProcessPoolExecutor(max_workers=4) as executor:
-                    futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
-                    results = [f.result() for f in futures]
-                
-                analyzer.analyze_directory(target_dir)
+            enhanced_analyzer = EnhancedCodeAnalyzer()
+            python_files = list(target_dir.rglob("*.py"))
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
+                results = [f.result() for f in futures]
+            all_results = [item for sublist in results for item in sublist]
 
-                dependency_analyzer.analyze_directory(target_dir)
-
-                nodes, links = dependency_analyzer.get_graph_data_with_quality(enhanced_analyzer)
-                graph_data = {"nodes": nodes, "links": links}
-                
-                save_cache(target_dir, graph_data)
-            except Exception as e:
-                # logger.error(f"Error analyzing directory: {str(e)}")
-                traceback_str = traceback.format_exc()
-                # logger.debug(f"Traceback:\n{traceback_str}")
-                return HTMLResponse(
-                    f"""
-                    <html>
-                        <body>
-                            <h1>Analysis Error</h1>
-                            <p>An error occurred while analyzing the codebase. Please check the logs for details.</p>
-                        </body>
-                    </html>
-                    """
-                )
+            analyzer.analyze_directory(target_dir)
+            nodes, links = analyzer.get_graph_data_with_quality(enhanced_analyzer, all_results)
+            graph_data = {"nodes": nodes, "links": links}
+            save_cache(target_dir, graph_data)
 
         json_data = json.dumps(graph_data)
 
@@ -219,10 +196,7 @@ async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dep
         return HTMLResponse(html_content)
 
     except Exception as e:
-        # logger.error(f"\nERROR: {str(e)}")
         traceback_str = traceback.format_exc()
-        # logger.debug(f"Traceback:\n{traceback_str}")
-        
         return HTMLResponse(
             f"""
             <html>
@@ -234,10 +208,45 @@ async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dep
             """
         )
 
+
+def build_path_indices(nodes):
+    path_to_node_id = {}
+    name_to_node_id = {}
     
+    for node in nodes:
+        node_id = str(node.get('id'))
+        
+        if 'name' in node:
+            name = node['name']
+            name_to_node_id[name] = node_id
+        
+        path_props = ['file_path', 'path', 'filepath', 'filename', 'id']
+        for prop in path_props:
+            if prop in node and isinstance(node[prop], str):
+                path = node[prop]
+                
+                path_to_node_id[path] = node_id
+                
+                if path.startswith('/'):
+                    path_to_node_id[path[1:]] = node_id
+                else:
+                    path_to_node_id['/' + path] = node_id
+                
+                try:
+                    filename = Path(path).name
+                    if filename:
+                        path_to_node_id[filename] = node_id
+                except:
+                    pass
+    
+    return {
+        "path_to_node_id": path_to_node_id,
+        "name_to_node_id": name_to_node_id
+    }
+
+
 @app.get("/api/graph-data")
 async def get_graph_data():
-    """Return the graph data for visualization"""
     try:
         try:
             with open(".treeline_dir", "r") as f:
@@ -249,6 +258,9 @@ async def get_graph_data():
         
         if cached_data:
             logger.info("Using cached graph data")
+            if 'indices' not in cached_data:
+                cached_data['indices'] = build_path_indices(cached_data.get('nodes', []))
+                save_cache(target_dir, cached_data)
             return cached_data
         else:
             try:
@@ -260,68 +272,249 @@ async def get_graph_data():
                     results = [f.result() for f in futures]
                 
                 enhanced_analyzer.analyze_directory(target_dir)
-
                 dependency_analyzer.analyze_directory(target_dir)
-
                 nodes, links = dependency_analyzer.get_graph_data_with_quality(enhanced_analyzer)
-                graph_data = {"nodes": nodes, "links": links}
+                
+                indices = build_path_indices(nodes)
+                
+                graph_data = {
+                    "nodes": nodes, 
+                    "links": links,
+                    "indices": indices
+                }
                 
                 save_cache(target_dir, graph_data)
                 return graph_data
             except Exception as e:
-                # logger.error(f"Error analyzing directory: {str(e)}")
                 raise
                 
     except Exception as e:
-        # logger.error(f"\nERROR: {str(e)}")
         tb = traceback.format_exc()
-        # logger.debug(f"Traceback:\n{tb}")
         raise HTTPException(
             status_code=500, detail=f"Error generating graph data: {str(e)}"
         )
-
-@app.post("/analyze", response_model=AnalysisResponse)
-async def analyze_codebase(request: AnalysisRequest, analyzer: ModuleDependencyAnalyzer = Depends(get_dependency_analyzer)):
-    """Analyze a codebase and return comprehensive results"""
+    
+@app.get("/api/file-content")
+async def get_file_content(path: str = Query(...)):
+    """Get file content with basic structure analysis"""
     try:
-        requested_path = Path(request.path).resolve()
-
+        provided_path = Path(path).resolve()
+        
         base_dir = Path.cwd().resolve()
+        if not is_safe_path(base_dir, provided_path):
+            return JSONResponse(status_code=403, content={"detail": "Access denied"})
         
-        if not is_safe_path(base_dir, requested_path):
-            raise HTTPException(
-                status_code=403, 
-                detail=f"Access denied: {request.path} is outside the allowed directory"
-            )
+        if not provided_path.exists() or not provided_path.is_file():
+            return JSONResponse(status_code=404, content={"detail": f"File not found: {path}"})
         
-        if not requested_path.exists():
-            raise HTTPException(
-                status_code=404, detail=f"Path {request.path} not found"
+        try:
+            with open(provided_path, 'r') as f:
+                content = f.read()
+            
+            file_info = {
+                "path": str(provided_path),
+                "name": provided_path.name,
+                "content": content,
+                "structure": []
+            }
+            
+            
+            class_matches = re.finditer(r'^\s*class\s+(\w+)', content, re.MULTILINE)
+            for match in class_matches:
+                line_number = content[:match.start()].count('\n') + 1
+                file_info["structure"].append({
+                    "type": "class",
+                    "name": match.group(1),
+                    "line": line_number
+                })
+            
+            func_matches = re.finditer(r'^\s*def\s+(\w+)', content, re.MULTILINE)
+            for match in func_matches:
+                line_number = content[:match.start()].count('\n') + 1
+                file_info["structure"].append({
+                    "type": "function",
+                    "name": match.group(1),
+                    "line": line_number
+                })
+            
+            file_info["structure"].sort(key=lambda x: x["line"])
+            
+            return file_info
+        except Exception as e:
+            return JSONResponse(
+                status_code=500,
+                content={"detail": f"Error analyzing file: {str(e)}"}
             )
-
-        dependency_analyzer.analyze_directory(
-            requested_path,
-            show_params=request.show_params,
-            show_relationships=request.show_relationships,
-        )
-
-        nodes, links = dependency_analyzer.get_graph_data()
-
-        return {
-            "nodes": nodes,
-            "relationships": links,
-            "metrics": dependency_analyzer.module_metrics,
-            "insights": {
-                "entry_points": dependency_analyzer.get_entry_points(),
-                "core_components": dependency_analyzer.get_core_components(),
-                "workflows": dependency_analyzer.get_common_flows(),
-            },
-        }
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Error analyzing codebase")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error: {str(e)}"}
+        )
+    
+@app.get("/api/node-by-path/{file_path:path}")
+async def get_node_by_path(file_path: str):
+    provided_path = Path(file_path).resolve()
+    try:
+        with open(".treeline_dir", "r") as f:
+            project_root = Path(f.read().strip()).resolve()
+    except FileNotFoundError:
+        project_root = Path(".").resolve()
 
+    try:
+        cached_data = load_cache(project_root)
+        
+        if not cached_data or 'nodes' not in cached_data or not cached_data['nodes']:
+            print("Cache is empty or invalid, generating new cache data...")
+            dependency_analyzer = ModuleDependencyAnalyzer()
+            enhanced_analyzer = EnhancedCodeAnalyzer()
+            
+            dependency_analyzer.analyze_directory(project_root)
+            python_files = list(project_root.rglob("*.py"))
+            
+            with ProcessPoolExecutor(max_workers=4) as executor:
+                futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
+                results = [f.result() for f in futures]
+            
+            nodes, links = dependency_analyzer.get_graph_data()
+            indices = build_path_indices(nodes)
+            
+            cached_data = {
+                "nodes": nodes,
+                "links": links,
+                "indices": indices
+            }
+            
+            save_cache(project_root, cached_data)
+            print(f"Generated new cache with {len(nodes)} nodes")
+        
+        nodes = cached_data.get('nodes', [])
+        links = cached_data.get('links', [])
+        
+        try:
+            search_path = str(provided_path.relative_to(project_root))
+        except ValueError:
+            search_path = file_path.lstrip("/")
+ 
+        for i, node in enumerate(nodes[:5]):
+            if 'file_path' in node:
+                print(f"Node {i} path: {node['file_path']}")
+        
+        filename = Path(search_path).name
+        basename = filename.replace('.py', '')
+        node = None
+        
+        if 'indices' in cached_data and cached_data['indices']:
+            path_to_node_id = cached_data['indices'].get('path_to_node_id', {})
+            
+            path_variations = [
+                search_path,
+                str(provided_path),
+                filename,
+                basename,
+                search_path.replace('\\', '/'),
+                search_path.replace('/', '\\')
+            ]
+            
+            for path_var in path_variations:
+                if path_var in path_to_node_id:
+                    node_id = path_to_node_id[path_var]
+                    node = next((n for n in nodes if str(n.get('id')) == node_id), None)
+                    if node:
+                        print(f"Found node via index lookup: {path_var}")
+                        break
+        
+        if not node:
+            for n in nodes:
+                for prop in ['file_path', 'path', 'filepath', 'id', 'name']:
+                    if prop not in n or not isinstance(n[prop], str):
+                        continue
+                    
+                    if n[prop] == search_path:
+                        node = n
+                        print(f"Found direct match on {prop}: {n[prop]}")
+                        break
+                    
+                    if n[prop].endswith(search_path):
+                        node = n
+                        print(f"Found ends-with match on {prop}: {n[prop]}")
+                        break
+                    
+                    if search_path in n[prop]:
+                        node = n
+                        print(f"Found contains match on {prop}: {n[prop]}")
+                        break
+                    
+                    if Path(n[prop]).name == filename:
+                        node = n
+                        print(f"Found filename match on {prop}: {n[prop]}")
+                        break
+                
+                if node:
+                    break
+        
+        if not node:
+            print(f"No node found for path: {search_path}")
+            return JSONResponse(
+                status_code=404,
+                content={"detail": f"No node found for file path: {search_path}"}
+            )
+        
+        node_id = str(node.get('id'))
+        node_lookup = {str(n.get('id')): n for n in nodes}
+        incoming_links = [link for link in links if str(link.get('target')) == node_id]
+        outgoing_links = [link for link in links if str(link.get('source')) == node_id]
+        
+        incoming_links_with_names = [
+            {
+                "source_id": link['source'],
+                "source_name": node_lookup.get(link['source'], {}).get('name', 'Unknown'),
+                "source_type": node_lookup.get(link['source'], {}).get('type', 'unknown'),
+                "target_id": link['target'],
+                "target_name": node_lookup.get(link['target'], {}).get('name', 'Unknown'),
+                "target_type": node_lookup.get(link['target'], {}).get('type', 'unknown'),
+                "type": link['type']
+            }
+            for link in incoming_links
+        ]
+        
+        outgoing_links_with_names = [
+            {
+                "source_id": link['source'],
+                "source_name": node_lookup.get(link['source'], {}).get('name', 'Unknown'),
+                "source_type": node_lookup.get(link['source'], {}).get('type', 'unknown'),
+                "target_id": link['target'],
+                "target_name": node_lookup.get(link['target'], {}).get('name', 'Unknown'),
+                "target_type": node_lookup.get(link['target'], {}).get('type', 'unknown'),
+                "type": link['type']
+            }
+            for link in outgoing_links
+        ]
+        
+        file_content = None
+        if 'file_path' in node and os.path.exists(node['file_path']):
+            try:
+                with open(node['file_path'], 'r') as f:
+                    file_content = f.read()
+            except Exception as e:
+                print(f"Could not read file content: {str(e)}")
+        
+        return {
+            "node": node,
+            "connections": {
+                "incoming": incoming_links_with_names,
+                "outgoing": outgoing_links_with_names
+            },
+            "file_content": file_content
+        }
+    
+    except Exception as e:
+        import traceback
+        print(f"Error in get_node_by_path: {str(e)}")
+        print(traceback.format_exc())
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error fetching node details: {str(e)}"}
+        )
 
 def is_safe_path(base_dir: Path, requested_path: Path) -> bool:
     """
@@ -491,107 +684,95 @@ async def get_node_details(node_id: str):
                 target_dir = Path(f.read().strip()).resolve()
         except FileNotFoundError:
             target_dir = Path(".").resolve()
-            
+
         cached_data = load_cache(target_dir)
-        
         if not cached_data:
-            return JSONResponse(
-                status_code=404, 
-                content={"detail": "No graph data available"}
-            )
-            
+            return JSONResponse(status_code=404, content={"detail": "No graph data available"})
+
         nodes = cached_data.get('nodes', [])
         links = cached_data.get('links', [])
-
         node_lookup = {str(n.get('id')): n for n in nodes}
 
-        if str(node_id) not in node_lookup:
-            return JSONResponse(
-                status_code=404,
-                content={"detail": f"Node with ID {node_id} not found", "available_ids_range": f"0-{len(nodes)-1}"}
-            )
-            
-        node = node_lookup[str(node_id)]
-        
+        if node_id in node_lookup:
+            node = node_lookup[node_id]
+        else:
+            node = next((n for n in nodes if n.get('file_path') == node_id), None)
+
+            if not node:
+                return JSONResponse(
+                    status_code=404,
+                    content={"detail": f"Node with ID or path {node_id} not found"}
+                )
+
+        node = node_lookup[node_id]
         incoming_links = []
         outgoing_links = []
-        
+
         def extract_id(item):
+            """Extract a string ID from various input types"""
             try:
                 if isinstance(item, str):
                     return item
                 elif isinstance(item, dict) and 'id' in item:
                     return item['id']
                 elif isinstance(item, int) and 0 <= item < len(nodes):
-                    return nodes[item].get('id')
+                    return str(nodes[item].get('id'))
                 raise ValueError("Invalid link data")
-            except Exception as e:
-                # logger.error(f"Failed to extract ID: {str(e)}")
+            except Exception:
                 return None
-        
+
         for link in links:
             try:
                 source_id = extract_id(link['source'])
                 target_id = extract_id(link['target'])
-                
-                if str(source_id) == str(node_id):
+                if source_id == node_id:
                     outgoing_links.append(link)
-                if str(target_id) == str(node_id):
+                if target_id == node_id:
                     incoming_links.append(link)
-            except Exception as e:
-                # logger.error(f"Error processing link: {e}")
+            except Exception:
                 continue
 
         incoming_links_with_names = [
             {
                 "source": {
-                    "id": link['source'],
-                    "name": node_lookup.get(str(link['source']), {}).get('name', 'Unknown'),
-                    "type": node_lookup.get(str(link['source']), {}).get('type', 'unknown')
+                    "id": extract_id(link['source']),
+                    "name": node_lookup.get(extract_id(link['source']), {}).get('name', 'Unknown'),
+                    "type": node_lookup.get(extract_id(link['source']), {}).get('type', 'unknown')
                 },
                 "target": {
-                    "id": link['target'],
-                    "name": node_lookup.get(str(link['target']), {}).get('name', 'Unknown'),  # <-- FIXED
-                    "type": node_lookup.get(str(link['target']), {}).get('type', 'unknown')   # <-- FIXED
+                    "id": extract_id(link['target']),
+                    "name": node_lookup.get(extract_id(link['target']), {}).get('name', 'Unknown'),
+                    "type": node_lookup.get(extract_id(link['target']), {}).get('type', 'unknown')
                 },
                 "type": link['type']
             }
-            for link in incoming_links
+            for link in incoming_links if extract_id(link['source']) and extract_id(link['target'])
         ]
 
         outgoing_links_with_names = [
             {
                 "source": {
-                    "id": link['source'],
-                    "name": node_lookup.get(str(link['source']), {}).get('name', 'Unknown'),
-                    "type": node_lookup.get(str(link['source']), {}).get('type', 'unknown')
+                    "id": extract_id(link['source']),
+                    "name": node_lookup.get(extract_id(link['source']), {}).get('name', 'Unknown'),
+                    "type": node_lookup.get(extract_id(link['source']), {}).get('type', 'unknown')
                 },
                 "target": {
-                    "id": link['target'],
-                    "name": node_lookup.get(str(link['target']), {}).get('name', 'Unknown'),  # <-- FIXED
-                    "type": node_lookup.get(str(link['target']), {}).get('type', 'unknown')   # <-- FIXED
+                    "id": extract_id(link['target']),
+                    "name": node_lookup.get(extract_id(link['target']), {}).get('name', 'Unknown'),
+                    "type": node_lookup.get(extract_id(link['target']), {}).get('type', 'unknown')
                 },
                 "type": link['type']
             }
-            for link in outgoing_links
+            for link in outgoing_links if extract_id(link['source']) and extract_id(link['target'])
         ]
-                
-        file_path = None
+
+        file_content = None
         if 'file_path' in node:
-            file_path = node['file_path']
             try:
-                with open(file_path, 'r') as f:
+                with open(node['file_path'], 'r') as f:
                     file_content = f.read()
             except:
                 file_content = None
-        else:
-            file_content = None
-        
-        print('nodeType:', node.get('type'))
-        print('Connections:', {
-            "incoming": incoming_links_with_names,
-            "outgoing": outgoing_links_with_names
-        })
 
         return {
             "node": node,
@@ -601,13 +782,10 @@ async def get_node_details(node_id: str):
             },
             "file_content": file_content
         }
-                
+
     except Exception as e:
-        # logger.error(f"\nERROR: {str(e)}")
-        tb = traceback.format_exc()
-        # logger.debug(f"Traceback:\n{tb}")
         return JSONResponse(
-            status_code=500, 
+            status_code=500,
             content={"detail": f"Error fetching node details: {str(e)}"}
         )
     
@@ -966,7 +1144,6 @@ async def get_complexity_breakdown(
     """
     target_dir = Path(directory).resolve()
     
-    # simple version first
     
     import ast
     from collections import Counter

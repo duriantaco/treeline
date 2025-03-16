@@ -14,6 +14,8 @@ class FunctionLocation(TypeChecked):
 class FunctionCallInfo(TypeChecked):
     from_module: str
     from_function: str
+    to_module: str
+    to_function: str
     line: int
 
 

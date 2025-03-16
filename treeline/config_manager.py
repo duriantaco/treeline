@@ -91,7 +91,6 @@ class ConfigManager:
                 print(f"Loaded configuration from {self._config_path}")
             except Exception as e:
                 print(f"Error loading configuration from {self._config_path}: {e}")
-                print("Using default configuration")
         
         self._initialized = True
     
@@ -116,7 +115,6 @@ class ConfigManager:
         with open(save_path, "w") as f:
             json.dump(self._config, f, indent=2)
             
-        print(f"Configuration saved to {save_path}")
     
     @classmethod
     def create_default_config(cls, path: str = "./treeline.json") -> None:

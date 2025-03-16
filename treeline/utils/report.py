@@ -33,13 +33,24 @@ class ReportGenerator:
         self.function_usage = defaultdict(set)
 
     def analyze(self):
-        print(f"Analyzing {self.target_dir}...")
+        
+        self.enhanced_analyzer.analyze_directory(self.target_dir)
+
         self.all_file_results = {}  
+        self.total_lines = 0
+        self.file_line_counts = {} 
+
         for py_file in self.target_dir.rglob("*.py"):
             if not self._should_analyze_file(py_file):
                 continue
             self.analyzed_files.append(py_file)
             try:
+                with open(py_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    line_count = len(lines)
+                    self.file_line_counts[str(py_file)] = line_count
+                    self.total_lines += line_count
+
                 file_results = self.enhanced_analyzer.analyze_file(py_file)
                 self.all_file_results[str(py_file)] = file_results 
                 for result in file_results:
@@ -84,7 +95,93 @@ class ReportGenerator:
         
         self._build_structure_data()
 
-        print(f"Analysis complete! Found {self.issues_count} issues in {len(self.analyzed_files)} files.")
+
+    def detect_circular_dependencies(self):
+        """Detect circular dependencies between functions and modules."""
+        circular_deps = {
+            "function_level": [],
+            "module_level": []
+        }
+        
+        for func_name in self.function_dependencies:
+            path = []
+            visited = set()
+            self._find_circular_path(func_name, func_name, path, visited, circular_deps["function_level"])
+        
+        for module in self.dependency_analyzer.module_imports:
+            path = []
+            visited = set()
+            self._find_module_circular_path(module, module, path, visited, circular_deps["module_level"])
+        
+        return circular_deps
+
+    def _find_circular_path(self, start, current, path, visited, results):
+        """DFS to find circular dependencies between functions."""
+        path.append(current)
+        visited.add(current)
+        
+        if current in self.function_dependencies:
+            for called in self.function_dependencies[current]["calls"]:
+                called_func = called["function"]
+                if called_func == start and len(path) > 1:
+                    cycle = path.copy()
+                    cycle.append(start)  
+                    if cycle not in results:
+                        results.append(cycle)
+                elif called_func not in visited:
+                    self._find_circular_path(start, called_func, path.copy(), visited.copy(), results)
+
+    def _find_module_circular_path(self, start, current, path, visited, results):
+        """DFS to find circular dependencies between modules."""
+        path.append(current)
+        visited.add(current)
+        
+        if current in self.dependency_analyzer.module_imports:
+            for imported in self.dependency_analyzer.module_imports[current]:
+                if imported == start and len(path) > 1:
+                    cycle = path.copy()
+                    cycle.append(start)  
+                    if cycle not in results:
+                        results.append(cycle)
+                elif imported not in visited:
+                    self._find_module_circular_path(start, imported, path.copy(), visited.copy(), results)
+
+    def _generate_circular_dependency_section(self):
+        """Generate a section about circular dependencies for the report."""
+        sections = []
+        
+        circular_deps = self.detect_circular_dependencies()
+        
+        sections.append("### Circular Dependency Analysis\n")
+        sections.append("Circular dependencies can cause maintenance issues, initialization problems, and make testing difficult. Here are the circular dependencies detected in your code:\n")
+        
+        sections.append("#### Module-Level Circular Dependencies\n")
+        if circular_deps["module_level"]:
+            for i, cycle in enumerate(circular_deps["module_level"]):
+                sections.append(f"{i+1}. {' → '.join(cycle)}")
+            sections.append(f"\nTotal module-level circular dependencies: {len(circular_deps['module_level'])}")
+        else:
+            sections.append("No module-level circular dependencies detected. Good job! 👍\n")
+        
+        sections.append("\n#### Function-Level Circular Dependencies\n")
+        if circular_deps["function_level"]:
+            for i, cycle in enumerate(circular_deps["function_level"][:10]): 
+                sections.append(f"{i+1}. {' → '.join(cycle)}")
+            
+            if len(circular_deps["function_level"]) > 10:
+                sections.append(f"\n...and {len(circular_deps['function_level']) - 10} more function-level circular dependencies.")
+            
+            sections.append(f"\nTotal function-level circular dependencies: {len(circular_deps['function_level'])}")
+            
+            sections.append("\n**Recommendations to resolve circular dependencies:**")
+            sections.append("1. Identify shared functionality and extract it to a common module")
+            sections.append("2. Use dependency injection to break tight coupling")
+            sections.append("3. Apply the Interface Segregation Principle to reduce dependencies")
+            sections.append("4. Consider using design patterns like Observer or Mediator")
+        else:
+            sections.append("No function-level circular dependencies detected. Good job! 👍")
+        
+        return "\n".join(sections)
         
     def _collect_function_dependencies(self):
         function_deps = {}
@@ -201,6 +298,22 @@ class ReportGenerator:
 
     def generate_report(self) -> str:
         sections = []
+        sections.append(self._generate_header_section())
+        sections.append(self._generate_structure_analysis_section())
+        sections.append(self._generate_executive_summary())
+        sections.append(self._generate_config_section())
+        sections.append(self._generate_issues_section())
+        sections.append(self._generate_complex_functions_section())
+        sections.append(self._generate_dependency_section())
+        sections.append(self._generate_circular_dependency_section())
+        sections.append(self._generate_line_count_section())
+        sections.append(self._generate_docstring_section())
+        sections.append("\n---\n")
+        sections.append("Report generated by Treeline")
+        return "\n".join(sections)
+
+    def _generate_header_section(self) -> str:
+        sections = []
         sections.append(f"# Treeline Code Analysis Report\n")
         sections.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         sections.append(f"**Project:** {self.target_dir.absolute()}")
@@ -209,6 +322,19 @@ class ReportGenerator:
         sections.append(f"**Files Analyzed:** {len(self.analyzed_files)}")
         sections.append(f"**Functions:** {total_funcs} (Entry: {len(categories['entry_points'])}, Core: {len(categories['core_functions'])})")
         sections.append(f"**Issues Found:** {self.issues_count}\n")
+        return "\n".join(sections)
+
+    def _generate_structure_analysis_section(self) -> str:
+        sections = []
+        sections.append("## 📊 Code Structure Analysis\n")
+        script_info = self._build_script_info()
+        sections.append(self._generate_connected_files_subsection(script_info))
+        sections.append(self._generate_stability_analysis_subsection())
+        sections.append(self._generate_impact_analysis_subsection())
+        sections.append(self._generate_architectural_insights_subsection())
+        return "\n".join(sections)
+
+    def _build_script_info(self) -> dict:
         script_info = {}
         for file_path in self.analyzed_files:
             rel_path = str(file_path.relative_to(self.target_dir))
@@ -221,6 +347,7 @@ class ReportGenerator:
                 "calls_to": set(),
                 "called_by": set()
             }
+        
         for module_name, classes in self.dependency_analyzer.class_info.items():
             for class_name, class_info in classes.items():
                 if "file" in class_info and "methods" in class_info:
@@ -230,6 +357,7 @@ class ReportGenerator:
                             "methods": list(class_info["methods"].keys()),
                             "line": class_info.get("line", 0)
                         }
+        
         for func_name, location in self.dependency_analyzer.function_locations.items():
             if "file" in location:
                 file_path = location["file"]
@@ -239,6 +367,7 @@ class ReportGenerator:
                         "module": location.get("module", ""),
                         "line": location.get("line", 0)
                     })
+        
         for module, imports in self.dependency_analyzer.module_imports.items():
             source_path = self._module_to_file_path(module)
             if source_path and source_path in script_info:
@@ -247,6 +376,7 @@ class ReportGenerator:
                     if imported_path and imported_path in script_info and imported_path != source_path:
                         script_info[source_path]["imports"].add(imported_path)
                         script_info[imported_path]["imported_by"].add(source_path)
+        
         for func_name, calls in self.dependency_analyzer.function_calls.items():
             if func_name in self.dependency_analyzer.function_locations:
                 func_file = self.dependency_analyzer.function_locations[func_name].get("file", "")
@@ -258,20 +388,30 @@ class ReportGenerator:
                             if caller_file in script_info and caller_file != func_file:
                                 script_info[caller_file]["calls_to"].add(func_file)
                                 script_info[func_file]["called_by"].add(caller_file)
-        sections.append("## 📊 Code Structure Analysis\n")
+        
+        return script_info
+
+    def _generate_connected_files_subsection(self, script_info: dict) -> str:
+        sections = []
         file_connections = {}
         for file_path, info in script_info.items():
             connections = (len(info["imports"]) + len(info["imported_by"]) + 
                         len(info["calls_to"]) + len(info["called_by"]))
             file_connections[file_path] = connections
+        
         most_connected = sorted(file_connections.items(), key=lambda x: x[1], reverse=True)[:5]
         sections.append("### Most Connected Files\n")
         sections.append("| File | Total Connections | Imports | Imported By | Calls To | Called By |")
         sections.append("|------|-------------------|---------|-------------|----------|-----------|")
+        
         for file_path, connections in most_connected:
             info = script_info[file_path]
             sections.append(f"| {info['path']} | {connections} | {len(info['imports'])} | {len(info['imported_by'])} | {len(info['calls_to'])} | {len(info['called_by'])} |")
         
+        return "\n".join(sections)
+
+    def _generate_stability_analysis_subsection(self) -> str:
+        sections = []
         sections.append("\n### Module Stability Analysis\n")
         sections.append("This analysis shows which modules are stable (many incoming, few outgoing dependencies) versus unstable (few incoming, many outgoing).\n")
         sections.append("| Module | Stability Index | Incoming | Outgoing | Rating |")
@@ -290,7 +430,10 @@ class ReportGenerator:
         for module, stability, incoming, outgoing, rating in sorted(module_stability, key=lambda x: x[1], reverse=True)[:10]:
             sections.append(f"| {module} | {stability:.2f} | {incoming} | {outgoing} | {rating} |")
         
+        return "\n".join(sections)
 
+    def _generate_impact_analysis_subsection(self) -> str:
+        sections = []
         sections.append("\n### Change Impact Analysis\n")
         sections.append("These modules would have the highest ripple effect if modified - changes here will impact many other parts of the codebase:\n")
 
@@ -310,7 +453,11 @@ class ReportGenerator:
                 sections.append(f" -> Most notable dependents: {', '.join(sorted(list(impacted))[:3])}")
             if count > 3:
                 sections.append(f" -> Impact risk: {'High ⚠' if count > 7 else 'Medium'}")
+        
+        return "\n".join(sections)
 
+    def _generate_architectural_insights_subsection(self) -> str:
+        sections = []
         sections.append("\n### Architectural Insights\n")
 
         entry_count = len(self.dependency_analyzer.get_entry_points())
@@ -357,9 +504,13 @@ class ReportGenerator:
             arch_insights.append(f"- Good use of utility modules ({len(utility_modules)} identified) - improves **code reusability**")
 
         sections.extend(arch_insights)
+        return "\n".join(sections)
 
+    def _generate_executive_summary(self) -> str:
+        sections = []
         sections.append("## Executive Summary\n")
         sections.append("This section provides a high-level overview of your codebase's health, highlighting key metrics and areas needing attention.\n")
+        
         total_functions = len(self.function_docstrings)
         missing_docstrings_count = sum(1 for info in self.function_docstrings.values() if not info["has_docstring"])
         docstring_coverage = 100 - (missing_docstrings_count / max(1, total_functions) * 100)
@@ -370,6 +521,7 @@ class ReportGenerator:
             key=lambda x: x[1],
             reverse=True
         )[:3]
+        
         summary_items = [
             f"- **Overall Health**: {'⚠️ Needs attention' if self.issues_count > 50 else '✅ Generally good' if self.issues_count > 10 else '🎉 Excellent'}",
             f"- **Function Count**: {total_functions} functions across {len(self.analyzed_files)} files",
@@ -378,7 +530,9 @@ class ReportGenerator:
             f"- **Security Issues**: {security_issues} potential security concerns",
             f"- **Top Issue Categories**: {', '.join([f'{cat.title()} ({count})' for cat, count in top_issue_categories]) if top_issue_categories else 'None'}"
         ]
+        
         sections.extend(summary_items)
+        
         recommendations = []
         if security_issues > 0:
             recommendations.append(f"- Address the {security_issues} security issues immediately")
@@ -386,17 +540,21 @@ class ReportGenerator:
             recommendations.append(f"- Refactor the top {min(3, len(high_complexity_funcs))} complex functions")
         if missing_docstrings_count > 0:
             recommendations.append(f"- Add docstrings to {missing_docstrings_count} undocumented functions")
+        
         if recommendations:
             sections.append("\n**Recommended Actions:**")
             sections.extend(recommendations)
+        
         sections.append("")
-        
-        sections.append("## Quality Analysis\n")
-        
+        return "\n".join(sections)
+
+    def _generate_config_section(self) -> str:
+        sections = []
         sections.append("## Configuration Thresholds\n")
         sections.append("This section lists the thresholds used to evaluate your code. These are the maximum allowed values for various metrics before an issue is flagged.\n")
         sections.append("| Threshold | Value |")
         sections.append("|-----------|-------|")
+        
         config = self.enhanced_analyzer.config
         thresholds = [
             (f"Maximum parameters per function", config.get('MAX_PARAMS', 5)),
@@ -409,23 +567,34 @@ class ReportGenerator:
             (f"Maximum return statements", config.get('MAX_RETURNS', 4)),
             (f"Maximum duplicated lines", config.get('MAX_DUPLICATED_LINES', 5))
         ]
+        
         for name, value in thresholds:
             sections.append(f"| {name} | {value} |")
+        
         sections.append("")
+        return "\n".join(sections)
+
+    def _generate_issues_section(self) -> str:
+        sections = []
         sections.append("## Priority Issues by Severity\n")
         sections.append("This section groups issues by their severity (critical, high, medium, low), helping you prioritize fixes based on their impact.\n")
+        
         SEVERITY_ORDER = ["critical", "high", "medium", "low"]
         issues_by_severity = defaultdict(list)
+        
         for category, issues in self.quality_issues.items():
             for issue in issues:
                 severity = issue.get("severity", "medium").lower()
                 issues_by_severity[severity].append(issue)
+        
         sorted_severities = sorted(
             issues_by_severity.keys(),
             key=lambda s: SEVERITY_ORDER.index(s) if s in SEVERITY_ORDER else len(SEVERITY_ORDER)
         )
+        
         for severity in sorted_severities:
             sections.append(f"### {severity.title()} Priority Issues\n")
+            
             if not issues_by_severity[severity]:
                 sections.append("None found.\n")
                 continue
@@ -443,6 +612,7 @@ class ReportGenerator:
             if total_issues > display_limit:
                 remaining = total_issues - display_limit
                 collapsed_content = []
+                
                 for issue in issues_by_severity[severity][display_limit:]:
                     file_path = issue.get('file_path', 'Unknown')
                     rel_path = Path(file_path).relative_to(self.target_dir) if Path(file_path).is_absolute() else file_path
@@ -455,12 +625,46 @@ class ReportGenerator:
                 sections.append('</details>')
                 
             sections.append(f"**Total: {total_issues} {severity} issues**\n")
-            
+        
+        return "\n".join(sections)
+
+    def _generate_complex_functions_section(self) -> str:
+        sections = []
         sections.append("## Most Complex Functions\n")
         sections.append("This section lists the functions with the highest complexity metrics, which may indicate areas that are hard to test, maintain, or understand.\n")
-        sections.append("- **Cyclomatic Complexity**: Measures the number of independent paths through a function's code (e.g., branches from if/loop statements). A higher value means more complex logic and more test cases needed.\n")
-        sections.append("- **Cognitive Complexity**: Assesses how difficult the code is for a human to understand, factoring in nesting, control flow, and logical complexity.\n")
+
+        sections.append("### Understanding Complexity Metrics\n")
+
+        sections.append("#### Cyclomatic Complexity\n")
+        sections.append("Cyclomatic complexity quantifies the number of linearly independent paths through a function's source code. In simple terms, it measures how many different routes the execution can take.\n")
+        sections.append("\nHow it's calculated:\n")
+        sections.append("- Start with a base score of 1\n")
+        sections.append("- Add 1 for each of the following structures:\n")
+        sections.append("  - `if` statement\n")
+        sections.append("  - `for` loop\n")
+        sections.append("  - `while` loop\n")
+        sections.append("  - `except` block\n")
+        sections.append("- For boolean operations (e.g., `and`, `or`), add the number of conditions minus 1\n")
+        sections.append("\nFor example, a function with two `if` statements, one `for` loop, and a condition like `a and b and c` would have a cyclomatic complexity of 1 + 2 + 1 + 2 = 6.\n")
+        sections.append("\nA complexity above 10 is generally considered too high and a sign that the function should be refactored.\n")
+
+        sections.append("#### Cognitive Complexity\n")
+        sections.append("While cyclomatic complexity treats all decision points equally, cognitive complexity focuses on how difficult the code is for humans to understand, particularly looking at nested structures.\n")
+        sections.append("\nHow it's calculated:\n")
+        sections.append("- Control flow structures (`if`, `for`, `while`) add 1 point at their base level\n")
+        sections.append("- Nesting increases the cost: each level of nesting adds an additional point\n")
+        sections.append("- Boolean operations add points based on the number of conditions\n")
+        sections.append("\nFor example, a deeply nested `if` statement inside a `for` loop is penalized more heavily than sequential `if` statements.\n")
+        sections.append("\nA cognitive complexity above 15 suggests code that may be difficult to understand and maintain.\n")
+
+        sections.append("#### Which Metric Should You Use?\n")
+        sections.append("Both metrics are valuable but serve different purposes:\n")
+        sections.append("- **Cyclomatic Complexity** helps estimate testing effort (each path should be tested)\n")
+        sections.append("- **Cognitive Complexity** helps identify code that humans might find confusing\n")
+        sections.append("\nThe functions listed below have high scores in one or both metrics, suggesting they might benefit from refactoring into smaller, more focused functions.\n")
         sections.append("\n")
+        sections.append("\n")
+        
         if self.functions_by_complexity:
             display_limit = 10
             total_complex_funcs = len(self.functions_by_complexity)
@@ -489,10 +693,14 @@ class ReportGenerator:
                 sections.append('</details>')
         else:
             sections.append("No complex functions found.\n")
-            
-        sections.append("")
+        
+        return "\n".join(sections)
+
+    def _generate_dependency_section(self) -> str:
+        sections = []
         sections.append("## Function Dependencies (Code Flow)\n")
         sections.append("This section details how functions interact, showing which functions depend on others and vice versa. If you change a function, its dependents (functions that call it) may be impacted. Understanding this helps predict the ripple effects of modifications.\n")
+        
         sections.append("### Most Called Functions\n")
         sections.append("These functions are depended upon by many others. Changing them could affect multiple parts of your codebase.\n")
         
@@ -521,12 +729,11 @@ class ReportGenerator:
                         for caller in deps["called_by"][display_limit:]:
                             sections.append(f"  - `{caller['function']}` in {caller['module']}")
                         sections.append('  </details>')
-                        
+        
         if not any(deps["called_by"] for _, deps in top_called):
             sections.append("No significant call dependencies found within project code.\n")
-            
-        sections.append("")
-        sections.append("### Functions with Most Dependencies\n")
+        
+        sections.append("\n### Functions with Most Dependencies\n")
         sections.append("These functions rely on many others. They might be complex hubs, and changes to their dependencies could affect them.\n")
         
         top_dependent = sorted(
@@ -554,13 +761,37 @@ class ReportGenerator:
                         for called in deps["calls"][display_limit:]:
                             sections.append(f"  - `{called['function']}` in {called['module']}")
                         sections.append('  </details>')
-                        
+        
         if not any(deps["calls"] for _, deps in top_dependent):
             sections.append("No significant dependencies found within project code.\n")
-            
-        sections.append("")
+        
+        return "\n".join(sections)
+
+    def _generate_line_count_section(self) -> str:
+        sections = []
+        sections.append("## Line Count Analysis\n")
+        sections.append("| File | Lines |")
+        sections.append("|------|-------|")
+
+        sorted_files = sorted(self.file_line_counts.items(), key=lambda x: x[1], reverse=True)
+
+        for file_path, count in sorted_files[:20]:
+            rel_path = str(Path(file_path).relative_to(self.target_dir))
+            sections.append(f"| {rel_path} | {count} |")
+
+        if len(sorted_files) > 20:
+            sections.append(f"\n*...and {len(sorted_files) - 20} more files*\n")
+
+        sections.append(f"\n**Total Lines of Code:** {self.total_lines} across {len(self.file_line_counts)} files")
+        sections.append(f"**Average Lines per File:** {self.total_lines / max(1, len(self.file_line_counts)):.1f}")
+        
+        return "\n".join(sections)
+
+    def _generate_docstring_section(self) -> str:
+        sections = []
         sections.append("## Function Docstring Status\n")
         sections.append("This section lists all functions and indicates whether they have docstrings. Docstrings are critical for documentation, improving code readability and maintainability by explaining a function's purpose and usage.\n")
+        
         sorted_functions = sorted(
             self.function_docstrings.items(),
             key=lambda x: (x[1]["file_path"], x[0])
@@ -569,6 +800,7 @@ class ReportGenerator:
 
         sections.append("| Module | Function | Has Docstring | Action Needed |")
         sections.append("|--------|----------|---------------|---------------|")
+        
         for full_name, info in sorted_functions[:display_limit]:
             has_doc = "✅" if info["has_docstring"] else "❌"
             action = "Add docstring" if not info["has_docstring"] else "None"
@@ -600,8 +832,6 @@ class ReportGenerator:
         
         missing_docstrings_count = sum(1 for info in self.function_docstrings.values() if not info["has_docstring"])
         sections.append(f"**Total Functions**: {len(self.function_docstrings)}, **Missing Docstrings**: {missing_docstrings_count}\n")
-        sections.append("\n---\n")
-        sections.append("Report generated by Treeline")
         return "\n".join(sections)
 
     def generate_report_json(self) -> Dict:
@@ -762,7 +992,6 @@ class ReportGenerator:
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(content)
             
-        print(f"Report saved to {output_path}")
         return output_path
 
     def _should_analyze_file(self, file_path: Path) -> bool:
