@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchNodeData } from '../services/dataServices';
 import ImpactAnalysis from '../components/ImpactAnalysis';
-import CodeMetricsGraphs from '../components/CodeMetricsGraphs';
 
 interface NodeDetails {
   node: any;
@@ -57,26 +56,6 @@ const NodeDetailsPage: React.FC = () => {
     loadNodeData();
   }, [nodeId]);
 
-  const renderMetricsGraphs = (node: any) => {
-    if (!node.metrics) {
-      return (
-        <div className="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-r-md mb-6">
-          <p className="text-gray-700">Not enough data available for metrics visualizations.</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="bg-white shadow-md rounded-xl p-6 mb-6">
-        <h3 className="text-purple-600 font-semibold text-lg flex items-center mb-4">
-          <span className="mr-2">📊</span>
-          Code Quality Visualizations
-        </h3>
-        <CodeMetricsGraphs metrics={node.metrics} codeSmells={node.code_smells || []} />
-      </div>
-    );
-  };
-
   const getNodeTypePillClass = (type: string) => {
     switch (type) {
       case 'module':
@@ -110,44 +89,6 @@ const NodeDetailsPage: React.FC = () => {
             </li>
           ))}
         </ul>
-      </div>
-    );
-  };
-
-  const formatMetrics = (metrics: any) => {
-    if (!metrics) return null;
-
-    return (
-      <div className="mb-6">
-        <h3 className="text-blue-600 font-semibold text-lg flex items-center mb-2">
-          <span className="mr-2">📊</span>
-          Metrics
-        </h3>
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-md">
-          <table className="w-full">
-            <tbody>
-              {Object.entries(metrics).map(([key, value]) => {
-                if (key.startsWith('_')) return null;
-
-                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-                const isWarning =
-                  (key === 'complexity' && Number(value) > 10) ||
-                  (key === 'cognitive_complexity' && Number(value) > 15) ||
-                  (key === 'lines' && Number(value) > 100) ||
-                  (key === 'params' && Number(value) > 5);
-
-                return (
-                  <tr key={key} className={isWarning ? 'bg-amber-50' : ''}>
-                    <td className="py-1 font-medium">{formattedKey}</td>
-                    <td className={`py-1 ${isWarning ? 'text-amber-700' : ''}`}>
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
       </div>
     );
   };
@@ -338,27 +279,6 @@ const NodeDetailsPage: React.FC = () => {
             Overview
           </button>
 
-          <button
-            onClick={() => setActiveTab('visualizations')}
-            className={`px-4 py-2 font-medium rounded-t-lg ${
-              activeTab === 'visualizations'
-                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Visualizations
-          </button>
-
-          <button
-            onClick={() => setActiveTab('metrics')}
-            className={`px-4 py-2 font-medium rounded-t-lg ${
-              activeTab === 'metrics'
-                ? 'bg-white text-blue-600 border-t border-r border-l border-gray-200'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Metrics
-          </button>
           <button
             onClick={() => setActiveTab('connections')}
             className={`px-4 py-2 font-medium rounded-t-lg ${
@@ -595,10 +515,6 @@ const NodeDetailsPage: React.FC = () => {
             </div>
           </div>
         )}
-
-        {activeTab === 'visualizations' && <div>{renderMetricsGraphs(node)}</div>}
-
-        {activeTab === 'metrics' && <div>{formatMetrics(node.metrics)}</div>}
 
         {activeTab === 'connections' && <div>{formatConnections(connections)}</div>}
 

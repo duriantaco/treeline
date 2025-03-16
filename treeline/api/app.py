@@ -8,6 +8,7 @@ import logging
 import re
 from collections import defaultdict
 import os
+import hashlib
 
 from fastapi import FastAPI, HTTPException, Query, Depends, APIRouter, Path as FastAPIPath
 from fastapi.middleware.cors import CORSMiddleware
@@ -105,29 +106,48 @@ class ComplexityBreakdown(BaseModel):
     nested_functions: int = 0
     nested_classes: int = 0
 
+def calculate_directory_hash(directory: Path) -> str:
+    file_hashes = []
+    for file_path in sorted(directory.rglob("*.py")):
+        with open(file_path, "rb") as f:
+            file_hash = hashlib.sha256(f.read()).hexdigest()
+        file_hashes.append(file_hash)
+    combined_hash = hashlib.sha256("".join(file_hashes).encode()).hexdigest()
+    return combined_hash
+
 def load_cache(dir_path: Path) -> Optional[Dict[str, Any]]:
+
     cache_file = CACHE_DIR / f"{dir_path.name}.json"
     if cache_file.exists():
         try:
             with open(cache_file, "r") as f:
-                data = json.load(f)
-                GraphData(**data)  
-                return data
+                cache_data = json.load(f)
+            stored_hash = cache_data.get("directory_hash")
+            current_hash = calculate_directory_hash(dir_path)
+            if stored_hash == current_hash:
+                return cache_data["graph_data"]
+            else:
+                return None
         except (json.JSONDecodeError, ValidationError):
-            return None
+            return None  
     return None
 
 def save_cache(dir_path: Path, data: Dict[str, Any]) -> None:
     """
-    Save data to cache using JSON instead of pickle for security
+    Save the analysis data and directory hash to a cache file.
     
     Args:
-        dir_path: Directory path to use as cache key
-        data: Data to cache
+        dir_path (Path): The directory being analyzed.
+        data (Dict[str, Any]): The analysis data to cache (e.g., graph data).
     """
     cache_file = CACHE_DIR / f"{dir_path.name}.json"
+    directory_hash = calculate_directory_hash(dir_path)
+    cache_data = {
+        "directory_hash": directory_hash,
+        "graph_data": data
+    }
     with open(cache_file, "w") as f:
-        json.dump(data, f)
+        json.dump(cache_data, f)
 
 def analyze_file_wrapper(file_path, analyzer):
     return analyzer.analyze_file(file_path)
@@ -155,14 +175,9 @@ def get_dependency_analyzer():
 
 @app.get("/", dependencies=[Depends(get_dependency_analyzer)])
 async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dependency_analyzer)):
-    global dependency_analyzer
+    global dependency_analyzer, code_analyzer
 
     try:
-        index_path = static_path / "index.html"
-        with open(index_path, "r") as f:
-            html_content = f.read()
-        logger.info("Successfully read HTML template")
-
         try:
             with open(".treeline_dir", "r") as f:
                 target_dir = Path(f.read().strip()).resolve()
@@ -171,43 +186,36 @@ async def get_visualization(analyzer: ModuleDependencyAnalyzer = Depends(get_dep
 
         if not dependency_analyzer:
             dependency_analyzer = ModuleDependencyAnalyzer()
+        if not code_analyzer:
+            code_analyzer = EnhancedCodeAnalyzer()
 
         cached_data = load_cache(target_dir)
         if cached_data:
-            graph_data = cached_data
+            logger.info("Loaded graph data from cache")
+            return cached_data
         else:
-            enhanced_analyzer = EnhancedCodeAnalyzer()
             python_files = list(target_dir.rglob("*.py"))
             with ProcessPoolExecutor(max_workers=4) as executor:
-                futures = [executor.submit(analyze_file_wrapper, f, enhanced_analyzer) for f in python_files]
+                futures = [executor.submit(analyze_file_wrapper, f, code_analyzer) for f in python_files]
                 results = [f.result() for f in futures]
-            all_results = [item for sublist in results for item in sublist]
+            all_results = [item for sublist in results for item in sublist if item is not None]
 
-            analyzer.analyze_directory(target_dir)
-            nodes, links = analyzer.get_graph_data_with_quality(enhanced_analyzer, all_results)
+            dependency_analyzer.analyze_directory(target_dir)
+            nodes, links = dependency_analyzer.get_graph_data_with_quality(code_analyzer)
             graph_data = {"nodes": nodes, "links": links}
             save_cache(target_dir, graph_data)
+            logger.info("Generated and cached new graph data")
 
-        json_data = json.dumps(graph_data)
-
-        html_content = html_content.replace("GRAPH_DATA_PLACEHOLDER", json_data)
-        logger.info("Successfully injected graph data")
-
-        return HTMLResponse(html_content)
+            return graph_data
 
     except Exception as e:
+        logger.error(f"Error in get_visualization: {str(e)}")
         traceback_str = traceback.format_exc()
-        return HTMLResponse(
-            f"""
-            <html>
-                <body>
-                    <h1>Server Error</h1>
-                    <p>An unexpected error occurred. Please contact the administrator.</p>
-                </body>
-            </html>
-            """
+        logger.debug(f"Traceback:\n{traceback_str}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Error generating graph data: {str(e)}"}
         )
-
 
 def build_path_indices(nodes):
     path_to_node_id = {}
@@ -295,60 +303,57 @@ async def get_graph_data():
         )
     
 @app.get("/api/file-content")
-async def get_file_content(path: str = Query(...)):
-    """Get file content with basic structure analysis"""
+def get_file_content(path: str = Query(...)):
     try:
-        provided_path = Path(path).resolve()
+        with open(".treeline_dir", "r") as f:
+            base_dir = Path(f.read().strip()).resolve()
+    except FileNotFoundError:
+        base_dir = Path(".").resolve()
+    
+    provided_path = (base_dir / path).resolve()
+    
+    if not is_safe_path(base_dir, provided_path):
+        return JSONResponse(status_code=403, content={"detail": "Access denied"})
+    
+    if not provided_path.exists() or not provided_path.is_file():
+        return JSONResponse(status_code=404, content={"detail": f"File not found: {path}"})
+    
+    try:
+        with open(provided_path, 'r') as f:
+            content = f.read()
         
-        base_dir = Path.cwd().resolve()
-        if not is_safe_path(base_dir, provided_path):
-            return JSONResponse(status_code=403, content={"detail": "Access denied"})
+        file_info = {
+            "path": str(provided_path),
+            "name": provided_path.name,
+            "content": content,
+            "structure": []
+        }
         
-        if not provided_path.exists() or not provided_path.is_file():
-            return JSONResponse(status_code=404, content={"detail": f"File not found: {path}"})
+        class_matches = re.finditer(r'^\s*class\s+(\w+)', content, re.MULTILINE)
+        for match in class_matches:
+            line_number = content[:match.start()].count('\n') + 1
+            file_info["structure"].append({
+                "type": "class",
+                "name": match.group(1),
+                "line": line_number
+            })
         
-        try:
-            with open(provided_path, 'r') as f:
-                content = f.read()
-            
-            file_info = {
-                "path": str(provided_path),
-                "name": provided_path.name,
-                "content": content,
-                "structure": []
-            }
-            
-            
-            class_matches = re.finditer(r'^\s*class\s+(\w+)', content, re.MULTILINE)
-            for match in class_matches:
-                line_number = content[:match.start()].count('\n') + 1
-                file_info["structure"].append({
-                    "type": "class",
-                    "name": match.group(1),
-                    "line": line_number
-                })
-            
-            func_matches = re.finditer(r'^\s*def\s+(\w+)', content, re.MULTILINE)
-            for match in func_matches:
-                line_number = content[:match.start()].count('\n') + 1
-                file_info["structure"].append({
-                    "type": "function",
-                    "name": match.group(1),
-                    "line": line_number
-                })
-            
-            file_info["structure"].sort(key=lambda x: x["line"])
-            
-            return file_info
-        except Exception as e:
-            return JSONResponse(
-                status_code=500,
-                content={"detail": f"Error analyzing file: {str(e)}"}
-            )
+        func_matches = re.finditer(r'^\s*def\s+(\w+)', content, re.MULTILINE)
+        for match in func_matches:
+            line_number = content[:match.start()].count('\n') + 1
+            file_info["structure"].append({
+                "type": "function",
+                "name": match.group(1),
+                "line": line_number
+            })
+        
+        file_info["structure"].sort(key=lambda x: x["line"])
+        
+        return file_info
     except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"detail": f"Error: {str(e)}"}
+            content={"detail": f"Error analyzing file: {str(e)}"}
         )
     
 @app.get("/api/node-by-path/{file_path:path}")
@@ -604,14 +609,23 @@ async def get_complexity_report():
 
 
 @app.get("/reports/structure")
-async def get_structure_report(tree_str: List[str]):
-    """Get codebase structure report"""
+async def get_structure_report(tree_str: List[str] = Query(...)):
+    global dependency_analyzer
+
+    if not dependency_analyzer:
+        try:
+            with open(".treeline_dir", "r") as f:
+                target_dir = Path(f.read().strip()).resolve()
+        except FileNotFoundError:
+            target_dir = Path(".").resolve()
+        dependency_analyzer = ModuleDependencyAnalyzer()
+        dependency_analyzer.analyze_directory(target_dir)
+
     if not all(isinstance(line, str) for line in tree_str):
         raise HTTPException(status_code=400, detail="Invalid tree_str format")
+    
     processed_tree = [dependency_analyzer.clean_for_markdown(line) for line in tree_str]
-
     return {"structure": processed_tree, "metrics": dependency_analyzer.module_metrics}
-
 
 @app.get("/reports/quality")
 async def get_quality_report():
@@ -1021,13 +1035,14 @@ async def get_detailed_metrics(
     }
 
 @detailed_metrics_router.get("/file/{file_path:path}", response_model=FileMetricsDetail)
-async def get_file_detailed_metrics(
-    file_path: str = FastAPIPath(..., description="File path to analyze")
-):
-    """
-    Get detailed metrics for a specific file.
-    """
-    target_file = FastAPIPath(file_path).resolve()
+async def get_file_detailed_metrics(file_path: str = FastAPIPath(...)):
+    try:
+        with open(".treeline_dir", "r") as f:
+            base_dir = Path(f.read().strip()).resolve()
+    except FileNotFoundError:
+        base_dir = Path(".").resolve()
+    
+    target_file = (base_dir / file_path).resolve()
     
     if not target_file.exists() or not target_file.is_file():
         raise HTTPException(status_code=404, detail=f"File not found: {file_path}")
