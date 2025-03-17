@@ -2,14 +2,14 @@ import React from 'react';
 
 interface NodeMetricsProps {
   metrics: {
-    complexity?: number;
-    cognitive_complexity?: number;
-    lines?: number;
-    functions?: number;
-    classes?: number;
-    params?: number;
-    methods?: number;
-    nested_depth?: number;
+    complexity?: number | string;
+    cognitive_complexity?: number | string;
+    lines?: number | string;
+    functions?: number | string;
+    classes?: number | string;
+    params?: number | string;
+    methods?: number | string;
+    nested_depth?: number | string;
     [key: string]: any;
   };
 }

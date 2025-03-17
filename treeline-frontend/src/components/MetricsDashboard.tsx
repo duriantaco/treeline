@@ -7,18 +7,26 @@ import {
   fetchComplexityBreakdown,
   fetchIssuesByCategory 
 } from '../services/dataServices';
-import ComplexityTimeline from '../components/ComplexityTimeline';
-import ImpactAnalysis from '../components/ImpactAnalysis';
+import ComplexityTimeline from './ComplexityTimeline';
+import ImpactAnalysis from './ImpactAnalysis';
+import {
+  MetricsData,
+  FileMetricsData,
+  ComplexityBreakdownData,
+  IssuesByCategoryData,
+  FileInfo,
+  PreparedFileMetric
+} from '../types/metrics';
 
 const MetricsDashboardPage: React.FC = () => {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<MetricsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [activeFile, setActiveFile] = useState<string | null>(null);
-  const [fileMetrics, setFileMetrics] = useState<any>(null);
-  const [complexityBreakdown, setComplexityBreakdown] = useState<any>(null);
-  const [issuesByCategory, setIssuesByCategory] = useState<any>(null);
+  const [fileMetrics, setFileMetrics] = useState<FileMetricsData | null>(null);
+  const [complexityBreakdown, setComplexityBreakdown] = useState<ComplexityBreakdownData | null>(null);
+  const [issuesByCategory, setIssuesByCategory] = useState<IssuesByCategoryData | null>(null);
   
   const donutChartRef = useRef<SVGSVGElement>(null);
   const barChartRef = useRef<SVGSVGElement>(null);
@@ -36,16 +44,16 @@ const MetricsDashboardPage: React.FC = () => {
           fetchIssuesByCategory()
         ]);
         
-        setData(metricsData);
-        setComplexityBreakdown(complexityData);
-        setIssuesByCategory(issuesData);
+        setData(metricsData as MetricsData);
+        setComplexityBreakdown(complexityData as ComplexityBreakdownData);
+        setIssuesByCategory(issuesData as IssuesByCategoryData);
         
         // Set first file as active if available
         if (metricsData.files && Object.keys(metricsData.files).length > 0) {
           const firstFilePath = Object.keys(metricsData.files)[0];
           setActiveFile(firstFilePath);
           const fileData = await fetchFileDetailedMetrics(firstFilePath);
-          setFileMetrics(fileData);
+          setFileMetrics(fileData as FileMetricsData);
         }
         
         setError(null);
@@ -76,7 +84,7 @@ const MetricsDashboardPage: React.FC = () => {
     try {
       setActiveFile(filePath);
       const fileData = await fetchFileDetailedMetrics(filePath);
-      setFileMetrics(fileData);
+      setFileMetrics(fileData as FileMetricsData);
     } catch (err) {
       console.error(`Error fetching data for file ${filePath}:`, err);
     }
@@ -249,17 +257,17 @@ const MetricsDashboardPage: React.FC = () => {
       .text('Top Complexity Factors');
   };
   
-  const prepareFileMetricsData = () => {
+  const prepareFileMetricsData = (): PreparedFileMetric[] => {
     if (!data?.files) return [];
     
     return Object.entries(data.files)
       .map(([filePath, fileData]) => {
-        const fileInfo = fileData as any;
+        const fileInfo = fileData as FileInfo;
         const issuesCount = Object.values(fileInfo.issues_by_category || {})
           .reduce((sum: number, issues: any) => sum + (issues as any[]).length, 0);
         
         return {
-          name: filePath.split('/').pop(),
+          name: filePath.split('/').pop() || '',
           path: filePath,
           lines: fileInfo.lines || 0,
           functions: fileInfo.functions?.length || 0,
@@ -271,10 +279,10 @@ const MetricsDashboardPage: React.FC = () => {
       .sort((a, b) => b.issues - a.issues);
   };
   
-  const calculateAverageComplexity = (fileData: any) => {
+  const calculateAverageComplexity = (fileData: FileInfo): number => {
     if (!fileData.functions || fileData.functions.length === 0) return 0;
     
-    const totalComplexity = fileData.functions.reduce((sum: number, func: any) => 
+    const totalComplexity = fileData.functions.reduce((sum: number, func) => 
       sum + (func.complexity || 0), 0);
     
     return Math.round((totalComplexity / fileData.functions.length) * 10) / 10;
@@ -475,17 +483,17 @@ const MetricsDashboardPage: React.FC = () => {
                     </div>
                     <div className="bg-gray-100 p-4 rounded-md">
                       <div className="text-sm text-gray-500">Functions</div>
-                      <div className="text-2xl font-semibold">{fileMetrics.functions.length}</div>
+                      <div className="text-2xl font-semibold">{fileMetrics.functions?.length || 0}</div>
                     </div>
                     <div className="bg-gray-100 p-4 rounded-md">
                       <div className="text-sm text-gray-500">Classes</div>
-                      <div className="text-2xl font-semibold">{fileMetrics.classes.length}</div>
+                      <div className="text-2xl font-semibold">{fileMetrics.classes?.length || 0}</div>
                     </div>
                     <div className="bg-gray-100 p-4 rounded-md">
                       <div className="text-sm text-gray-500">Issues</div>
-                      <div className="text-2xl font-semibold">{
-                        Object.values(fileMetrics.issues_by_category || {}).reduce((sum: number, issues: any) => sum + (issues as any[]).length, 0)
-                      }</div>
+                      <div className="text-2xl font-semibold">
+                        {Object.values(fileMetrics.issues_by_category || {}).reduce((sum: number, issues: any[]) => sum + issues.length, 0)}
+                      </div>
                     </div>
                   </div>
                   
@@ -504,16 +512,16 @@ const MetricsDashboardPage: React.FC = () => {
                                  category === 'complexity' ? '#8b5cf6' :
                                  category === 'sql_injection' ? '#ec4899' : '#718096'
                                }}>
-                            <h5 className="font-medium mb-2">{category.replace(/_/g, ' ')} ({(issues as any[]).length})</h5>
+                            <h5 className="font-medium mb-2">{category.replace(/_/g, ' ')} ({issues.length})</h5>
                             <ul className="space-y-1 text-sm">
-                              {(issues as any[]).slice(0, 5).map((issue, i) => (
+                              {issues.slice(0, 5).map((issue, i) => (
                                 <li key={i} className="flex justify-between">
                                   <span>{issue.description}</span>
                                   {issue.line && <span className="text-gray-500">Line {issue.line}</span>}
                                 </li>
                               ))}
-                              {(issues as any[]).length > 5 && (
-                                <li className="text-gray-500 italic">...and {(issues as any[]).length - 5} more</li>
+                              {issues.length > 5 && (
+                                <li className="text-gray-500 italic">...and {issues.length - 5} more</li>
                               )}
                             </ul>
                           </div>
@@ -523,7 +531,7 @@ const MetricsDashboardPage: React.FC = () => {
                   )}
                   
                   {/* Functions with complexity */}
-                  {fileMetrics.functions.length > 0 && (
+                  {fileMetrics.functions && fileMetrics.functions.length > 0 && (
                     <div className="mb-6">
                       <h4 className="text-lg font-semibold mb-2">Functions</h4>
                       <table className="min-w-full">
@@ -539,24 +547,24 @@ const MetricsDashboardPage: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {fileMetrics.functions.sort((a: any, b: any) => (b.complexity || 0) - (a.complexity || 0)).map((func: any, index: number) => (
+                          {fileMetrics.functions.slice().sort((a, b) => (b.complexity || 0) - (a.complexity || 0)).map((func, index) => (
                             <tr key={index} className="border-t border-gray-200 hover:bg-gray-50">
                               <td className="py-2 px-4">{func.name}</td>
                               <td className="py-2 px-4 text-right">{func.lines}</td>
                               <td className="py-2 px-4 text-right">{func.params}</td>
                               <td className="py-2 px-4 text-right">
-                                <span className={func.complexity > 10 ? 'text-red-600 font-medium' : ''}>
-                                  {func.complexity || 'N/A'}
+                                <span className={func.complexity !== undefined && func.complexity > 10 ? 'text-red-600 font-medium' : ''}>
+                                  {func.complexity !== undefined ? func.complexity : 'N/A'}
                                 </span>
                               </td>
                               <td className="py-2 px-4 text-right">
-                                <span className={func.cognitive_complexity > 15 ? 'text-red-600 font-medium' : ''}>
-                                  {func.cognitive_complexity || 'N/A'}
+                                <span className={func.cognitive_complexity !== undefined && func.cognitive_complexity > 15 ? 'text-red-600 font-medium' : ''}>
+                                  {func.cognitive_complexity !== undefined ? func.cognitive_complexity : 'N/A'}
                                 </span>
                               </td>
                               <td className="py-2 px-4 text-right">
-                                <span className={func.nested_depth > 4 ? 'text-red-600 font-medium' : ''}>
-                                  {func.nested_depth || 'N/A'}
+                                <span className={func.nested_depth !== undefined && func.nested_depth > 4 ? 'text-red-600 font-medium' : ''}>
+                                  {func.nested_depth !== undefined ? func.nested_depth : 'N/A'}
                                 </span>
                               </td>
                               <td className="py-2 px-4 text-right">
@@ -653,7 +661,7 @@ const MetricsDashboardPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {issuesByCategory.files_with_most_issues.map((file: any, index: number) => (
+                    {issuesByCategory.files_with_most_issues.map((file, index) => (
                       <tr 
                         key={index} 
                         className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
@@ -747,7 +755,7 @@ const MetricsDashboardPage: React.FC = () => {
             </div>
           </div>
           
-          {fileMetrics?.functions?.length > 0 && fileMetrics.functions.some((f: any) => f.complexity > 0) && (
+          {fileMetrics && fileMetrics.functions && fileMetrics.functions.length > 0 && fileMetrics.functions.some((f) => (f.complexity || 0) > 0) && (
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-semibold mb-4">Complexity Refactoring Projection</h3>
               <p className="text-sm text-gray-600 mb-4">
@@ -756,7 +764,8 @@ const MetricsDashboardPage: React.FC = () => {
               
               {/* Find the function with highest complexity */}
               {(() => {
-                const mostComplexFunction = [...fileMetrics.functions].sort((a: any, b: any) => 
+                // Safe to use because we already checked above that fileMetrics and functions exist and have length > 0
+                const mostComplexFunction = [...(fileMetrics.functions || [])].sort((a, b) => 
                   (b.complexity || 0) - (a.complexity || 0)
                 )[0];
                 
@@ -819,8 +828,8 @@ const MetricsDashboardPage: React.FC = () => {
                     incoming: [],  
                     outgoing: []   
                   }}
-                  hasIssues={Object.values(fileMetrics.issues_by_category || {}).some((issues: any) => issues.length > 0)}
-                  highComplexity={fileMetrics.functions.some((f: any) => (f.complexity || 0) > 10)}
+                  hasIssues={Object.values(fileMetrics.issues_by_category || {}).some((issues) => issues.length > 0)}
+                  highComplexity={fileMetrics.functions && fileMetrics.functions.some((f) => (f.complexity || 0) > 10) || false}
                 />
               ) : (
                 <div className="p-4 bg-gray-50 rounded-lg text-center">
