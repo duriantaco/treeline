@@ -7,6 +7,16 @@ import {
   fetchComplexityBreakdown,
 } from '../services/dataServices';
 
+interface FileTableItem {
+  path: string;
+  name: string;
+  lines: number;
+  functions: number;
+  classes: number;
+  complexity: number;
+  issues: number;
+}
+
 const ProjectMetricsPage: React.FC = () => {
   const [projectMetrics, setProjectMetrics] = useState<any>(null);
   const [complexityBreakdown, setComplexityBreakdown] = useState<any>(null);
@@ -305,11 +315,11 @@ const ProjectMetricsPage: React.FC = () => {
                         classes: fileData.classes?.length || 0,
                         complexity: avgComplexity,
                         issues: issuesCount,
-                      };
+                      } as FileTableItem;
                     })
-                      .sort((a, b) => b.issues - a.issues)
+                      .sort((a: FileTableItem, b: FileTableItem) => b.issues - a.issues)
                       .slice(0, 10)
-                      .map((file, index) => (
+                      .map((file: FileTableItem, index: number) => (
                         <tr
                           key={index}
                           className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"

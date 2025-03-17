@@ -30,12 +30,13 @@ const FileDetailsPage: React.FC = () => {
     useEffect(() => {
         const loadNodeData = async () => {
           if (!filePath) return;
-      
           try {
             setLoading(true);
             const decodedPath = decodeURIComponent(filePath);
             const data = await fetchNodeByFilePath(decodedPath);
-            
+            if (!data) {
+              throw new Error("Failed to load file details.");
+            }
             setNodeData(data);
             setError(null);
           } catch (err: any) {
@@ -45,7 +46,6 @@ const FileDetailsPage: React.FC = () => {
             setLoading(false);
           }
         };
-      
         loadNodeData();
       }, [filePath]);
 

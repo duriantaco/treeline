@@ -1,4 +1,8 @@
+// remember to add this shit for testing zzzz 
 {
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

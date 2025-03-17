@@ -10,10 +10,12 @@ const Graph: React.FC<GraphProps> = ({ data, onNodeClick }) => {
   const svgRef = useRef<SVGSVGElement>(null);
 
   useEffect(() => {
-    if (!svgRef.current || !data.nodes.length) return;
+    if (!svgRef.current) return;
 
     const svg = d3.select(svgRef.current).attr('width', 800).attr('height', 600);
     svg.selectAll('*').remove();
+
+    if (!data.nodes.length) return;
 
     const simulation = d3.forceSimulation(data.nodes)
       .force('link', d3.forceLink(data.links).id((d: any) => d.id))
