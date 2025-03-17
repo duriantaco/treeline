@@ -102,20 +102,22 @@ class ReportGenerator:
             "function_level": [],
             "module_level": []
         }
+        seen_cycles = set() 
         
         for func_name in self.function_dependencies:
             path = []
             visited = set()
-            self._find_circular_path(func_name, func_name, path, visited, circular_deps["function_level"])
+            self._find_circular_path(func_name, func_name, path, visited, circular_deps["function_level"], seen_cycles)
         
+        module_seen_cycles = set()
         for module in self.dependency_analyzer.module_imports:
             path = []
             visited = set()
-            self._find_module_circular_path(module, module, path, visited, circular_deps["module_level"])
+            self._find_module_circular_path(module, module, path, visited, circular_deps["module_level"], module_seen_cycles)
         
         return circular_deps
 
-    def _find_circular_path(self, start, current, path, visited, results):
+    def _find_circular_path(self, start, current, path, visited, results, seen_cycles):
         """DFS to find circular dependencies between functions."""
         path.append(current)
         visited.add(current)
@@ -125,13 +127,15 @@ class ReportGenerator:
                 called_func = called["function"]
                 if called_func == start and len(path) > 1:
                     cycle = path.copy()
-                    cycle.append(start)  
-                    if cycle not in results:
+                    cycle.append(start)
+                    edges = frozenset((cycle[i], cycle[i+1]) for i in range(len(cycle)-1))
+                    if edges not in seen_cycles:
+                        seen_cycles.add(edges)
                         results.append(cycle)
                 elif called_func not in visited:
-                    self._find_circular_path(start, called_func, path.copy(), visited.copy(), results)
+                    self._find_circular_path(start, called_func, path.copy(), visited.copy(), results, seen_cycles)
 
-    def _find_module_circular_path(self, start, current, path, visited, results):
+    def _find_module_circular_path(self, start, current, path, visited, results, seen_cycles):
         """DFS to find circular dependencies between modules."""
         path.append(current)
         visited.add(current)
@@ -140,11 +144,13 @@ class ReportGenerator:
             for imported in self.dependency_analyzer.module_imports[current]:
                 if imported == start and len(path) > 1:
                     cycle = path.copy()
-                    cycle.append(start)  
-                    if cycle not in results:
+                    cycle.append(start)
+                    edges = frozenset((cycle[i], cycle[i+1]) for i in range(len(cycle)-1))
+                    if edges not in seen_cycles:
+                        seen_cycles.add(edges)
                         results.append(cycle)
                 elif imported not in visited:
-                    self._find_module_circular_path(start, imported, path.copy(), visited.copy(), results)
+                    self._find_module_circular_path(start, imported, path.copy(), visited.copy(), results, seen_cycles)
 
     def _generate_circular_dependency_section(self):
         """Generate a section about circular dependencies for the report."""
@@ -188,10 +194,11 @@ class ReportGenerator:
         for func_name, calls in self.dependency_analyzer.function_calls.items():
             if func_name not in self.dependency_analyzer.function_locations:
                 continue 
-            function_deps[func_name] = {
-                "called_by": [],
-                "calls": []
-            }
+            if func_name not in function_deps: 
+                function_deps[func_name] = {
+                    "called_by": [],
+                    "calls": []
+                }
             for call_info in calls:
                 caller = call_info.get("from_function", "unknown")
                 module = call_info.get("from_module", "unknown")
@@ -209,7 +216,7 @@ class ReportGenerator:
                         "line": call_info.get("line", 0)
                     })
         return function_deps
-        
+            
     def _collect_complex_functions(self):
         complex_funcs = []
         for file_path, file_results in self.all_file_results.items():
@@ -318,7 +325,7 @@ class ReportGenerator:
         sections.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         sections.append(f"**Project:** {self.target_dir.absolute()}")
         total_funcs = len(self.function_docstrings)
-        categories = self.dependency_analyzer.categorize_functions(self.function_dependencies)
+        categories = self.dependency_analyzer.categorize_functions() 
         sections.append(f"**Files Analyzed:** {len(self.analyzed_files)}")
         sections.append(f"**Functions:** {total_funcs} (Entry: {len(categories['entry_points'])}, Core: {len(categories['core_functions'])})")
         sections.append(f"**Issues Found:** {self.issues_count}\n")
