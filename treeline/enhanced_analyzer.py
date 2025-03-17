@@ -21,7 +21,7 @@ class EnhancedCodeAnalyzer:
         self.quality_issues = defaultdict(list)
         self.metrics_summary = defaultdict(dict)
         
-        self.config = config or get_config().as_dict()
+        self.config = config or get_config()
 
         self.config = config or {}
         self.code_smell_checker = CodeSmellChecker(self.config)

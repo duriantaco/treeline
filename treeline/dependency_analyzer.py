@@ -99,13 +99,18 @@ class ModuleDependencyAnalyzer:
                 setattr(child, "parent", parent)
 
         imports = set()
+        imported_modules = {} 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for name in node.names:
                     imports.add(name.name)
+                    imported_modules[name.name] = name.name  
             elif isinstance(node, ast.ImportFrom):
                 if node.module:
                     imports.add(node.module)
+                    for name in node.names:
+                        alias = name.asname or name.name
+                        imported_modules[alias] = f"{node.module}.{name.name}"  # e.g., 'file3': 'sub.file3'
 
         functions = []
         classes = []
@@ -143,15 +148,25 @@ class ModuleDependencyAnalyzer:
                     function_locations[func_id] = location.__dict__
 
                     for child in ast.walk(node):
-                        if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
-                            called_func = child.func.id
-                            if called_func in local_functions:
-                                target_module = module_name
-                                target_func = called_func
-                            elif called_func in imported_functions:
-                                target_module, target_func = imported_functions[called_func].rsplit(".", 1)
+                        if isinstance(child, ast.Call):
+                            if isinstance(child.func, ast.Name):
+                                called_func = child.func.id
+                                if called_func in local_functions:
+                                    target_module = module_name
+                                    target_func = called_func
+                                elif called_func in imported_functions:
+                                    target_module, target_func = imported_functions[called_func].rsplit(".", 1)
+                                else:
+                                    continue
+                            elif isinstance(child.func, ast.Attribute) and isinstance(child.func.value, ast.Name):
+                                module_name_attr = child.func.value.id
+                                if module_name_attr in imported_modules:
+                                    target_module = imported_modules[module_name_attr]
+                                    target_func = child.func.attr
+                                else:
+                                    continue
                             else:
-                                continue  
+                                continue
                             call_info = FunctionCallInfo(
                                 from_module=module_name,
                                 from_function=node.name,
@@ -188,7 +203,7 @@ class ModuleDependencyAnalyzer:
             "class_info": class_info,
             "module_name": module_name
         }
-    
+        
     def _analyze_file(self, file_path: Path) -> dict:
         try:
             with open(file_path, "r", encoding="utf-8") as f:
@@ -228,7 +243,6 @@ class ModuleDependencyAnalyzer:
         return calculate_cyclomatic_complexity(node)
 
     def get_graph_data(self):
-
         nodes = []
         links = []
         node_lookup = {}
@@ -244,7 +258,7 @@ class ModuleDependencyAnalyzer:
                 "name": module,
                 "type": "module",
                 "is_entry": is_entry,
-                "file_path": file_path,  
+                "file_path": file_path,
                 "metrics": self.module_metrics.get(module, {}),
                 "code_smells": [],
             })
@@ -293,13 +307,13 @@ class ModuleDependencyAnalyzer:
             if "module" not in location:
                 continue
             module = location["module"]
-            func_id = f"{module}.{func_name}"
+            func_id = func_name  # Use func_name directly as it is "file1.func1"
             node_id = len(nodes)
             node_lookup[func_id] = node_id
             nodes.append(
                 {
                     "id": node_id,
-                    "name": func_name,
+                    "name": func_name,  # Name is "file1.func1"
                     "type": "function",
                     "metrics": location,
                     "code_smells": [],
@@ -312,8 +326,7 @@ class ModuleDependencyAnalyzer:
         for to_func_id, calls in self.function_calls.items():
             if to_func_id not in self.function_locations:
                 continue
-            target_module = self.function_locations[to_func_id]["module"]
-            target_key = to_func_id  
+            target_key = to_func_id
             for call in calls:
                 source_key = f"{call['from_module']}.{call['from_function']}"
                 if source_key in node_lookup and target_key in node_lookup:
@@ -344,9 +357,17 @@ class ModuleDependencyAnalyzer:
     
     def categorize_functions(self):
         categories = {'entry_points': [], 'core_functions': [], 'leaf_functions': []}
-        for func, calls in self.function_calls.items():
-            fan_in = len(calls)
-            fan_out = len(self.function_dependencies.get(func, {}).get('calls', []))
+        
+        caller_to_callees = defaultdict(list)
+        for called_func, callers in self.function_calls.items():
+            for caller_info in callers:
+                caller_func = f"{caller_info['from_module']}.{caller_info['from_function']}"
+                caller_to_callees[caller_func].append(called_func)
+        
+        all_functions = set(self.function_locations.keys())
+        for func in all_functions:
+            fan_in = len(self.function_calls.get(func, []))
+            fan_out = len(caller_to_callees.get(func, []))
             if fan_in == 0:
                 categories['entry_points'].append(func)
             elif fan_in > 5 or fan_out > 5:

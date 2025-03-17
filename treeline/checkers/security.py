@@ -114,32 +114,9 @@ class SecurityAnalyzer:
 
     def _check_dangerous_ast_patterns(self, tree: ast.AST, file_path: Path, quality_issues: defaultdict):
         for node in ast.walk(tree):
-            if (isinstance(node, ast.Call) and 
-                isinstance(node.func, ast.Name) and 
-                node.func.id == 'eval'):
-                quality_issues["security"].append({
-                    "description": "Use of eval() function - potential security risk",
-                    "file_path": str(file_path),
-                    "line": node.lineno,
-                    "severity": "high"
-                })
-                
-            if (isinstance(node, ast.Call) and 
-                isinstance(node.func, ast.Name) and 
-                node.func.id == 'input'):
-                parent = self._get_parent(node, tree)
-                if parent and isinstance(parent, ast.Call) and hasattr(parent.func, 'id'):
-                    if parent.func.id in ['eval', 'exec', 'os.system', 'subprocess.call']:
-                        quality_issues["security"].append({
-                            "description": f"User input passed directly to {parent.func.id} - critical security risk",
-                            "file_path": str(file_path),
-                            "line": node.lineno,
-                            "severity": "critical"
-                        })
-            
             if (isinstance(node, ast.Call) and
-                isinstance(node.func, ast.Attribute) and
-                node.func.attr in ['open', 'read', 'write']):
+                ((isinstance(node.func, ast.Name) and node.func.id == 'open') or
+                (isinstance(node.func, ast.Attribute) and node.func.attr in ['open', 'read', 'write']))):
                 
                 for arg in node.args:
                     if isinstance(arg, ast.BinOp) or (
@@ -154,6 +131,28 @@ class SecurityAnalyzer:
                             "severity": "high"
                         })
                         break
+            # Keep existing checks for eval, input, etc.
+            if (isinstance(node, ast.Call) and 
+                isinstance(node.func, ast.Name) and 
+                node.func.id == 'eval'):
+                quality_issues["security"].append({
+                    "description": "Use of eval() function - potential security risk",
+                    "file_path": str(file_path),
+                    "line": node.lineno,
+                    "severity": "high"
+                })
+            if (isinstance(node, ast.Call) and 
+                isinstance(node.func, ast.Name) and 
+                node.func.id == 'input'):
+                parent = self._get_parent(node, tree)
+                if parent and isinstance(parent, ast.Call) and hasattr(parent.func, 'id'):
+                    if parent.func.id in ['eval', 'exec', 'os.system', 'subprocess.call']:
+                        quality_issues["security"].append({
+                            "description": f"User input passed directly to {parent.func.id} - critical security risk",
+                            "file_path": str(file_path),
+                            "line": node.lineno,
+                            "severity": "critical"
+                        })
 
     def _get_parent(self, node, tree):
         for parent in ast.walk(tree):

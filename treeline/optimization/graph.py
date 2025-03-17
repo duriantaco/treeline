@@ -1,14 +1,14 @@
 from collections import defaultdict
 from typing import Dict, List, Set
-
+from collections import deque
 
 class OptimizedDependencyGraph:
     """High-performance graph structure for code dependencies"""
 
     def __init__(self):
-        self.nodes: Dict[str, int] = {}  # name -> index mapping
-        self.reverse_nodes: Dict[int, str] = {}  # index -> name mapping
-        self.node_types: Dict[int, str] = {}  # node metadata
+        self.nodes: Dict[str, int] = {} 
+        self.reverse_nodes: Dict[int, str] = {} 
+        self.node_types: Dict[int, str] = {}  
         self._next_index: int = 0
         self.outgoing_edges: Dict[int, Set[int]] = defaultdict(set)
         self._cache = {}
@@ -43,12 +43,25 @@ class OptimizedDependencyGraph:
 
         return self._cache[cache_key]
 
-    def get_dependency_chain(
-        self, start_node: str, max_depth: int = -1
-    ) -> Dict[str, int]:
+    def get_dependency_chain(self, start_node: str, max_depth: int = -1) -> Dict[str, int]:
         """Get all dependencies and their distances from start node"""
         if start_node not in self.nodes:
             return {}
+        start_idx = self.nodes[start_node]
+        queue = deque([(start_idx, 0)])
+        visited = set([start_idx])
+        chain = {}
+        while queue:
+            node_idx, depth = queue.popleft()
+            if max_depth != -1 and depth > max_depth:
+                continue
+            node_name = self.reverse_nodes[node_idx]
+            chain[node_name] = depth
+            for neighbor in self.outgoing_edges[node_idx]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append((neighbor, depth + 1))
+        return chain
 
     def _strongly_connected_components(self) -> List[Set[str]]:
         index_counter = 0
@@ -114,9 +127,8 @@ class OptimizedDependencyGraph:
             path.append(node_idx)
             path_set.add(node_idx)
 
-            row = self.adjacency_matrix[node_idx].tocoo()
-            for _, col, _ in zip(row.row, row.col, row.data):
-                dfs(col)
+            for neighbor in self.outgoing_edges[node_idx]:
+                dfs(neighbor)
 
             path.pop()
             path_set.remove(node_idx)
