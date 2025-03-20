@@ -32,7 +32,6 @@ def load_config(config_path: Path = Path("config.json")) -> Dict:
             with open(config_path, "r") as f:
                 user_config = json.load(f)
             config.update(user_config)
-            print(f"Loaded configuration from {config_path}")
         except json.JSONDecodeError:
             print(f"Error: {config_path} contains invalid JSON. Using defaults.")
     else:

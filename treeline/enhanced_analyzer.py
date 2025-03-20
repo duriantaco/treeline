@@ -33,53 +33,28 @@ class EnhancedCodeAnalyzer:
         self.unused_code_checker = UnusedCodeChecker(self.config) 
 
     def analyze_file(self, file_path: Path) -> List[Dict]:
-        """Analyze a file for code quality issues and structure"""
         try:
             content = self._read_file(file_path)
             if not content:
                 return []
-                
+            
             tree = self._parse_content(content)
             if not tree:
                 return []
 
-            try:
-                self.code_smell_checker.check(tree, file_path, self.quality_issues)
-            except Exception as e:
-                print(f"Error in code smell checker for {file_path}: {e}")
-                
-            try:
-                self.complexity_analyzer.check(tree, file_path, self.quality_issues)
-            except Exception as e:
-                print(f"Error in complexity analyzer for {file_path}: {e}")
-                
-            try:
-                self.security_analyzer.check(tree, file_path, self.quality_issues)
-            except Exception as e:
-                print(f"Error in security analyzer for {file_path}: {e}")
-                
-            try:
-                self.sql_injection_checker.check(tree, file_path, self.quality_issues)
-            except Exception as e:
-                print(f"Error in SQL injection checker for {file_path}: {e}")
-
-            try:
-                self.style_checker.check(file_path, self.quality_issues)
-            except Exception as e:
-                print(f"Error in style checker for {file_path}: {e}")
+            self.code_smell_checker.check(tree, file_path, self.quality_issues)
+            self.complexity_analyzer.check(tree, file_path, self.quality_issues)
+            self.security_analyzer.check(tree, file_path, self.quality_issues)
+            self.sql_injection_checker.check(tree, file_path, self.quality_issues)
+            self.style_checker.check(file_path, self.quality_issues)
 
             results = self._analyze_code_elements(tree, content, file_path)
-            
-            for result in results:
-                if 'code_smells' not in result:
-                    result['code_smells'] = []
-            
             self._add_file_issues_to_elements(results, file_path)
             
             return results
         except Exception as e:
-            print(f"Error analyzing file {file_path}: {e}")
-            return []
+            print(f"Error analyzing {file_path}: {e}")
+            raise
 
     def _add_file_issues_to_elements(self, elements: List[Dict], file_path: Path):
         file_issues = [
@@ -92,39 +67,14 @@ class EnhancedCodeAnalyzer:
             for category, issues in self.quality_issues.items()
             for issue in issues if isinstance(issue, dict) and issue.get('file_path') == str(file_path)
         ]
+        
         if not file_issues:
             return
 
+        sortable_issues = [issue for issue in file_issues if issue['line'] is not None]
+        
         elements.sort(key=lambda e: e.get('line', 0))
-        file_issues.sort(key=lambda i: i.get('line', 0))
-
-        element_idx = 0
-        for issue in file_issues:
-            issue_line = issue.get('line')
-            if not issue_line:
-                continue
-
-            while element_idx < len(elements) and elements[element_idx].get('line', 0) < issue_line:
-                element_idx += 1
-
-            if element_idx > 0 and element_idx < len(elements):
-                prev_line = elements[element_idx - 1].get('line', 0)
-                curr_line = elements[element_idx].get('line', 0)
-                if abs(issue_line - prev_line) < abs(issue_line - curr_line):
-                    closest_element = elements[element_idx - 1]
-                else:
-                    closest_element = elements[element_idx]
-            elif element_idx == 0 and elements:
-                closest_element = elements[0]
-            elif element_idx == len(elements) and elements:
-                closest_element = elements[-1]
-            else:
-                continue
-
-            if 'code_smells' not in closest_element:
-                closest_element['code_smells'] = []
-            if issue not in closest_element['code_smells']:
-                closest_element['code_smells'].append(issue)
+        sortable_issues.sort(key=lambda i: i['line'])
 
     def analyze_directory(self, directory: Path) -> List[Dict]:
         results = []
@@ -202,7 +152,13 @@ class EnhancedCodeAnalyzer:
         line_count = len(func_lines)
         docstring = ast.get_docstring(node)
         param_count = len(node.args.args)
-        complexity = self._calculate_complexity(node)
+
+        try:
+            complexity = self._calculate_complexity(node)
+            if complexity is None:
+                complexity = 0
+        except Exception:
+            complexity = 0
         
         return {
             "type": "function",

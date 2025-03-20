@@ -5,6 +5,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+import uvicorn
 
 from treeline.dependency_analyzer import ModuleDependencyAnalyzer
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
@@ -260,7 +261,6 @@ def serve():
       treeline serve
     """
     try:
-        import uvicorn
         from treeline.api.app import app
 
         console.print("[green]Starting Treeline web interface...[/]")

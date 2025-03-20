@@ -222,23 +222,25 @@ class ReportGenerator:
         for file_path, file_results in self.all_file_results.items():
             for result in file_results:
                 if result["type"] == "function" and "metrics" in result:
-                    module_path = str(Path(file_path).relative_to(self.target_dir)).replace('/', '.').replace('\\', '.').replace('.py', '')
-                    func_name = result["name"]
-                    complexity = result["metrics"].get("complexity", 0)
+                    complexity = result["metrics"].get("complexity")
+                    if complexity is None:
+                        complexity = 0
+                    
                     if complexity > 5:
+                        module_path = str(Path(file_path).relative_to(self.target_dir)).replace('/', '.').replace('\\', '.').replace('.py', '')
                         complex_funcs.append({
                             "module": module_path,
-                            "function": func_name,
+                            "function": result["name"],
                             "complexity": complexity,
-                            "cognitive_complexity": result["metrics"].get("cognitive_complexity", 0),
-                            "lines": result["metrics"].get("lines", 0),
-                            "params": result["metrics"].get("params", 0),
+                            "cognitive_complexity": result["metrics"].get("cognitive_complexity", 0) or 0,
+                            "lines": result["metrics"].get("lines", 0) or 0,
+                            "params": result["metrics"].get("params", 0) or 0,
                             "has_docstring": result["docstring"] is not None,
                             "file_path": file_path,
                             "line": result["line"]
                         })
         return sorted(complex_funcs, key=lambda x: x["complexity"], reverse=True)
-    
+            
     def _build_structure_data(self):
         for module_name, classes in self.dependency_analyzer.class_info.items():
             for class_name, class_info in classes.items():
@@ -521,7 +523,7 @@ class ReportGenerator:
         total_functions = len(self.function_docstrings)
         missing_docstrings_count = sum(1 for info in self.function_docstrings.values() if not info["has_docstring"])
         docstring_coverage = 100 - (missing_docstrings_count / max(1, total_functions) * 100)
-        high_complexity_funcs = [f for f in self.functions_by_complexity if f["complexity"] > 10]
+        high_complexity_funcs = [f for f in self.functions_by_complexity if f.get("complexity", 0) > 10]
         security_issues = len(self.code_smells_by_category.get('security', []))
         top_issue_categories = sorted(
             [(category, len(issues)) for category, issues in self.code_smells_by_category.items()],
