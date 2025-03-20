@@ -88,7 +88,6 @@ class ConfigManager:
                     else:
                         print(f"Warning: Unknown configuration key '{key}' in {self._config_path}")
                         
-                print(f"Loaded configuration from {self._config_path}")
             except Exception as e:
                 print(f"Error loading configuration from {self._config_path}: {e}")
         

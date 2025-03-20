@@ -23,8 +23,6 @@ def create_default_ignore():
                 ""
             ])
         )
-        print("Created .treeline-ignore file")
-
 
 def main():
     """Entry point for the Treeline CLI."""

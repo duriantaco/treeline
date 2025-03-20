@@ -69,7 +69,7 @@ class ModuleDependencyAnalyzer:
 
     def analyze_directory(self, directory: Path):
         self.directory = directory
-        ignore_patterns = read_ignore_patterns()
+        ignore_patterns = read_ignore_patterns(directory)
         python_files = [fp for fp in directory.rglob("*.py") if not should_ignore(fp, ignore_patterns)]
         
         with ProcessPoolExecutor(max_workers=4) as executor:
@@ -213,7 +213,6 @@ class ModuleDependencyAnalyzer:
             analysis = self._analyze_module(tree, module_name, str(file_path))
             return analysis
         except Exception as e:
-            print(f"Error analyzing {file_path}: {e}")
             return None
 
     def _analyze_imports(self, tree: ast.AST, module_name: str):
@@ -232,6 +231,8 @@ class ModuleDependencyAnalyzer:
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 complexity = self._calculate_complexity(node)
+                if complexity is None:
+                    complexity = 0
                 total_complexity += complexity
                 functions.append(node.name)
             elif isinstance(node, ast.ClassDef):
@@ -240,7 +241,11 @@ class ModuleDependencyAnalyzer:
         self.module_metrics[module_name] = metrics.__dict__
 
     def _calculate_complexity(self, node: ast.AST) -> int:
-        return calculate_cyclomatic_complexity(node)
+        try:
+            complexity = calculate_cyclomatic_complexity(node)
+            return complexity if complexity is not None else 0
+        except Exception:
+            return 0
 
     def get_graph_data(self):
         nodes = []
@@ -307,13 +312,13 @@ class ModuleDependencyAnalyzer:
             if "module" not in location:
                 continue
             module = location["module"]
-            func_id = func_name  # Use func_name directly as it is "file1.func1"
+            func_id = func_name  
             node_id = len(nodes)
             node_lookup[func_id] = node_id
             nodes.append(
                 {
                     "id": node_id,
-                    "name": func_name,  # Name is "file1.func1"
+                    "name": func_name,
                     "type": "function",
                     "metrics": location,
                     "code_smells": [],

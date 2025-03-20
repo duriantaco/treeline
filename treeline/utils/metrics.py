@@ -13,13 +13,16 @@ def calculate_cyclomatic_complexity(node: ast.AST) -> int:
     Returns:
         int: The cyclomatic complexity score
     """
-    complexity = 1 
-    for child in ast.walk(node):
-        if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
-            complexity += 1
-        elif isinstance(child, ast.BoolOp):
-            complexity += len(child.values) - 1
-    return complexity
+    try:
+        complexity = 1 
+        for child in ast.walk(node):
+            if isinstance(child, (ast.If, ast.While, ast.For, ast.ExceptHandler)):
+                complexity += 1
+            elif isinstance(child, ast.BoolOp):
+                complexity += len(child.values) - 1
+        return complexity
+    except Exception as e:
+        return 0
 
 def calculate_cognitive_complexity(node: ast.AST) -> int:
     """    
