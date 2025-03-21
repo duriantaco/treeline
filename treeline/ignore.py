@@ -33,15 +33,16 @@ def read_ignore_patterns(directory: Path) -> List[str]:
     return ignore_patterns
 
 def should_ignore(path: Path, ignore_patterns: List[str]) -> bool:
-    EXCLUDED_DIRS = {'venv', '.venv', 'env', '__pycache__', '.git', '.svn', 'build', 'dist', 'node_modules'}
-    for part in path.parts:
-        if part in EXCLUDED_DIRS:
+    rel_path = str(path)
+    
+    for excluded in {'venv/', '.venv/', 'env/', '__pycache__/', '.git/', '.svn/', 'build/', 'dist/', 'node_modules/'}:
+        if f'/{excluded}' in rel_path or rel_path.startswith(excluded):
             return True
 
     for pattern in ignore_patterns:
         if pattern.endswith('/'):
             dir_name = pattern.rstrip('/')
-            if any(parent.name == dir_name for parent in path.parents):
+            if f'/{dir_name}/' in rel_path or rel_path.startswith(f"{dir_name}/"):
                 return True
         else:
             match_pattern = '**/' + pattern if not pattern.startswith('/') else pattern

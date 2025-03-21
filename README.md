@@ -6,13 +6,19 @@
 
 A Python toolkit for analyzing and visualizing code structure, dependencies, and generating directory trees. treeline helps developers understand codebases through ASCII tree representations, interactive dependency graphs, and structural diff visualizations.
 
-<p align="center" style="margin: 0; padding: 0;">
-    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/screenshot2.png" alt="Screenshot" width="800" />
-</p>
-
 ## Installation
 
 `pip install treeline`
+
+## Quick Start
+
+```bash
+treeline serve 
+```
+
+<p align="center" style="margin: 0; padding: 0;">
+    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/screenshot2.png" alt="Screenshot" width="800" />
+</p>
 
 ## Usage
 
@@ -57,7 +63,7 @@ treeline quality . --min-complexity 12
 # Start the web interface
 treeline serve
 
-# Generate a markdown report (saved as 'treeline_report.md' by default)
+# Generate a markdown report (saved as 'treeline_report_YYYYMMDD_HHMMSS.md' by default)
 treeline report /path/to/codebase
 
 Generates a Markdown report summarizing issues and hotspots in the specified directory (defaults to .).
@@ -130,17 +136,6 @@ with open("code_diff.html", "w", encoding="utf-8") as f:
     f.write(diff_html)
 ```
 
-#### Visualization Options
-
-```bash
-# Hide all code structure details
-treeline --hide-structure
-```
-```bash
-# Hide function parameters
-treeline --no-params
-```
-
 ## Configuration
 
 Treeline looks for configuration in the following order:
@@ -180,7 +175,7 @@ secrets.py
 ```
 
 ### Analysis Configuration (Optional)
-You can place a JSON config file (e.g. treeline.config.json) to override default thresholds or configure how the analysis runs:
+You can place a JSON config file (e.g. treeline.json) to override default thresholds or configure how the analysis runs:
 
 ```json
 {

@@ -1,0 +1,2039 @@
+{
+  "summary": {
+    "total_files": 96,
+    "total_python_files": 35,
+    "total_lines_raw": 5511,
+    "total_functions": 174,
+    "total_classes": 45,
+    "files_with_errors": 0,
+    "entities_with_unknown_files": 0
+  },
+  "python_files": [
+    "type_checker.py",
+    "config_manager.py",
+    "dependency_analyzer.py",
+    "__init__.py",
+    "enhanced_analyzer.py",
+    "core.py",
+    "diagnostic.py",
+    "ignore.py",
+    "cli.py",
+    "__main__.py",
+    "checkers/complexity.py",
+    "checkers/duplication.py",
+    "checkers/security.py",
+    "checkers/code_smells.py",
+    "checkers/style_checker.py",
+    "checkers/unused_code.py",
+    "checkers/sql_injection.py",
+    "optimization/graph.py",
+    "optimization/indexer.py",
+    "utils/metrics.py",
+    "utils/config.py",
+    "utils/__init__.py",
+    "utils/report.py",
+    "models/dependency_analyzer.py",
+    "models/analyzer.py",
+    "models/__init__.py",
+    "models/enhanced_analyzer.py",
+    "models/core.py",
+    "models/graphing.py",
+    "api/__init__.py",
+    "api/app.py",
+    "api/dependencies.py",
+    "api/routes/file.py",
+    "api/routes/reports.py",
+    "api/routes/detailed_metrics.py"
+  ],
+  "file_metrics": {
+    "type_checker.py": {
+      "path": "type_checker.py",
+      "absolute_path": "/Users/oha/treeline/treeline/type_checker.py",
+      "lines": 86,
+      "functions": [
+        {
+          "name": "validate",
+          "line": 7,
+          "file_path": "type_checker.py"
+        },
+        {
+          "name": "__post_init__",
+          "line": 73,
+          "file_path": "type_checker.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "TypeValidator",
+          "line": 5,
+          "file_path": "type_checker.py",
+          "methods": [
+            {
+              "name": "validate",
+              "line": 7
+            }
+          ]
+        },
+        {
+          "name": "TypeChecked",
+          "line": 70,
+          "file_path": "type_checker.py",
+          "methods": [
+            {
+              "name": "__post_init__",
+              "line": 73
+            }
+          ]
+        },
+        {
+          "name": "ValidationError",
+          "line": 83,
+          "file_path": "type_checker.py",
+          "methods": []
+        }
+      ]
+    },
+    "config_manager.py": {
+      "path": "config_manager.py",
+      "absolute_path": "/Users/oha/treeline/treeline/config_manager.py",
+      "lines": 133,
+      "functions": [
+        {
+          "name": "get_config",
+          "line": 131,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "__new__",
+          "line": 47,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "__init__",
+          "line": 54,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "get",
+          "line": 96,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "set",
+          "line": 100,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "as_dict",
+          "line": 104,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "save_user_config",
+          "line": 108,
+          "file_path": "config_manager.py"
+        },
+        {
+          "name": "create_default_config",
+          "line": 119,
+          "file_path": "config_manager.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "ConfigManager",
+          "line": 7,
+          "file_path": "config_manager.py",
+          "methods": [
+            {
+              "name": "__new__",
+              "line": 47
+            },
+            {
+              "name": "__init__",
+              "line": 54
+            },
+            {
+              "name": "get",
+              "line": 96
+            },
+            {
+              "name": "set",
+              "line": 100
+            },
+            {
+              "name": "as_dict",
+              "line": 104
+            },
+            {
+              "name": "save_user_config",
+              "line": 108
+            },
+            {
+              "name": "create_default_config",
+              "line": 119
+            }
+          ]
+        }
+      ]
+    },
+    "dependency_analyzer.py": {
+      "path": "dependency_analyzer.py",
+      "absolute_path": "/Users/oha/treeline/treeline/dependency_analyzer.py",
+      "lines": 485,
+      "functions": [
+        {
+          "name": "default_call_graph",
+          "line": 17,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "__init__",
+          "line": 30,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "analyze_directory",
+          "line": 70,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "_analyze_module",
+          "line": 96,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "_analyze_file",
+          "line": 207,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "_analyze_imports",
+          "line": 218,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "_collect_metrics",
+          "line": 227,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "_calculate_complexity",
+          "line": 243,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "get_graph_data",
+          "line": 250,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "get_entry_points",
+          "line": 356,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "categorize_functions",
+          "line": 363,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "get_core_components",
+          "line": 384,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "get_graph_data_with_quality",
+          "line": 401,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "get_common_flows",
+          "line": 450,
+          "file_path": "dependency_analyzer.py"
+        },
+        {
+          "name": "clean_for_markdown",
+          "line": 459,
+          "file_path": "dependency_analyzer.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "ModuleDependencyAnalyzer",
+          "line": 29,
+          "file_path": "dependency_analyzer.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 30
+            },
+            {
+              "name": "analyze_directory",
+              "line": 70
+            },
+            {
+              "name": "_analyze_module",
+              "line": 96
+            },
+            {
+              "name": "_analyze_file",
+              "line": 207
+            },
+            {
+              "name": "_analyze_imports",
+              "line": 218
+            },
+            {
+              "name": "_collect_metrics",
+              "line": 227
+            },
+            {
+              "name": "_calculate_complexity",
+              "line": 243
+            },
+            {
+              "name": "get_graph_data",
+              "line": 250
+            },
+            {
+              "name": "get_entry_points",
+              "line": 356
+            },
+            {
+              "name": "categorize_functions",
+              "line": 363
+            },
+            {
+              "name": "get_core_components",
+              "line": 384
+            },
+            {
+              "name": "get_graph_data_with_quality",
+              "line": 401
+            },
+            {
+              "name": "get_common_flows",
+              "line": 450
+            },
+            {
+              "name": "clean_for_markdown",
+              "line": 459
+            }
+          ]
+        }
+      ]
+    },
+    "__init__.py": {
+      "path": "__init__.py",
+      "absolute_path": "/Users/oha/treeline/treeline/__init__.py",
+      "lines": 0,
+      "functions": [],
+      "classes": []
+    },
+    "enhanced_analyzer.py": {
+      "path": "enhanced_analyzer.py",
+      "absolute_path": "/Users/oha/treeline/treeline/enhanced_analyzer.py",
+      "lines": 197,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 19,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "analyze_file",
+          "line": 35,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_add_file_issues_to_elements",
+          "line": 59,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "analyze_directory",
+          "line": 79,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_read_file",
+          "line": 93,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_parse_content",
+          "line": 101,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_add_issue",
+          "line": 108,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_analyze_code_elements",
+          "line": 112,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_add_quality_issues_to_element",
+          "line": 128,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_analyze_function",
+          "line": 150,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_analyze_class",
+          "line": 176,
+          "file_path": "enhanced_analyzer.py"
+        },
+        {
+          "name": "_calculate_complexity",
+          "line": 194,
+          "file_path": "enhanced_analyzer.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "EnhancedCodeAnalyzer",
+          "line": 18,
+          "file_path": "enhanced_analyzer.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 19
+            },
+            {
+              "name": "analyze_file",
+              "line": 35
+            },
+            {
+              "name": "_add_file_issues_to_elements",
+              "line": 59
+            },
+            {
+              "name": "analyze_directory",
+              "line": 79
+            },
+            {
+              "name": "_read_file",
+              "line": 93
+            },
+            {
+              "name": "_parse_content",
+              "line": 101
+            },
+            {
+              "name": "_add_issue",
+              "line": 108
+            },
+            {
+              "name": "_analyze_code_elements",
+              "line": 112
+            },
+            {
+              "name": "_add_quality_issues_to_element",
+              "line": 128
+            },
+            {
+              "name": "_analyze_function",
+              "line": 150
+            },
+            {
+              "name": "_analyze_class",
+              "line": 176
+            },
+            {
+              "name": "_calculate_complexity",
+              "line": 194
+            }
+          ]
+        }
+      ]
+    },
+    "core.py": {
+      "path": "core.py",
+      "absolute_path": "/Users/oha/treeline/treeline/core.py",
+      "lines": 34,
+      "functions": [
+        {
+          "name": "create_default_ignore",
+          "line": 6,
+          "file_path": "core.py"
+        },
+        {
+          "name": "main",
+          "line": 27,
+          "file_path": "core.py"
+        }
+      ],
+      "classes": []
+    },
+    "diagnostic.py": {
+      "path": "diagnostic.py",
+      "absolute_path": "/Users/oha/treeline/treeline/diagnostic.py",
+      "lines": 171,
+      "functions": [
+        {
+          "name": "diagnose_line_count_issue",
+          "line": 12,
+          "file_path": "diagnostic.py"
+        }
+      ],
+      "classes": []
+    },
+    "ignore.py": {
+      "path": "ignore.py",
+      "absolute_path": "/Users/oha/treeline/treeline/ignore.py",
+      "lines": 52,
+      "functions": [
+        {
+          "name": "read_ignore_patterns",
+          "line": 22,
+          "file_path": "ignore.py"
+        },
+        {
+          "name": "should_ignore",
+          "line": 35,
+          "file_path": "ignore.py"
+        }
+      ],
+      "classes": []
+    },
+    "cli.py": {
+      "path": "cli.py",
+      "absolute_path": "/Users/oha/treeline/treeline/cli.py",
+      "lines": 305,
+      "functions": [
+        {
+          "name": "cli",
+          "line": 18,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "analyze",
+          "line": 35,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "config",
+          "line": 93,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "init_config",
+          "line": 100,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "show_config",
+          "line": 119,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "set_config",
+          "line": 156,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "quality",
+          "line": 196,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "serve",
+          "line": 255,
+          "file_path": "cli.py"
+        },
+        {
+          "name": "report",
+          "line": 282,
+          "file_path": "cli.py"
+        }
+      ],
+      "classes": []
+    },
+    "__main__.py": {
+      "path": "__main__.py",
+      "absolute_path": "/Users/oha/treeline/treeline/__main__.py",
+      "lines": 4,
+      "functions": [],
+      "classes": []
+    },
+    "checkers/complexity.py": {
+      "path": "checkers/complexity.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/complexity.py",
+      "lines": 39,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 11,
+          "file_path": "checkers/complexity.py"
+        },
+        {
+          "name": "check",
+          "line": 16,
+          "file_path": "checkers/complexity.py"
+        },
+        {
+          "name": "_calculate_cyclomatic_complexity",
+          "line": 35,
+          "file_path": "checkers/complexity.py"
+        },
+        {
+          "name": "_calculate_cognitive_complexity",
+          "line": 38,
+          "file_path": "checkers/complexity.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "ComplexityAnalyzer",
+          "line": 10,
+          "file_path": "checkers/complexity.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 11
+            },
+            {
+              "name": "check",
+              "line": 16
+            },
+            {
+              "name": "_calculate_cyclomatic_complexity",
+              "line": 35
+            },
+            {
+              "name": "_calculate_cognitive_complexity",
+              "line": 38
+            }
+          ]
+        }
+      ]
+    },
+    "checkers/duplication.py": {
+      "path": "checkers/duplication.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/duplication.py",
+      "lines": 60,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 8,
+          "file_path": "checkers/duplication.py"
+        },
+        {
+          "name": "analyze_directory",
+          "line": 11,
+          "file_path": "checkers/duplication.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "DuplicationDetector",
+          "line": 7,
+          "file_path": "checkers/duplication.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 8
+            },
+            {
+              "name": "analyze_directory",
+              "line": 11
+            }
+          ]
+        }
+      ]
+    },
+    "checkers/security.py": {
+      "path": "checkers/security.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/security.py",
+      "lines": 162,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 8,
+          "file_path": "checkers/security.py"
+        },
+        {
+          "name": "check",
+          "line": 64,
+          "file_path": "checkers/security.py"
+        },
+        {
+          "name": "_check_regex_patterns",
+          "line": 81,
+          "file_path": "checkers/security.py"
+        },
+        {
+          "name": "_is_credential_false_positive",
+          "line": 100,
+          "file_path": "checkers/security.py"
+        },
+        {
+          "name": "_check_dangerous_ast_patterns",
+          "line": 115,
+          "file_path": "checkers/security.py"
+        },
+        {
+          "name": "_get_parent",
+          "line": 157,
+          "file_path": "checkers/security.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "SecurityAnalyzer",
+          "line": 7,
+          "file_path": "checkers/security.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 8
+            },
+            {
+              "name": "check",
+              "line": 64
+            },
+            {
+              "name": "_check_regex_patterns",
+              "line": 81
+            },
+            {
+              "name": "_is_credential_false_positive",
+              "line": 100
+            },
+            {
+              "name": "_check_dangerous_ast_patterns",
+              "line": 115
+            },
+            {
+              "name": "_get_parent",
+              "line": 157
+            }
+          ]
+        }
+      ]
+    },
+    "checkers/code_smells.py": {
+      "path": "checkers/code_smells.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/code_smells.py",
+      "lines": 122,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 8,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "check",
+          "line": 15,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_long_parameter_lists",
+          "line": 24,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_long_functions",
+          "line": 34,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_nested_blocks",
+          "line": 46,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_get_max_nesting",
+          "line": 58,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_multiple_returns",
+          "line": 71,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_too_many_branches",
+          "line": 83,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_empty_except_blocks",
+          "line": 95,
+          "file_path": "checkers/code_smells.py"
+        },
+        {
+          "name": "_check_too_broad_except",
+          "line": 106,
+          "file_path": "checkers/code_smells.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "CodeSmellChecker",
+          "line": 7,
+          "file_path": "checkers/code_smells.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 8
+            },
+            {
+              "name": "check",
+              "line": 15
+            },
+            {
+              "name": "_check_long_parameter_lists",
+              "line": 24
+            },
+            {
+              "name": "_check_long_functions",
+              "line": 34
+            },
+            {
+              "name": "_check_nested_blocks",
+              "line": 46
+            },
+            {
+              "name": "_get_max_nesting",
+              "line": 58
+            },
+            {
+              "name": "_check_multiple_returns",
+              "line": 71
+            },
+            {
+              "name": "_check_too_many_branches",
+              "line": 83
+            },
+            {
+              "name": "_check_empty_except_blocks",
+              "line": 95
+            },
+            {
+              "name": "_check_too_broad_except",
+              "line": 106
+            }
+          ]
+        }
+      ]
+    },
+    "checkers/style_checker.py": {
+      "path": "checkers/style_checker.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/style_checker.py",
+      "lines": 111,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 11,
+          "file_path": "checkers/style_checker.py"
+        },
+        {
+          "name": "check",
+          "line": 28,
+          "file_path": "checkers/style_checker.py"
+        },
+        {
+          "name": "_is_exception",
+          "line": 110,
+          "file_path": "checkers/style_checker.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "StyleChecker",
+          "line": 7,
+          "file_path": "checkers/style_checker.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 11
+            },
+            {
+              "name": "check",
+              "line": 28
+            },
+            {
+              "name": "_is_exception",
+              "line": 110
+            }
+          ]
+        }
+      ]
+    },
+    "checkers/unused_code.py": {
+      "path": "checkers/unused_code.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/unused_code.py",
+      "lines": 129,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 9,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "check",
+          "line": 17,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "finalize_checks",
+          "line": 25,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "_collect_imports_and_functions",
+          "line": 28,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "_check_name_usage",
+          "line": 55,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "_report_unused_imports",
+          "line": 82,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "_report_unused_functions",
+          "line": 96,
+          "file_path": "checkers/unused_code.py"
+        },
+        {
+          "name": "_find_import_line",
+          "line": 111,
+          "file_path": "checkers/unused_code.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "UnusedCodeChecker",
+          "line": 8,
+          "file_path": "checkers/unused_code.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 9
+            },
+            {
+              "name": "check",
+              "line": 17
+            },
+            {
+              "name": "finalize_checks",
+              "line": 25
+            },
+            {
+              "name": "_collect_imports_and_functions",
+              "line": 28
+            },
+            {
+              "name": "_check_name_usage",
+              "line": 55
+            },
+            {
+              "name": "_report_unused_imports",
+              "line": 82
+            },
+            {
+              "name": "_report_unused_functions",
+              "line": 96
+            },
+            {
+              "name": "_find_import_line",
+              "line": 111
+            }
+          ]
+        }
+      ]
+    },
+    "checkers/sql_injection.py": {
+      "path": "checkers/sql_injection.py",
+      "absolute_path": "/Users/oha/treeline/treeline/checkers/sql_injection.py",
+      "lines": 113,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 8,
+          "file_path": "checkers/sql_injection.py"
+        },
+        {
+          "name": "check",
+          "line": 37,
+          "file_path": "checkers/sql_injection.py"
+        },
+        {
+          "name": "_check_ast_for_sql_injection",
+          "line": 53,
+          "file_path": "checkers/sql_injection.py"
+        },
+        {
+          "name": "_get_func_name",
+          "line": 85,
+          "file_path": "checkers/sql_injection.py"
+        },
+        {
+          "name": "_has_injection_risk",
+          "line": 94,
+          "file_path": "checkers/sql_injection.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "SQLInjectionChecker",
+          "line": 7,
+          "file_path": "checkers/sql_injection.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 8
+            },
+            {
+              "name": "check",
+              "line": 37
+            },
+            {
+              "name": "_check_ast_for_sql_injection",
+              "line": 53
+            },
+            {
+              "name": "_get_func_name",
+              "line": 85
+            },
+            {
+              "name": "_has_injection_risk",
+              "line": 94
+            }
+          ]
+        }
+      ]
+    },
+    "optimization/graph.py": {
+      "path": "optimization/graph.py",
+      "absolute_path": "/Users/oha/treeline/treeline/optimization/graph.py",
+      "lines": 141,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 8,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "_get_node_index",
+          "line": 16,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "add_edge",
+          "line": 25,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "get_connected_components",
+          "line": 36,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "get_dependency_chain",
+          "line": 46,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "_strongly_connected_components",
+          "line": 66,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "get_cycles",
+          "line": 105,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "strongconnect",
+          "line": 74,
+          "file_path": "optimization/graph.py"
+        },
+        {
+          "name": "dfs",
+          "line": 116,
+          "file_path": "optimization/graph.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "OptimizedDependencyGraph",
+          "line": 5,
+          "file_path": "optimization/graph.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 8
+            },
+            {
+              "name": "_get_node_index",
+              "line": 16
+            },
+            {
+              "name": "add_edge",
+              "line": 25
+            },
+            {
+              "name": "get_connected_components",
+              "line": 36
+            },
+            {
+              "name": "get_dependency_chain",
+              "line": 46
+            },
+            {
+              "name": "_strongly_connected_components",
+              "line": 66
+            },
+            {
+              "name": "get_cycles",
+              "line": 105
+            }
+          ]
+        }
+      ]
+    },
+    "optimization/indexer.py": {
+      "path": "optimization/indexer.py",
+      "absolute_path": "/Users/oha/treeline/treeline/optimization/indexer.py",
+      "lines": 332,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 24,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "_load_index_state",
+          "line": 36,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "_save_index_state",
+          "line": 49,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "_process_file",
+          "line": 58,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "_parse_ast",
+          "line": 109,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "_parse_large_file",
+          "line": 163,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "index_codebase",
+          "line": 251,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "get_dependencies",
+          "line": 282,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "get_dependents",
+          "line": 306,
+          "file_path": "optimization/indexer.py"
+        },
+        {
+          "name": "get_definitions_for_file",
+          "line": 330,
+          "file_path": "optimization/indexer.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "IndexEntry",
+          "line": 14,
+          "file_path": "optimization/indexer.py",
+          "methods": []
+        },
+        {
+          "name": "FastIndexer",
+          "line": 23,
+          "file_path": "optimization/indexer.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 24
+            },
+            {
+              "name": "_load_index_state",
+              "line": 36
+            },
+            {
+              "name": "_save_index_state",
+              "line": 49
+            },
+            {
+              "name": "_process_file",
+              "line": 58
+            },
+            {
+              "name": "_parse_ast",
+              "line": 109
+            },
+            {
+              "name": "_parse_large_file",
+              "line": 163
+            },
+            {
+              "name": "index_codebase",
+              "line": 251
+            },
+            {
+              "name": "get_dependencies",
+              "line": 282
+            },
+            {
+              "name": "get_dependents",
+              "line": 306
+            },
+            {
+              "name": "get_definitions_for_file",
+              "line": 330
+            }
+          ]
+        }
+      ]
+    },
+    "utils/metrics.py": {
+      "path": "utils/metrics.py",
+      "absolute_path": "/Users/oha/treeline/treeline/utils/metrics.py",
+      "lines": 46,
+      "functions": [
+        {
+          "name": "calculate_cyclomatic_complexity",
+          "line": 3,
+          "file_path": "utils/metrics.py"
+        },
+        {
+          "name": "calculate_cognitive_complexity",
+          "line": 27,
+          "file_path": "utils/metrics.py"
+        },
+        {
+          "name": "walk_cognitive",
+          "line": 34,
+          "file_path": "utils/metrics.py"
+        }
+      ],
+      "classes": []
+    },
+    "utils/config.py": {
+      "path": "utils/config.py",
+      "absolute_path": "/Users/oha/treeline/treeline/utils/config.py",
+      "lines": 39,
+      "functions": [
+        {
+          "name": "load_config",
+          "line": 28,
+          "file_path": "utils/config.py"
+        }
+      ],
+      "classes": []
+    },
+    "utils/__init__.py": {
+      "path": "utils/__init__.py",
+      "absolute_path": "/Users/oha/treeline/treeline/utils/__init__.py",
+      "lines": 0,
+      "functions": [],
+      "classes": []
+    },
+    "utils/report.py": {
+      "path": "utils/report.py",
+      "absolute_path": "/Users/oha/treeline/treeline/utils/report.py",
+      "lines": 1010,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 7,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "analyze",
+          "line": 35,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "detect_circular_dependencies",
+          "line": 99,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_find_circular_path",
+          "line": 120,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_find_module_circular_path",
+          "line": 138,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_circular_dependency_section",
+          "line": 155,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_collect_function_dependencies",
+          "line": 192,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_collect_complex_functions",
+          "line": 220,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_build_structure_data",
+          "line": 244,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_module_to_file_path",
+          "line": 284,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "generate_report",
+          "line": 308,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_header_section",
+          "line": 324,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_structure_analysis_section",
+          "line": 336,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_build_script_info",
+          "line": 346,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_connected_files_subsection",
+          "line": 403,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_stability_analysis_subsection",
+          "line": 422,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_impact_analysis_subsection",
+          "line": 444,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_architectural_insights_subsection",
+          "line": 468,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_executive_summary",
+          "line": 518,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_config_section",
+          "line": 560,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_issues_section",
+          "line": 586,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_complex_functions_section",
+          "line": 640,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_dependency_section",
+          "line": 708,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_line_count_section",
+          "line": 779,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_generate_docstring_section",
+          "line": 799,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "generate_report_json",
+          "line": 846,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "save_report",
+          "line": 983,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "_should_analyze_file",
+          "line": 1006,
+          "file_path": "utils/report.py"
+        },
+        {
+          "name": "get_depth",
+          "line": 481,
+          "file_path": "utils/report.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "ReportGenerator",
+          "line": 6,
+          "file_path": "utils/report.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 7
+            },
+            {
+              "name": "analyze",
+              "line": 35
+            },
+            {
+              "name": "detect_circular_dependencies",
+              "line": 99
+            },
+            {
+              "name": "_find_circular_path",
+              "line": 120
+            },
+            {
+              "name": "_find_module_circular_path",
+              "line": 138
+            },
+            {
+              "name": "_generate_circular_dependency_section",
+              "line": 155
+            },
+            {
+              "name": "_collect_function_dependencies",
+              "line": 192
+            },
+            {
+              "name": "_collect_complex_functions",
+              "line": 220
+            },
+            {
+              "name": "_build_structure_data",
+              "line": 244
+            },
+            {
+              "name": "_module_to_file_path",
+              "line": 284
+            },
+            {
+              "name": "generate_report",
+              "line": 308
+            },
+            {
+              "name": "_generate_header_section",
+              "line": 324
+            },
+            {
+              "name": "_generate_structure_analysis_section",
+              "line": 336
+            },
+            {
+              "name": "_build_script_info",
+              "line": 346
+            },
+            {
+              "name": "_generate_connected_files_subsection",
+              "line": 403
+            },
+            {
+              "name": "_generate_stability_analysis_subsection",
+              "line": 422
+            },
+            {
+              "name": "_generate_impact_analysis_subsection",
+              "line": 444
+            },
+            {
+              "name": "_generate_architectural_insights_subsection",
+              "line": 468
+            },
+            {
+              "name": "_generate_executive_summary",
+              "line": 518
+            },
+            {
+              "name": "_generate_config_section",
+              "line": 560
+            },
+            {
+              "name": "_generate_issues_section",
+              "line": 586
+            },
+            {
+              "name": "_generate_complex_functions_section",
+              "line": 640
+            },
+            {
+              "name": "_generate_dependency_section",
+              "line": 708
+            },
+            {
+              "name": "_generate_line_count_section",
+              "line": 779
+            },
+            {
+              "name": "_generate_docstring_section",
+              "line": 799
+            },
+            {
+              "name": "generate_report_json",
+              "line": 846
+            },
+            {
+              "name": "save_report",
+              "line": 983
+            },
+            {
+              "name": "_should_analyze_file",
+              "line": 1006
+            }
+          ]
+        }
+      ]
+    },
+    "models/dependency_analyzer.py": {
+      "path": "models/dependency_analyzer.py",
+      "absolute_path": "/Users/oha/treeline/treeline/models/dependency_analyzer.py",
+      "lines": 81,
+      "functions": [
+        {
+          "name": "__post_init__",
+          "line": 64,
+          "file_path": "models/dependency_analyzer.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "FunctionLocation",
+          "line": 7,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "FunctionCallInfo",
+          "line": 14,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "ClassMethod",
+          "line": 23,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "ClassInfo",
+          "line": 29,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "ModuleMetrics",
+          "line": 37,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "ComplexFunction",
+          "line": 44,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "MethodInfo",
+          "line": 51,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "Node",
+          "line": 57,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": [
+            {
+              "name": "__post_init__",
+              "line": 64
+            }
+          ]
+        },
+        {
+          "name": "Link",
+          "line": 72,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "GraphData",
+          "line": 79,
+          "file_path": "models/dependency_analyzer.py",
+          "methods": []
+        }
+      ]
+    },
+    "models/analyzer.py": {
+      "path": "models/analyzer.py",
+      "absolute_path": "/Users/oha/treeline/treeline/models/analyzer.py",
+      "lines": 43,
+      "functions": [],
+      "classes": [
+        {
+          "name": "FunctionCall",
+          "line": 8,
+          "file_path": "models/analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "CodeStructure",
+          "line": 14,
+          "file_path": "models/analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "FunctionNode",
+          "line": 23,
+          "file_path": "models/analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "ClassNode",
+          "line": 32,
+          "file_path": "models/analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "AnalyzerConfig",
+          "line": 41,
+          "file_path": "models/analyzer.py",
+          "methods": []
+        }
+      ]
+    },
+    "models/__init__.py": {
+      "path": "models/__init__.py",
+      "absolute_path": "/Users/oha/treeline/treeline/models/__init__.py",
+      "lines": 4,
+      "functions": [],
+      "classes": []
+    },
+    "models/enhanced_analyzer.py": {
+      "path": "models/enhanced_analyzer.py",
+      "absolute_path": "/Users/oha/treeline/treeline/models/enhanced_analyzer.py",
+      "lines": 44,
+      "functions": [],
+      "classes": [
+        {
+          "name": "FunctionMetrics",
+          "line": 8,
+          "file_path": "models/enhanced_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "ClassMetrics",
+          "line": 22,
+          "file_path": "models/enhanced_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "CodeDuplication",
+          "line": 35,
+          "file_path": "models/enhanced_analyzer.py",
+          "methods": []
+        },
+        {
+          "name": "QualityIssue",
+          "line": 41,
+          "file_path": "models/enhanced_analyzer.py",
+          "methods": []
+        }
+      ]
+    },
+    "models/core.py": {
+      "path": "models/core.py",
+      "absolute_path": "/Users/oha/treeline/treeline/models/core.py",
+      "lines": 30,
+      "functions": [],
+      "classes": [
+        {
+          "name": "CodeStructure",
+          "line": 9,
+          "file_path": "models/core.py",
+          "methods": []
+        },
+        {
+          "name": "TreeOptions",
+          "line": 18,
+          "file_path": "models/core.py",
+          "methods": []
+        },
+        {
+          "name": "ModuleMetrics",
+          "line": 27,
+          "file_path": "models/core.py",
+          "methods": []
+        }
+      ]
+    },
+    "models/graphing.py": {
+      "path": "models/graphing.py",
+      "absolute_path": "/Users/oha/treeline/treeline/models/graphing.py",
+      "lines": 65,
+      "functions": [],
+      "classes": [
+        {
+          "name": "FunctionMetricsDetail",
+          "line": 4,
+          "file_path": "models/graphing.py",
+          "methods": []
+        },
+        {
+          "name": "ClassMetricsDetail",
+          "line": 19,
+          "file_path": "models/graphing.py",
+          "methods": []
+        },
+        {
+          "name": "FileMetricsDetail",
+          "line": 33,
+          "file_path": "models/graphing.py",
+          "methods": []
+        },
+        {
+          "name": "DetailedAnalysisResponse",
+          "line": 42,
+          "file_path": "models/graphing.py",
+          "methods": []
+        },
+        {
+          "name": "ComplexityBreakdown",
+          "line": 48,
+          "file_path": "models/graphing.py",
+          "methods": []
+        }
+      ]
+    },
+    "api/__init__.py": {
+      "path": "api/__init__.py",
+      "absolute_path": "/Users/oha/treeline/treeline/api/__init__.py",
+      "lines": 0,
+      "functions": [],
+      "classes": []
+    },
+    "api/app.py": {
+      "path": "api/app.py",
+      "absolute_path": "/Users/oha/treeline/treeline/api/app.py",
+      "lines": 634,
+      "functions": [
+        {
+          "name": "calculate_directory_hash",
+          "line": 32,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "load_cache",
+          "line": 41,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "save_cache",
+          "line": 58,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "analyze_file_wrapper",
+          "line": 75,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "get_dependency_analyzer",
+          "line": 104,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "build_path_indices",
+          "line": 151,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "get_file_content",
+          "line": 229,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "is_safe_path",
+          "line": 436,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "analyze_directory",
+          "line": 457,
+          "file_path": "api/app.py"
+        },
+        {
+          "name": "extract_id",
+          "line": 509,
+          "file_path": "api/app.py"
+        }
+      ],
+      "classes": []
+    },
+    "api/dependencies.py": {
+      "path": "api/dependencies.py",
+      "absolute_path": "/Users/oha/treeline/treeline/api/dependencies.py",
+      "lines": 33,
+      "functions": [
+        {
+          "name": "get_project_path",
+          "line": 7,
+          "file_path": "api/dependencies.py"
+        },
+        {
+          "name": "get_analyzers",
+          "line": 15,
+          "file_path": "api/dependencies.py"
+        },
+        {
+          "name": "analyze_file_wrapper",
+          "line": 26,
+          "file_path": "api/dependencies.py"
+        }
+      ],
+      "classes": []
+    },
+    "api/routes/file.py": {
+      "path": "api/routes/file.py",
+      "absolute_path": "/Users/oha/treeline/treeline/api/routes/file.py",
+      "lines": 70,
+      "functions": [
+        {
+          "name": "is_safe_path",
+          "line": 8,
+          "file_path": "api/routes/file.py"
+        },
+        {
+          "name": "get_file_content",
+          "line": 19,
+          "file_path": "api/routes/file.py"
+        }
+      ],
+      "classes": []
+    },
+    "api/routes/reports.py": {
+      "path": "api/routes/reports.py",
+      "absolute_path": "/Users/oha/treeline/treeline/api/routes/reports.py",
+      "lines": 203,
+      "functions": [
+        {
+          "name": "is_safe_path",
+          "line": 16,
+          "file_path": "api/routes/reports.py"
+        },
+        {
+          "name": "analyze_file_wrapper",
+          "line": 26,
+          "file_path": "api/routes/reports.py"
+        },
+        {
+          "name": "analyze_directory",
+          "line": 29,
+          "file_path": "api/routes/reports.py"
+        }
+      ],
+      "classes": []
+    },
+    "api/routes/detailed_metrics.py": {
+      "path": "api/routes/detailed_metrics.py",
+      "absolute_path": "/Users/oha/treeline/treeline/api/routes/detailed_metrics.py",
+      "lines": 533,
+      "functions": [
+        {
+          "name": "__init__",
+          "line": 331,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_If",
+          "line": 334,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_For",
+          "line": 338,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_While",
+          "line": 342,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_Try",
+          "line": 346,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_ExceptHandler",
+          "line": 350,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_BoolOp",
+          "line": 354,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_ListComp",
+          "line": 363,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_DictComp",
+          "line": 368,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_SetComp",
+          "line": 373,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_GeneratorExp",
+          "line": 378,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_Lambda",
+          "line": 382,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_FunctionDef",
+          "line": 386,
+          "file_path": "api/routes/detailed_metrics.py"
+        },
+        {
+          "name": "visit_ClassDef",
+          "line": 392,
+          "file_path": "api/routes/detailed_metrics.py"
+        }
+      ],
+      "classes": [
+        {
+          "name": "ComplexityBreakdownAnalyzer",
+          "line": 330,
+          "file_path": "api/routes/detailed_metrics.py",
+          "methods": [
+            {
+              "name": "__init__",
+              "line": 331
+            },
+            {
+              "name": "visit_If",
+              "line": 334
+            },
+            {
+              "name": "visit_For",
+              "line": 338
+            },
+            {
+              "name": "visit_While",
+              "line": 342
+            },
+            {
+              "name": "visit_Try",
+              "line": 346
+            },
+            {
+              "name": "visit_ExceptHandler",
+              "line": 350
+            },
+            {
+              "name": "visit_BoolOp",
+              "line": 354
+            },
+            {
+              "name": "visit_ListComp",
+              "line": 363
+            },
+            {
+              "name": "visit_DictComp",
+              "line": 368
+            },
+            {
+              "name": "visit_SetComp",
+              "line": 373
+            },
+            {
+              "name": "visit_GeneratorExp",
+              "line": 378
+            },
+            {
+              "name": "visit_Lambda",
+              "line": 382
+            },
+            {
+              "name": "visit_FunctionDef",
+              "line": 386
+            },
+            {
+              "name": "visit_ClassDef",
+              "line": 392
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "entities_with_unknown_files": [],
+  "files_with_errors": [],
+  "files_without_entities": [
+    "__init__.py",
+    "__main__.py",
+    "utils/__init__.py",
+    "models/__init__.py",
+    "api/__init__.py"
+  ]
+}

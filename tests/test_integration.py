@@ -5,10 +5,8 @@ This script tests that the results from quality checkers are properly
 integrated into the visualization.
 """
 
-import ast
 import json
 import tempfile
-from collections import defaultdict
 from pathlib import Path
 
 from treeline.enhanced_analyzer import EnhancedCodeAnalyzer

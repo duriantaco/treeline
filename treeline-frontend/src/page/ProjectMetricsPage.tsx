@@ -17,17 +17,33 @@ interface FileTableItem {
   issues: number;
 }
 
+interface ViewOption {
+  label: string;
+  value: number | null;
+}
+
 const ProjectMetricsPage: React.FC = () => {
   const [projectMetrics, setProjectMetrics] = useState<any>(null);
   const [complexityBreakdown, setComplexityBreakdown] = useState<any>(null);
   const [issuesByCategory, setIssuesByCategory] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-
+  
+  // New states for enhanced dashboard
+  const [filesList, setFilesList] = useState<FileTableItem[]>([]);
+  const [viewMode, setViewMode] = useState<number | null>(10); // 10 for top 10, null for all
+  
   const donutChartRef = useRef<SVGSVGElement>(null);
   const barChartRef = useRef<SVGSVGElement>(null);
 
   const navigate = useNavigate();
+
+  const viewOptions: ViewOption[] = [
+    { label: 'Top 10', value: 10 },
+    { label: 'Top 25', value: 25 },
+    { label: 'Top 50', value: 50 },
+    { label: 'All Files', value: null }
+  ];
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,6 +57,34 @@ const ProjectMetricsPage: React.FC = () => {
         setProjectMetrics(metricsData);
         setComplexityBreakdown(complexityData);
         setIssuesByCategory(issuesData);
+        
+        if (metricsData && metricsData.files) {
+          const processedFiles = Object.entries(metricsData.files || {}).map(([filePath, fileData]: [string, any]) => {
+            const issuesCount = Object.values(fileData.issues_by_category || {}).reduce(
+              (sum: number, issues: any) => sum + (issues as any[]).length,
+              0
+            );
+            const avgComplexity =
+              fileData.functions && fileData.functions.length > 0
+                ? Math.round(
+                    (fileData.functions.reduce((sum: number, func: any) => sum + (func.complexity || 0), 0) /
+                      fileData.functions.length) *
+                      10
+                  ) / 10
+                : 0;
+            return {
+              path: filePath,
+              name: filePath.split('/').pop(),
+              lines: fileData.lines || 0,
+              functions: fileData.functions?.length || 0,
+              classes: fileData.classes?.length || 0,
+              complexity: avgComplexity,
+              issues: issuesCount,
+            } as FileTableItem;
+          });
+          setFilesList(processedFiles);
+        }
+        
         setError(null);
       } catch (err) {
         console.error('Error fetching project metrics:', err);
@@ -207,6 +251,20 @@ const ProjectMetricsPage: React.FC = () => {
       .text('Top Complexity Factors');
   };
 
+  const handleViewModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setViewMode(value === "null" ? null : parseInt(value, 10));
+  };
+
+  const getFilteredFiles = () => {
+    const sortedFiles = [...filesList].sort((a, b) => b.issues - a.issues);
+    
+    if (viewMode !== null) {
+      return sortedFiles.slice(0, viewMode);
+    }
+    return sortedFiles;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -229,6 +287,9 @@ const ProjectMetricsPage: React.FC = () => {
       </div>
     );
   }
+
+  const filteredFiles = getFilteredFiles();
+  const totalFiles = filesList.length;
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl">
@@ -279,8 +340,27 @@ const ProjectMetricsPage: React.FC = () => {
                 </div>
               </div>
             </div>
+            
             <div className="bg-white p-6 rounded-lg shadow-md border mb-8">
-              <h3 className="text-lg font-semibold mb-4">Files with Most Issues</h3>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">All Project Files</h3>
+                <div className="flex items-center">
+                  <label htmlFor="viewMode" className="mr-2 text-gray-700">Show:</label>
+                  <select 
+                    id="viewMode" 
+                    value={viewMode === null ? "null" : viewMode.toString()}
+                    onChange={handleViewModeChange}
+                    className="border rounded py-1 px-2"
+                  >
+                    {viewOptions.map(option => (
+                      <option key={option.label} value={option.value === null ? "null" : option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
               <div className="overflow-x-auto">
                 <table className="min-w-full">
                   <thead>
@@ -294,64 +374,41 @@ const ProjectMetricsPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(projectMetrics.files || {}).map(([filePath, fileData]: [string, any]) => {
-                      const issuesCount = Object.values(fileData.issues_by_category || {}).reduce(
-                        (sum: number, issues: any) => sum + (issues as any[]).length,
-                        0
-                      );
-                      const avgComplexity =
-                        fileData.functions && fileData.functions.length > 0
-                          ? Math.round(
-                              (fileData.functions.reduce((sum: number, func: any) => sum + (func.complexity || 0), 0) /
-                                fileData.functions.length) *
-                                10
-                            ) / 10
-                          : 0;
-                      return {
-                        path: filePath,
-                        name: filePath.split('/').pop(),
-                        lines: fileData.lines || 0,
-                        functions: fileData.functions?.length || 0,
-                        classes: fileData.classes?.length || 0,
-                        complexity: avgComplexity,
-                        issues: issuesCount,
-                      } as FileTableItem;
-                    })
-                      .sort((a: FileTableItem, b: FileTableItem) => b.issues - a.issues)
-                      .slice(0, 10)
-                      .map((file: FileTableItem, index: number) => (
-                        <tr
-                          key={index}
-                          className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
-                          onClick={() => {
-                            const encodedPath = encodeURIComponent(file.path);
-                            navigate(`/file/${encodedPath}`);
-                          }}
+                    {filteredFiles.map((file: FileTableItem) => (
+                      <tr
+                      >
+                        <td className="py-2 px-4">{file.name}</td>
+                        <td className="py-2 px-4 text-right">{file.lines}</td>
+                        <td className="py-2 px-4 text-right">{file.functions}</td>
+                        <td className="py-2 px-4 text-right">{file.classes}</td>
+                        <td className="py-2 px-4 text-right">
+                          <span className={file.complexity > 10 ? 'text-red-600 font-medium' : ''}>
+                            {file.complexity}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 text-right">
+                          <span
+                            className={`px-2 py-1 rounded-full text-white ${
+                              file.issues > 0 ? 'bg-red-500' : 'bg-green-500'
+                            }`}
                           >
-                          <td className="py-2 px-4">{file.name}</td>
-                          <td className="py-2 px-4 text-right">{file.lines}</td>
-                          <td className="py-2 px-4 text-right">{file.functions}</td>
-                          <td className="py-2 px-4 text-right">{file.classes}</td>
-                          <td className="py-2 px-4 text-right">
-                            <span className={file.complexity > 10 ? 'text-red-600 font-medium' : ''}>
-                              {file.complexity}
-                            </span>
-                          </td>
-                          <td className="py-2 px-4 text-right">
-                            <span
-                              className={`px-2 py-1 rounded-full text-white ${
-                                file.issues > 0 ? 'bg-red-500' : 'bg-green-500'
-                              }`}
-                            >
-                              {file.issues}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
+                            {file.issues}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
+              
+              <div className="mt-4 text-gray-600 text-sm">
+                Showing {filteredFiles.length} of {totalFiles} files
+                {viewMode !== null && totalFiles > filteredFiles.length && (
+                  <span> — Select "All Files" to view all</span>
+                )}
+              </div>
             </div>
+            
             {issuesByCategory?.category_counts && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                 {Object.entries(issuesByCategory.category_counts).map(([category, count]) => {
