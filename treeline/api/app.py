@@ -52,7 +52,7 @@ def load_cache(dir_path: Path) -> Optional[Dict[str, Any]]:
             else:
                 return None
         except (json.JSONDecodeError, ValidationError):
-            return None  
+            return None
     return None
 
 def save_cache(dir_path: Path, data: Dict[str, Any]) -> None:
@@ -630,17 +630,28 @@ async def generate_report(
 
     raise HTTPException(status_code=400, detail=f"Unsupported format: {format}")
 
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    error_detail = str(exc)
-    # logger.error(f"ERROR: {error_detail}")
-    traceback_str = traceback.format_exc()
-    # logger.debug(f"Traceback:\n{traceback_str}")
-    
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An internal server error occurred. Please try again later."}
-    )
-
 app.include_router(detailed_metrics_router)
 app.include_router(reports_router)
+
+@app.get("/api/detailed-metrics")
+async def get_detailed_metrics_root():
+    """
+    Redirect to the detailed metrics endpoint in the router
+    """
+    from treeline.api.routes.detailed_metrics import get_detailed_metrics
+    return await get_detailed_metrics(directory=".", max_depth=1)
+
+@app.api_route("/{path_name:path}", methods=["GET"])
+async def catch_all(path_name: str):
+    if path_name.startswith("api/") or path_name == "api":
+        raise HTTPException(status_code=404, detail="API endpoint not found")
+    
+    if path_name.startswith("static/"):
+        raise HTTPException(status_code=404, detail="Static file not found")
+    
+    logger.info(f"Serving index.html for client-side route: {path_name}")
+    index_path = static_path / "index.html"
+    if index_path.exists():
+        return HTMLResponse(content=index_path.read_text())
+    else:
+        return HTMLResponse("<html><body><h1>Welcome to Treeline</h1><p>Index file not found.</p></body></html>")

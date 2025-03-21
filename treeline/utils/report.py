@@ -36,7 +36,7 @@ class ReportGenerator:
         
         self.enhanced_analyzer.analyze_directory(self.target_dir)
 
-        self.all_file_results = {}  
+        self.all_file_results = {}
         self.total_lines = 0
         self.file_line_counts = {} 
 
@@ -52,7 +52,7 @@ class ReportGenerator:
                     self.total_lines += line_count
 
                 file_results = self.enhanced_analyzer.analyze_file(py_file)
-                self.all_file_results[str(py_file)] = file_results 
+                self.all_file_results[str(py_file)] = file_results
                 for result in file_results:
                     if result["type"] == "function":
                         func_name = result["name"]
@@ -102,7 +102,7 @@ class ReportGenerator:
             "function_level": [],
             "module_level": []
         }
-        seen_cycles = set() 
+        seen_cycles = set()
         
         for func_name in self.function_dependencies:
             path = []
@@ -171,7 +171,7 @@ class ReportGenerator:
         
         sections.append("\n#### Function-Level Circular Dependencies\n")
         if circular_deps["function_level"]:
-            for i, cycle in enumerate(circular_deps["function_level"][:10]): 
+            for i, cycle in enumerate(circular_deps["function_level"][:10]):
                 sections.append(f"{i+1}. {' → '.join(cycle)}")
             
             if len(circular_deps["function_level"]) > 10:
@@ -193,8 +193,8 @@ class ReportGenerator:
         function_deps = {}
         for func_name, calls in self.dependency_analyzer.function_calls.items():
             if func_name not in self.dependency_analyzer.function_locations:
-                continue 
-            if func_name not in function_deps: 
+                continue
+            if func_name not in function_deps:
                 function_deps[func_name] = {
                     "called_by": [],
                     "calls": []
@@ -490,7 +490,7 @@ class ReportGenerator:
 
         arch_insights = []
         if entry_count > 5:
-            arch_insights.append("- Multiple entry points detected - this appears to be a **multi-service architecture**")
+            arch_insights.append(f"- Multiple entry points detected - this appears to be a **multi-service architecture**")
         elif entry_count == 1:
             arch_insights.append("- Single clear entry point - this follows a **monolithic architecture** pattern")
 

@@ -114,12 +114,12 @@ class EnhancedCodeAnalyzer:
         
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-                func_info = self._analyze_function(node, content)
+                func_info = self._analyze_function(node, content, file_path)
                 self._add_quality_issues_to_element(func_info, node.lineno, file_path)
                 results.append(func_info)
                 
             elif isinstance(node, ast.ClassDef):
-                class_info = self._analyze_class(node, content)
+                class_info = self._analyze_class(node, content, file_path)
                 self._add_quality_issues_to_element(class_info, node.lineno, file_path)
                 results.append(class_info)
     
@@ -147,7 +147,7 @@ class EnhancedCodeAnalyzer:
                     if new_issue not in element_info['code_smells']:
                         element_info['code_smells'].append(new_issue)
 
-    def _analyze_function(self, node: ast.FunctionDef, content: str) -> Dict:
+    def _analyze_function(self, node: ast.FunctionDef, content: str, file_path: Path) -> Dict:
         func_lines = content.splitlines()[node.lineno-1:node.end_lineno]
         line_count = len(func_lines)
         docstring = ast.get_docstring(node)
@@ -165,6 +165,7 @@ class EnhancedCodeAnalyzer:
             "name": node.name,
             "line": node.lineno,
             "docstring": docstring,
+            "file_path": str(file_path),  
             "metrics": {
                 "lines": line_count,
                 "params": param_count,
@@ -173,7 +174,7 @@ class EnhancedCodeAnalyzer:
             "code_smells": []
         }
 
-    def _analyze_class(self, node: ast.ClassDef, content: str) -> Dict:
+    def _analyze_class(self, node: ast.ClassDef, content: str, file_path: Path) -> Dict:
         class_lines = content.splitlines()[node.lineno-1:node.end_lineno]
         line_count = len(class_lines)
         docstring = ast.get_docstring(node)
@@ -183,6 +184,7 @@ class EnhancedCodeAnalyzer:
             "type": "class",
             "name": node.name,
             "line": node.lineno,
+            "file_path": str(file_path), 
             "docstring": docstring,
             "metrics": {
                 "lines": line_count,

@@ -21,7 +21,7 @@ def cli():
 
     A CLI to analyze and visualize Python codebases. Provides commands to:
     - Analyze structural dependencies
-    - Check code quality  
+    - Check code quality
     - Generate reports
     - Launch a web interface
     - Manage configuration
@@ -71,8 +71,8 @@ def analyze(directory, depth, config):
                 table.add_column("Outgoing", justify="right")
                 for comp in core_components:
                     table.add_row(
-                        comp["name"], 
-                        str(comp["incoming"]), 
+                        comp["name"],
+                        str(comp["incoming"]),
                         str(comp["outgoing"])
                     )
                 console.print(table)
@@ -95,7 +95,7 @@ def config():
     pass
 
 @config.command("init")
-@click.option("--path", type=click.Path(), default="./treeline.json", 
+@click.option("--path", type=click.Path(), default="./treeline.json",
               help="Path to create the configuration file")
 def init_config(path):
     """
@@ -114,7 +114,7 @@ def init_config(path):
 
 
 @config.command("show")
-@click.option("--path", type=click.Path(exists=True), 
+@click.option("--path", type=click.Path(exists=True),
               help="Path to configuration file (optional)")
 def show_config(path):
     """
@@ -151,7 +151,7 @@ def show_config(path):
 @config.command("set")
 @click.argument("key")
 @click.argument("value")
-@click.option("--path", type=click.Path(), 
+@click.option("--path", type=click.Path(),
               help="Path to save configuration (defaults to existing or ./treeline.json)")
 def set_config(key, value, path):
     """
@@ -276,7 +276,7 @@ def serve():
 
 @cli.command()
 @click.argument("directory", type=click.Path(exists=True), default=".")
-@click.option("--output", default=None, help="Output markdown filename (default: treeline_report.md)")
+@click.option("--output", default=None, help="Output markdown filename (default: a timestamped file like treeline_report_YYYYMMDD_HHMMSS.md)")
 @click.option("--json", is_flag=True, help="Output report in JSON format instead of Markdown")
 
 def report(directory, output, json):

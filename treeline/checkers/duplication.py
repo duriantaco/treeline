@@ -1,35 +1,60 @@
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict
-from treeline.config_manager import get_config
+import ast
 from treeline.models.enhanced_analyzer import QualityIssue
 
 class DuplicationDetector:
     def __init__(self, config: Dict = None):
-        """Initialize the DuplicationDetector with a configuration."""
-        self.config = config or get_config().as_dict()
-        self.min_block_size = self.config.get("MIN_DUPLICATED_BLOCK_SIZE", 5)
+        self.config = config or {"MIN_DUPLICATED_BLOCK_SIZE": 5}
 
     def analyze_directory(self, directory: Path, quality_issues: defaultdict):
-        """Analyze a directory for duplicated code blocks."""
-        all_lines = {}
+
+        function_defs = defaultdict(list)
+        class_defs = defaultdict(list)
+
         for file_path in directory.rglob("*.py"):
             with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.read().split("\n")
-            all_lines[str(file_path)] = lines
+                content = f.read()
 
-        block_locations = defaultdict(list)
-        for file_path, lines in all_lines.items():
-            for i in range(len(lines) - self.min_block_size + 1):
-                block = tuple(lines[i:i + self.min_block_size])
-                if any(line.strip() for line in block):  
-                    block_locations[block].append((file_path, i + 1))
+            try:
+                tree = ast.parse(content)
+            except SyntaxError:
+                continue  
 
-        for block, locations in block_locations.items():
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    func_code = ast.unparse(node).strip()
+                    normalized_code = "\n".join(line.strip() for line in func_code.splitlines())
+                    function_defs[normalized_code].append((str(file_path), node.lineno))
+                
+                elif isinstance(node, ast.ClassDef):
+                    class_code = ast.unparse(node).strip()
+                    normalized_code = "\n".join(line.strip() for line in class_code.splitlines())
+                    class_defs[normalized_code].append((str(file_path), node.lineno))
+
+        for func_code, locations in function_defs.items():
             if len(locations) > 1:  
-                for file_path, start_line in locations:
-                    quality_issues["duplication"].append(QualityIssue(
-                        description=f"Duplicated code block of {self.min_block_size} lines starting at line {start_line}",
-                        file_path=file_path,
-                        line=start_line
-                    ).__dict__)
+                description = "Duplicated function found at " + ", ".join(
+                    [f"{file}:{line}" for file, line in locations]
+                )
+                quality_issues["duplication"].append(
+                    QualityIssue(
+                        description=description,
+                        file_path=locations[0][0],
+                        line=locations[0][1]
+                    ).__dict__
+                )
+
+        for class_code, locations in class_defs.items():
+            if len(locations) > 1:  
+                description = "Duplicated class found at " + ", ".join(
+                    [f"{file}:{line}" for file, line in locations]
+                )
+                quality_issues["duplication"].append(
+                    QualityIssue(
+                        description=description,
+                        file_path=locations[0][0],
+                        line=locations[0][1]
+                    ).__dict__
+                )

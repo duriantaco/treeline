@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treeline"
-version = "0.1.3"
+version = "0.1.4"
 description = "A simple tool for analyzing your codebase architecture"
 readme = "README.md"
 authors = [
@@ -32,36 +32,6 @@ dev = [
     "isort>=5.13.2",
     "pytest>=7.0.0",
     "markdown"
-]
-
-[tool.black]
-line-length = 88
-target-version = ['py37']
-include = '\.pyi?$'
-extend-exclude = '''
-# A regex preceded with ^/ will apply only to files and directories
-# in the root of the project.
-^/docs/
-'''
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-skip = ["docs/"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = "-ra -q"
-
-[tool.flake8]
-max-line-length = 150
-extend-ignore = "E266"
-per-file-ignores = [
-    "treeline/dependency_analyzer.py:E501",
-    "treeline/security_analyzer.py:E501",
-    "treeline/enhanced_analyzer.py:E501"
 ]
 
 [tool.setuptools]

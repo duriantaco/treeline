@@ -36,7 +36,12 @@ export async function fetchGraphData(params: GraphDataParams = {}): Promise<Grap
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    
+    console.log("Total nodes returned:", data.nodes.length);
+    console.log("Unique files:", new Set(data.nodes.filter((n: { file_path?: string }) => n.file_path).map((n: { file_path: string }) => n.file_path)).size);
+    console.log("Sample file paths:", data.nodes.filter((n: { file_path?: string }) => n.file_path).map((n: { file_path: string }) => n.file_path).slice(0, 5));
+    return data  
   } catch (error) {
     console.error('Error fetching graph data:', error);
     throw error;
@@ -89,7 +94,6 @@ export async function fetchNodeByFilePath(filePath: string): Promise<any> {
         };
       }
       
-      // Handle other error cases
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.detail || `Error ${response.status}`);
     } catch (fetchError) {

@@ -25,7 +25,7 @@ async def get_detailed_metrics(
     Get comprehensive detailed metrics for the entire codebase.
     Returns raw metrics for all files, functions, classes, and dependencies.
     """
-    target_dir = Path(directory).resolve()  
+    target_dir = Path(directory).resolve()
     
     from treeline.dependency_analyzer import ModuleDependencyAnalyzer
     from treeline.enhanced_analyzer import EnhancedCodeAnalyzer
@@ -59,7 +59,11 @@ async def get_detailed_metrics(
     
     for result in file_results:
         if result["type"] == "function":
-            file_path = result.get("file_path", "unknown")
+            file_path = result.get("file_path")
+
+            if not file_path or file_path == "unknown":
+                continue        
+        
             if file_path not in files_data:
                 files_data[file_path] = {
                     "path": file_path,
@@ -110,7 +114,7 @@ async def get_detailed_metrics(
                         "lines": method_info.get("lines", 0),
                         "params": method_info.get("params", 0),
                         "complexity": method_info.get("complexity", 0),
-                        "code_smells": []  
+                        "code_smells": []
                     }
                     class_methods.append(method_detail)
             
@@ -162,7 +166,7 @@ async def get_detailed_metrics(
     total_classes = sum(len(file_data["classes"]) for file_data in files_data.values())
     total_lines = sum(file_data["lines"] for file_data in files_data.values())
     
-    complexity_values = [func["complexity"] for file_data in files_data.values() 
+    complexity_values = [func["complexity"] for file_data in files_data.values()
                          for func in file_data["functions"] if "complexity" in func]
     
     avg_complexity = sum(complexity_values) / len(complexity_values) if complexity_values else 0
@@ -524,7 +528,7 @@ async def get_issues_by_category(
         "issues_by_category": issues_by_category,
         "total_issues": sum(len(issues) for issues in code_analyzer.quality_issues.values()),
         "files_with_most_issues": [
-            {"file_path": file_path, "issue_count": count} 
+            {"file_path": file_path, "issue_count": count}
             for file_path, count in files_with_most_issues
         ],
         "category_counts": {
