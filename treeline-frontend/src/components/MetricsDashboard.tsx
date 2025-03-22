@@ -323,8 +323,7 @@ const MetricsDashboardPage: React.FC = () => {
         </button>
       </div>
       
-      {/* Navigation Tabs */}
-      <div className="mb-6 border-b border-gray-200">
+=      <div className="mb-6 border-b border-gray-200">
         <div className="flex space-x-4">
           <button
             className={`py-2 px-4 font-medium ${activeTab === 'overview' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600'}`}
@@ -353,7 +352,6 @@ const MetricsDashboardPage: React.FC = () => {
         </div>
       </div>
       
-      {/* Overview Tab */}
       {activeTab === 'overview' && (
         <div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -497,7 +495,6 @@ const MetricsDashboardPage: React.FC = () => {
                     </div>
                   </div>
                   
-                  {/* Issues by category */}
                   {Object.keys(fileMetrics.issues_by_category || {}).length > 0 && (
                     <div className="mb-6">
                       <h4 className="text-lg font-semibold mb-2">Issues</h4>
@@ -591,7 +588,6 @@ const MetricsDashboardPage: React.FC = () => {
         </div>
       )}
       
-      {/* Quality Issues Tab */}
       {activeTab === 'issues' && (
         <div className="grid grid-cols-1 gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
@@ -639,7 +635,7 @@ const MetricsDashboardPage: React.FC = () => {
             })}
           </div>
           
-          {issuesByCategory?.files_with_most_issues && (
+          {issuesByCategory?.most_problematic_files && (
             <div className="bg-white p-6 rounded-lg shadow-md">
               <h3 className="text-lg font-semibold mb-4">Files with Most Issues</h3>
               <div className="overflow-x-auto">
@@ -661,7 +657,7 @@ const MetricsDashboardPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {issuesByCategory.files_with_most_issues.map((file, index) => (
+                    {issuesByCategory.most_problematic_files.map((file, index) => (
                       <tr 
                         key={index} 
                         className="border-t border-gray-200 hover:bg-gray-50 cursor-pointer"
@@ -703,7 +699,6 @@ const MetricsDashboardPage: React.FC = () => {
         </div>
       )}
       
-      {/* Complexity Analysis Tab */}
       {activeTab === 'complexity' && (
         <div className="grid grid-cols-1 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-md">

@@ -51,7 +51,7 @@ def get_file_content(path: str = Query(...)):
                 "line": line_number
             })
         
-        func_matches = re.finditer(r'^\s*def\s+(\w+)', content, re.MULTILINE)
+        func_matches = re.finditer(r'^\s*(?:async\s+)?def\s+(\w+)', content, re.MULTILINE)
         for match in func_matches:
             line_number = content[:match.start()].count('\n') + 1
             file_info["structure"].append({

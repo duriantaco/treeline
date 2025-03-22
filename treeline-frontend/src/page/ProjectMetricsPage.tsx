@@ -6,33 +6,16 @@ import {
   fetchIssuesByCategory, 
   fetchComplexityBreakdown,
 } from '../services/dataServices';
-
-interface FileTableItem {
-  path: string;
-  name: string;
-  lines: number;
-  functions: number;
-  classes: number;
-  complexity: number;
-  issues: number;
-}
-
-interface ViewOption {
-  label: string;
-  value: number | null;
-}
+import { FileTableItem, FileData, ViewOption, ComplexFunction } from '../types/metrics';
 
 const ProjectMetricsPage: React.FC = () => {
-  const [projectMetrics, setProjectMetrics] = useState<any>(null);
+  const [projectMetrics, setProjectMetrics] = useState<any | null>(null);
   const [complexityBreakdown, setComplexityBreakdown] = useState<any>(null);
   const [issuesByCategory, setIssuesByCategory] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // New states for enhanced dashboard
   const [filesList, setFilesList] = useState<FileTableItem[]>([]);
-  const [viewMode, setViewMode] = useState<number | null>(10); // 10 for top 10, null for all
-  
+  const [viewMode, setViewMode] = useState<number | null>(10);
   const donutChartRef = useRef<SVGSVGElement>(null);
   const barChartRef = useRef<SVGSVGElement>(null);
 
@@ -45,6 +28,28 @@ const ProjectMetricsPage: React.FC = () => {
     { label: 'All Files', value: null }
   ];
 
+  const getMostComplexFunctions = (): ComplexFunction[] => {
+    if (!projectMetrics?.files) return [];
+    
+    const allFunctions: ComplexFunction[] = [];
+    Object.entries(projectMetrics.files as Record<string, FileData>).forEach(([filePath, fileData]) => {
+      if (fileData.functions) {
+        fileData.functions.forEach((func) => {
+          allFunctions.push({
+            name: func.name || 'Unknown',
+            module: filePath.split('/').pop()?.replace('.py', '') || 'Unknown',
+            complexity: func.complexity || 0,
+            lines: func.lines || 0
+          });
+        });
+      }
+    });
+    
+    return allFunctions
+      .sort((a, b) => b.complexity - a.complexity)
+      .slice(0, 10);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -53,6 +58,7 @@ const ProjectMetricsPage: React.FC = () => {
           fetchDetailedMetrics(),
           fetchComplexityBreakdown(),
           fetchIssuesByCategory(),
+
         ]);
         setProjectMetrics(metricsData);
         setComplexityBreakdown(complexityData);
@@ -251,6 +257,41 @@ const ProjectMetricsPage: React.FC = () => {
       .text('Top Complexity Factors');
   };
 
+  const calculateIssuesDensity = (): number => {
+    const totalIssues = Object.values(issuesByCategory?.category_counts || {})
+      .reduce((sum: number, count) => sum + (typeof count === 'number' ? count : 0), 0);
+    const totalLines = projectMetrics?.project_metrics?.total_lines || 1;
+    return (totalIssues / totalLines) * 50;
+  };
+
+  const calculateHealthScore = (): number => {
+    if (!projectMetrics || !issuesByCategory) return 0;
+    
+    const issuesDensity = calculateIssuesDensity();
+    const avgComplexity = projectMetrics.project_metrics?.avg_complexity || 0;
+    const securityIssues = issuesByCategory.category_counts?.security || 0;
+    
+    let score = 100;
+    
+    score -= Math.min(30, issuesDensity * 4);
+    score -= Math.min(20, avgComplexity * 3);  
+    score -= Math.min(40, securityIssues * 10);
+    
+    return Math.max(0, Math.min(100, Math.round(score)));
+  };
+  
+  const getHealthScoreColor = (score: number): string => {
+    if (score >= 80) return '#10b981'; // green
+    if (score >= 60) return '#f59e0b'; // amber
+    return '#ef4444'; // red
+  };
+  
+  const getHealthRating = (score: number): string => {
+    if (score >= 80) return 'Good';
+    if (score >= 60) return 'Needs improvement';
+    return 'Critical issues';
+  };
+
   const handleViewModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
     setViewMode(value === "null" ? null : parseInt(value, 10));
@@ -326,22 +367,49 @@ const ProjectMetricsPage: React.FC = () => {
                 <p className="text-3xl font-bold mt-2">{projectMetrics?.project_metrics?.total_classes || 0}</p>
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-              <div className="bg-white p-6 rounded-lg shadow-md border">
-                <h3 className="text-lg font-semibold mb-4">Quality Issues Summary</h3>
-                <div className="h-80">
-                  <svg ref={donutChartRef} className="w-full"></svg>
+
+            <div className="bg-white p-6 rounded-lg shadow-md border relative group">
+              <h3 className="text-gray-500 text-sm font-medium">Code Health Score</h3>
+              <div className="flex items-end gap-2">
+                <p className="text-3xl font-bold mt-2" style={{ 
+                  color: getHealthScoreColor(calculateHealthScore()) 
+                }}>
+                  {calculateHealthScore()}/100
+                </p>
+                <div className="text-sm text-gray-500 mb-1">
+                  {getHealthRating(calculateHealthScore())}
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border">
-                <h3 className="text-lg font-semibold mb-4">Complexity Factors</h3>
-                <div className="h-80">
-                  <svg ref={barChartRef} className="w-full"></svg>
+              
+              <div className="absolute top-4 right-4 cursor-help">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                
+                <div className="hidden group-hover:block absolute right-0 w-72 bg-gray-800 text-white text-xs rounded p-3 z-10">
+                  <p className="font-bold mb-1">Code Health Score Calculation:</p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    <li>Starting score: 100 points</li>
+                    <li>Issues density: -{Math.min(30, 
+                      parseFloat(((calculateIssuesDensity() * 2)).toFixed(1))
+                    )} points</li>
+                    <li>Code complexity: -{Math.min(20, 
+                      parseFloat(((projectMetrics?.project_metrics?.avg_complexity || 0) * 1.5).toFixed(1))
+                    )} points</li>
+                    <li>Security issues: -{Math.min(40, 
+                      parseFloat(((issuesByCategory?.category_counts?.security || 0) * 5).toFixed(1))
+                    )} points</li>
+                  </ul>
+                  <div className="mt-2 pt-2 border-t border-gray-600">
+                    <p>80-100: Good code health</p>
+                    <p>60-79: Needs improvement</p>
+                    <p>&lt;60: Critical issues</p>
+                  </div>
                 </div>
               </div>
             </div>
             
-            <div className="bg-white p-6 rounded-lg shadow-md border mb-8">
+            <div className="bg-white p-6 rounded-lg shadow-md border mt-8 mb-8">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">All Project Files</h3>
                 <div className="flex items-center">
@@ -400,7 +468,7 @@ const ProjectMetricsPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-              
+             
               <div className="mt-4 text-gray-600 text-sm">
                 Showing {filteredFiles.length} of {totalFiles} files
                 {viewMode !== null && totalFiles > filteredFiles.length && (
@@ -408,6 +476,36 @@ const ProjectMetricsPage: React.FC = () => {
                 )}
               </div>
             </div>
+            <div className="bg-white p-6 rounded-lg shadow-md border mb-8">
+                <h3 className="text-lg font-semibold mb-4">Most Complex Functions</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="py-2 px-4 text-left">Function</th>
+                        <th className="py-2 px-4 text-left">Module</th>
+                        <th className="py-2 px-4 text-right">Complexity</th>
+                        <th className="py-2 px-4 text-right">Lines</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getMostComplexFunctions().map((func, idx) => (
+                        <tr key={idx} className={idx % 2 === 0 ? 'bg-gray-50' : ''}>
+                          <td className="py-2 px-4">{func.name}</td>
+                          <td className="py-2 px-4">{func.module}</td>
+                          <td className="py-2 px-4 text-right">
+                            <span className={func.complexity > 10 ? 'text-red-600 font-medium' : ''}>
+                              {func.complexity}
+                            </span>
+                          </td>
+                          <td className="py-2 px-4 text-right">{func.lines}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            
             
             {issuesByCategory?.category_counts && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">

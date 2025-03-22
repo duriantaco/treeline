@@ -14,6 +14,9 @@ reports_router = APIRouter(prefix="/reports", tags=["reports"])
 static_path = Path(__file__).parent.parent / "static"
 
 def is_safe_path(base_dir: Path, requested_path: Path) -> bool:
+    """
+    Check if the requested path is within the allowed base directory
+    """
     base_dir = base_dir.resolve()
     requested_path = requested_path.resolve()
     
@@ -76,7 +79,6 @@ async def get_complexity_report():
         return {"message": "No complex functions found"}
     
     return {"hotspots": sorted(hotspots, key=lambda x: x["complexity"], reverse=True)}
-
 
 @reports_router.get("/structure")
 async def get_structure_report(tree_str: List[str] = Query(...)):
