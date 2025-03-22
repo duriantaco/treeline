@@ -29,6 +29,19 @@ CACHE_DIR.mkdir(exist_ok=True)
 dependency_analyzer = None
 code_analyzer = None
 
+def extract_id(item):
+    """Extract a string ID from various input types"""
+    try:
+        if isinstance(item, str):
+            return item
+        elif isinstance(item, dict) and 'id' in item:
+            return item['id']
+        elif isinstance(item, int):
+            return str(item)
+        raise ValueError("Invalid link data")
+    except Exception:
+        return None
+
 def calculate_directory_hash(directory: Path) -> str:
     file_hashes = []
     for file_path in sorted(directory.rglob("*.py")):
@@ -261,7 +274,7 @@ def get_file_content(path: str = Query(...)):
                 "line": line_number
             })
         
-        func_matches = re.finditer(r'^\s*def\s+(\w+)', content, re.MULTILINE)
+        func_matches = re.finditer(r'^\s*(?:async\s+)?def\s+(\w+)', content, re.MULTILINE)
         for match in func_matches:
             line_number = content[:match.start()].count('\n') + 1
             file_info["structure"].append({
@@ -389,22 +402,26 @@ async def get_node_by_path(file_path: str):
                 "source_id": link['source'],
                 "source_name": node_lookup.get(link['source'], {}).get('name', 'Unknown'),
                 "source_type": node_lookup.get(link['source'], {}).get('type', 'unknown'),
+                "source_docstring": node_lookup.get(extract_id(link['source']), {}).get('docstring', None),
                 "target_id": link['target'],
                 "target_name": node_lookup.get(link['target'], {}).get('name', 'Unknown'),
                 "target_type": node_lookup.get(link['target'], {}).get('type', 'unknown'),
+                "target_docstring": node_lookup.get(extract_id(link['target']), {}).get('docstring', None), 
                 "type": link['type']
             }
-            for link in incoming_links
+            for link in incoming_links if extract_id(link['source']) and extract_id(link['target'])
         ]
-        
+
         outgoing_links_with_names = [
             {
                 "source_id": link['source'],
                 "source_name": node_lookup.get(link['source'], {}).get('name', 'Unknown'),
                 "source_type": node_lookup.get(link['source'], {}).get('type', 'unknown'),
+                "source_docstring": node_lookup.get(link['source'], {}).get('docstring', None),
                 "target_id": link['target'],
                 "target_name": node_lookup.get(link['target'], {}).get('name', 'Unknown'),
                 "target_type": node_lookup.get(link['target'], {}).get('type', 'unknown'),
+                "target_docstring": node_lookup.get(link['target'], {}).get('docstring', None),
                 "type": link['type']
             }
             for link in outgoing_links
@@ -532,16 +549,14 @@ async def get_node_details(node_id: str):
 
         incoming_links_with_names = [
             {
-                "source": {
-                    "id": extract_id(link['source']),
-                    "name": node_lookup.get(extract_id(link['source']), {}).get('name', 'Unknown'),
-                    "type": node_lookup.get(extract_id(link['source']), {}).get('type', 'unknown')
-                },
-                "target": {
-                    "id": extract_id(link['target']),
-                    "name": node_lookup.get(extract_id(link['target']), {}).get('name', 'Unknown'),
-                    "type": node_lookup.get(extract_id(link['target']), {}).get('type', 'unknown')
-                },
+                "source_id": extract_id(link['source']),
+                "source_name": node_lookup.get(extract_id(link['source']), {}).get('name', 'Unknown'),
+                "source_type": node_lookup.get(extract_id(link['source']), {}).get('type', 'unknown'),
+                "source_docstring": node_lookup.get(extract_id(link['source']), {}).get('docstring', None),  # Add this
+                "target_id": extract_id(link['target']),
+                "target_name": node_lookup.get(extract_id(link['target']), {}).get('name', 'Unknown'),
+                "target_type": node_lookup.get(extract_id(link['target']), {}).get('type', 'unknown'),
+                "target_docstring": node_lookup.get(extract_id(link['target']), {}).get('docstring', None),  # Add this
                 "type": link['type']
             }
             for link in incoming_links if extract_id(link['source']) and extract_id(link['target'])
@@ -549,19 +564,17 @@ async def get_node_details(node_id: str):
 
         outgoing_links_with_names = [
             {
-                "source": {
-                    "id": extract_id(link['source']),
-                    "name": node_lookup.get(extract_id(link['source']), {}).get('name', 'Unknown'),
-                    "type": node_lookup.get(extract_id(link['source']), {}).get('type', 'unknown')
-                },
-                "target": {
-                    "id": extract_id(link['target']),
-                    "name": node_lookup.get(extract_id(link['target']), {}).get('name', 'Unknown'),
-                    "type": node_lookup.get(extract_id(link['target']), {}).get('type', 'unknown')
-                },
+                "source_id": extract_id(link['source']),
+                "source_name": node_lookup.get(extract_id(link['source']), {}).get('name', 'Unknown'),
+                "source_type": node_lookup.get(extract_id(link['source']), {}).get('type', 'unknown'),
+                "source_docstring": node_lookup.get(extract_id(link['source']), {}).get('docstring', None),  # Add this
+                "target_id": extract_id(link['target']),
+                "target_name": node_lookup.get(extract_id(link['target']), {}).get('name', 'Unknown'),
+                "target_type": node_lookup.get(extract_id(link['target']), {}).get('type', 'unknown'),
+                "target_docstring": node_lookup.get(extract_id(link['target']), {}).get('docstring', None),  # Add this
                 "type": link['type']
             }
-            for link in outgoing_links if extract_id(link['source']) and extract_id(link['target'])
+            for link in incoming_links if extract_id(link['source']) and extract_id(link['target'])
         ]
 
         file_content = None

@@ -116,7 +116,7 @@ class ModuleDependencyAnalyzer:
         classes = []
         total_complexity = 0
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 complexity = self._calculate_complexity(node)
                 total_complexity += complexity
                 functions.append(node.name)
@@ -130,7 +130,7 @@ class ModuleDependencyAnalyzer:
         imported_functions = {}
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if isinstance(getattr(node, "parent", None), ast.Module):
                     local_functions.add(node.name)
             elif isinstance(node, ast.ImportFrom):
@@ -140,12 +140,13 @@ class ModuleDependencyAnalyzer:
                         imported_functions[alias] = f"{node.module}.{name.name}"
 
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 parent = getattr(node, "parent", None)
                 if isinstance(parent, ast.Module):
                     func_id = f"{module_name}.{node.name}"
+                    docstring = ast.get_docstring(node)
                     location = FunctionLocation(module=module_name, file=file_path, line=node.lineno)
-                    function_locations[func_id] = location.__dict__
+                    function_locations[func_id] = {**location.__dict__, "docstring": docstring}
 
                     for child in ast.walk(node):
                         if isinstance(child, ast.Call):
@@ -183,16 +184,22 @@ class ModuleDependencyAnalyzer:
                     "module": module_name,
                     "file": file_path,
                     "line": node.lineno,
+                    "docstring": ast.get_docstring(node),
                     "methods": {},
                 }
                 for item in node.body:
-                    if isinstance(item, ast.FunctionDef):
+                    if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         calls = []
                         for child in ast.walk(item):
                             if isinstance(child, ast.Call) and isinstance(child.func, ast.Name):
                                 calls.append(child.func.id)
-                        method_info = MethodInfo(line=item.lineno, calls=calls)
-                        class_data["methods"][item.name] = method_info.__dict__
+                        method_docstring = ast.get_docstring(item)
+                        method_info_dict = {
+                            "line": item.lineno,
+                            "calls": calls,
+                            "docstring": method_docstring
+                        }
+                        class_data["methods"][item.name] = method_info_dict
                 class_info[node.name] = class_data
 
         return {
@@ -280,6 +287,7 @@ class ModuleDependencyAnalyzer:
                     {
                         "id": class_node_id,
                         "name": class_name,
+                        "docstring": info.get("docstring"),
                         "type": "class",
                         "metrics": info,
                         "methods": info["methods"],
@@ -321,6 +329,7 @@ class ModuleDependencyAnalyzer:
                     "name": func_name,
                     "type": "function",
                     "metrics": location,
+                    "docstring": location.get("docstring"), 
                     "code_smells": [],
                 }
             )

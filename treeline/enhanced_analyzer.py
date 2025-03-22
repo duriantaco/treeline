@@ -113,7 +113,7 @@ class EnhancedCodeAnalyzer:
         results = []
         
         for node in ast.walk(tree):
-            if isinstance(node, ast.FunctionDef):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 func_info = self._analyze_function(node, content, file_path)
                 self._add_quality_issues_to_element(func_info, node.lineno, file_path)
                 results.append(func_info)
