@@ -539,48 +539,73 @@ const VisualizationPage: React.FC = () => {
     }
   };
 
-  const debouncedSearch = useCallback(
-    debounce((term: string) => {
-      if (!svgRef.current) return;
-      const svg = d3.select(svgRef.current);
-      const nodeSelection = svg.selectAll('.node');
-      const linkSelection = svg.selectAll('path');
-  
-      if (term === '') {
-        nodeSelection.transition().duration(300).style('opacity', 1);
-        linkSelection.transition().duration(300).style('opacity', 0.7);
-        return;
-      }
-      
-      const matchedNodes = new Set<string>();
-      
-      data.nodes.forEach(node => {
-        if (node.name.toLowerCase().includes(term.toLowerCase()) ||
-            node.id.toLowerCase().includes(term.toLowerCase())) {
-          matchedNodes.add(node.id);
-        }
-      });
-      
-      nodeSelection.transition().duration(300).style('opacity', (d: unknown) => 
-        matchedNodes.has((d as CodeNode).id) ? 1 : 0.1
-      );
-      
-      linkSelection.transition().duration(300).style('opacity', (d: unknown) => {
-        const l = d as CodeLink;
-        const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
-        const targetId = typeof l.target === 'string' ? l.target : l.target.id;
-        return matchedNodes.has(sourceId) && matchedNodes.has(targetId) ? 0.7 : 0.1;
-      });
-    }, 200),
-    [data]
-  );
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
     setSearchTerm(term);
-    debouncedSearch(term);
-  };
+    
+    if (!svgRef.current) return;
+    
+    const svg = d3.select(svgRef.current);
+    const nodeSelection = svg.selectAll('.node');
+    const linkSelection = svg.selectAll('path');
+    
+    if (term === '') {
+      nodeSelection.transition().duration(300).style('opacity', 1);
+      linkSelection.transition().duration(300).style('opacity', 0.7);
+      return;
+    }
+    
+    const matchedNodes = new Set<string>();
+    
+    data.nodes.forEach(node => {
+      if (node.id && typeof node.id !== 'string') {
+      }
+      
+      if ((node.name && typeof node.name === 'string' && node.name.toLowerCase().includes(term.toLowerCase())) ||
+          (node.id && typeof node.id === 'string' && node.id.toLowerCase().includes(term.toLowerCase()))) {
+        matchedNodes.add(node.id);
+      }
+    });
+        
+    nodeSelection.transition().duration(300).style('opacity', (d: any) => {
+      return matchedNodes.has(d.id) ? 1 : 0.1;
+    });
+    
 
+  linkSelection.transition().duration(300).style('opacity', (d: any) => {
+    if (!d || d.source === undefined || d.target === undefined) {
+      console.warn('Invalid link data found:', d);
+      return 0.1; 
+    }
+    
+    try {
+      let sourceId = null;
+      let targetId = null;
+      
+      if (typeof d.source === 'string') {
+        sourceId = d.source;
+      } else if (d.source && typeof d.source === 'object' && d.source.id !== undefined) {
+        sourceId = d.source.id;
+      }
+      
+      if (typeof d.target === 'string') {
+        targetId = d.target;
+      } else if (d.target && typeof d.target === 'object' && d.target.id !== undefined) {
+        targetId = d.target.id;
+      }
+      
+      if (sourceId === null || targetId === null) {
+        return 0.1;
+      }
+      
+      return (matchedNodes.has(sourceId) || matchedNodes.has(targetId)) ? 0.7 : 0.1;
+      } catch (error) {
+        console.error('Error processing link data:', error, d);
+        return 0.1; 
+        }
+      }
+    );
+    }
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">

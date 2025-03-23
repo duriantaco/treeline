@@ -12,12 +12,32 @@ A Python toolkit for analyzing and visualizing code structure, dependencies, and
 
 ## Quick Start
 
+To look at all your nodes, run the command below: 
+
 ```bash
 treeline serve 
 ```
 
 <p align="center" style="margin: 0; padding: 0;">
     <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/screenshot2.png" alt="Screenshot" width="800" />
+</p>
+
+This is the full front end. 
+
+<p align="center" style="margin: 0; padding: 0;">
+    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/recording1.gif" alt="Demo" width="800" />
+</p>
+
+To look at your reports, run the following command: 
+
+```bash
+treeline report
+```
+
+This is a sample.
+
+<p align="center" style="margin: 0; padding: 0;">
+    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/screenshotreport.png" alt="Report" width="800" />
 </p>
 
 ## Usage

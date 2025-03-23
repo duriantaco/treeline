@@ -66,31 +66,41 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
 
     const addedNodeIds = new Set([nodeId]);
 
-    const extractNodeData = (node: any, fallbackId: string) => {
-      if (typeof node === 'string') {
-        return { id: node, name: node, type: 'unknown' };
-      } else if (node && typeof node === 'object') {
+    const extractNodeData = (conn: any, isSource: boolean, fallbackId: string): any => {
+      if (typeof conn === 'string') {
+        return { id: conn, name: conn, type: 'unknown' };
+      }
+      
+      if (!conn || typeof conn !== 'object') {
+        return { id: fallbackId, name: fallbackId, type: 'unknown' };
+      }
+      
+      if (isSource) {
         return {
-          id: node.id || node.source_id || node.target_id || fallbackId,
-          name: node.name || node.source_name || node.target_name || (node.id || fallbackId),
-          type: node.type || node.source_type || node.target_type || 'unknown',
-          metrics: node.metrics || {},
-          issues: node.code_smells?.length || 0
+          id: conn.source_id || conn.source || conn.id || fallbackId,
+          name: conn.source_name || (conn.source && typeof conn.source === 'object' ? conn.source.name : conn.source) || conn.name || fallbackId,
+          type: conn.source_type || (conn.source && typeof conn.source === 'object' ? conn.source.type : '') || conn.type || 'unknown',
+          metrics: conn.metrics || (conn.source && typeof conn.source === 'object' ? conn.source.metrics : {}) || {},
+          issues: conn.code_smells?.length || (conn.source && typeof conn.source === 'object' ? conn.source.code_smells?.length : 0) || 0
+        };
+      } else {
+        return {
+          id: conn.target_id || conn.target || conn.id || fallbackId,
+          name: conn.target_name || (conn.target && typeof conn.target === 'object' ? conn.target.name : conn.target) || conn.name || fallbackId,
+          type: conn.target_type || (conn.target && typeof conn.target === 'object' ? conn.target.type : '') || conn.type || 'unknown',
+          metrics: conn.metrics || (conn.target && typeof conn.target === 'object' ? conn.target.metrics : {}) || {},
+          issues: conn.code_smells?.length || (conn.target && typeof conn.target === 'object' ? conn.target.code_smells?.length : 0) || 0
         };
       }
-      return { id: '', name: '', type: 'unknown' };
     };
 
     if (connections.incoming && Array.isArray(connections.incoming)) {
-      const validIncoming = connections.incoming.filter(conn => {
-        const sourceData = extractNodeData(conn.source || conn, '');
-        const targetData = extractNodeData(conn.target || conn, '');
-        return sourceData.id && targetData.id;
-      });
-
-      validIncoming.forEach((conn, index) => {
-        const sourceData = extractNodeData(conn.source || conn, '');
+      connections.incoming.forEach((conn, index) => {
+        const sourceData = extractNodeData(conn, true, `incoming-${index}`);
         const sourceId = sourceData.id;
+        
+        if (!sourceId) return;
+        
         const sourceName = sourceData.name;
         const sourceType = sourceData.type;
         const sourceIssues = sourceData.issues || 0;
@@ -98,7 +108,7 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         riskScores[sourceId] = Math.min(10, sourceIssues + (sourceType === 'module' ? 3 : sourceType === 'class' ? 2 : 1));
 
         if (!addedNodeIds.has(sourceId)) {
-          const angle = (Math.PI / (validIncoming.length + 1)) * (index + 1);
+          const angle = (2 * Math.PI / (connections.incoming.length)) * index;
           const radius = 150;
           const x = width / 2 - radius * Math.cos(angle);
           const y = height / 2 - radius * Math.sin(angle);
@@ -136,15 +146,12 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
     }
 
     if (connections.outgoing && Array.isArray(connections.outgoing)) {
-      const validOutgoing = connections.outgoing.filter(conn => {
-        const sourceData = extractNodeData(conn.source || conn, '');
-        const targetData = extractNodeData(conn.target || conn, '');
-        return sourceData.id && targetData.id;
-      });
-
-      validOutgoing.forEach((conn, index) => {
-        const targetData = extractNodeData(conn.target || conn, '');
+      connections.outgoing.forEach((conn, index) => {
+        const targetData = extractNodeData(conn, false, `outgoing-${index}`);
         const targetId = targetData.id;
+        
+        if (!targetId) return;
+        
         const targetName = targetData.name;
         const targetType = targetData.type;
         const targetIssues = targetData.issues || 0;
@@ -152,10 +159,10 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         riskScores[targetId] = Math.min(10, targetIssues + (targetType === 'module' ? 3 : targetType === 'class' ? 2 : 1));
 
         if (!addedNodeIds.has(targetId)) {
-          const angle = (Math.PI / (validOutgoing.length + 1)) * (index + 1);
+          const angle = (2 * Math.PI / (connections.outgoing.length)) * index + Math.PI; // Offset angle
           const radius = 150;
           const x = width / 2 + radius * Math.cos(angle);
-          const y = height / 2 - radius * Math.sin(angle);
+          const y = height / 2 + radius * Math.sin(angle);
 
           allNodes.push({
             id: targetId,
@@ -190,16 +197,18 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
     }
 
     riskScores[nodeId] = Math.min(10, (highComplexity ? 5 : 0) + (hasIssues ? 5 : 0));
+    impactScores[nodeId] = 10;
     
-    impactScores[nodeId] = 10; 
+    console.log('Nodes to render:', allNodes.length, allNodes);
+    console.log('Links to render:', allLinks.length, allLinks);
 
     const simulation = d3.forceSimulation(allNodes)
       .force('link', d3.forceLink(allLinks).id((d: any) => d.id).distance(120))
-      .force('charge', d3.forceManyBody().strength(-600))
+      .force('charge', d3.forceManyBody().strength(-1000)) 
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(40))
-      .force('x', d3.forceX(width / 2).strength(0.05))
-      .force('y', d3.forceY(height / 2).strength(0.05));
+      .force('collision', d3.forceCollide().radius(40)) 
+      .force('x', d3.forceX(width / 2).strength(0.1))
+      .force('y', d3.forceY(height / 2).strength(0.1));
 
     const link = svg.append('g')
       .selectAll('path')
@@ -294,7 +303,6 @@ const ImpactAnalysis: React.FC<ImpactAnalysisProps> = ({
         .style('top', (event.pageY - 28) + 'px');
     })
     .on('mouseout', function() {
-      // Hide tooltip
       tooltipDiv.transition()
         .duration(500)
         .style('opacity', 0);

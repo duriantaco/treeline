@@ -1,9 +1,8 @@
-
-### `docs/web-interface.md`
-```markdown
 # Web Interface
 
 Treeline’s web interface provides an interactive way to visualize your Python codebase. It is served by the FastAPI backend and requires no separate installation.
+
+![Screenshot of the report interface](assets/screenshot2.png)
 
 ## Starting the Web Interface
 
@@ -19,6 +18,8 @@ treeline serve
 * Search: Filter nodes by name using the search bar.
 * Zoom and Pan: Navigate large graphs with ease.
 * Legend: Color-coded guide for node types and edge relationships.
+
+![Demo of Treeline](assets/recording1.gif)
 
 ## Notes
 
