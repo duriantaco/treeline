@@ -194,6 +194,27 @@ config.local.py
 secrets.py
 ```
 
+By default we will ignore all these
+
+```python
+DEFAULT_IGNORE_PATTERNS = [
+    'venv/',
+    '.venv/',
+    'node_modules/',
+    'env/',
+    '__pycache__/',
+    '.git/',
+    '.svn/',
+    'build/',
+    'dist/',
+    '*.pyc',
+    '*.pyo',
+    '*.log',
+    '*.zip',
+    '*.tar.gz',
+]
+```
+
 ### Analysis Configuration (Optional)
 You can place a JSON config file (e.g. treeline.json) to override default thresholds or configure how the analysis runs:
 
@@ -230,6 +251,8 @@ You can place a JSON config file (e.g. treeline.json) to override default thresh
 | **MAX_METHODS_PER_CLASS**    | Method count threshold in a single class.                                  | 20                    |
 | **MAX_CLASS_COMPLEXITY**     | Overall complexity threshold for a class.                                 | 50                    |
 
+## Limitations
+This repo is solely for python. 
 
 ## Contributing
 
@@ -238,6 +261,8 @@ You can place a JSON config file (e.g. treeline.json) to override default thresh
 3. Commit your changes (git commit -m 'cool stuff')
 4. Push to the branch (git push origin branch)
 5. Open a Pull Request
+
+Refer to the `contributing.md` for more details. 
 
 ## Sources for best practices
 
