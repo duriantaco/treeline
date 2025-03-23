@@ -1,29 +1,41 @@
-[tool.black]
-line-length = 88
-target-version = ['py37']
-include = '\.pyi?$'
-extend-exclude = '''
-# A regex preceded with ^/ will apply only to files and directories
-# in the root of the project.
-^/docs/
-'''
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-skip = ["docs/"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = "-ra -q"
-
-[tool.flake8]
-max-line-length = 150
-extend-ignore = "E266"
-per-file-ignores = [
-    "treeline/dependency_analyzer.py:E501",
-    "treeline/security_analyzer.py:E501",
-    "treeline/enhanced_analyzer.py:E501"
+[project]
+name = "treeline"
+version = "0.1.4"
+description = "A simple tool for analyzing your codebase architecture"
+readme = "README.md"
+authors = [
+    { name = "oha", email = "aaronoh2015@gmail.com" }
 ]
+license = { text = "MIT" }
+requires-python = ">=3.7"
+urls = { Homepage = "https://github.com/duriantaco/treeline" }
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.1",
+    "pydantic>=2.6.1",
+    "typer>=0.9.0",
+    "httpx>=0.19.0",
+    "xxhash>=3.4.1",        # for ultra-mega-super-fast hashing
+    "numpy>=1.24.0",        # for graph operations
+    "scipy>=1.11.0",        # For sparse matrix operations
+    "numba>=0.58.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=2.21.0",
+    "black>=24.2.0",
+    "isort>=5.13.2",
+    "pytest>=7.0.0",
+    "markdown"
+]
+
+[tool.setuptools]
+packages = {find = {where = ["."], include = ["treeline*"], exclude = ["assets*", "results*", "docs*", "tests*", "example*"]}}
+
+[project.scripts]
+treeline = "treeline.cli:cli"

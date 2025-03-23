@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Code Analysis Report</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+            background: #f8f9fa;
+        }
+        h1 { color: #2563eb; margin-bottom: 30px; }
+        h2 { color: #1d4ed8; margin-top: 40px; }
+        h3 { color: #1e40af; }
+        h4 { color: #1e3a8a; }
+
+        .fa-bolt {
+            color: #d97706;  /* Amber color for function icon */
+            margin-right: 4px;
+        }
+
+        .fa-cube {
+            color: #2563eb;  /* Blue color for class icon */
+            margin-right: 4px;
+        }
+
+         .icon-function {
+            color: #d97706;
+            margin-right: 4px;
+        }
+
+        .icon-class {
+            color: #2563eb;
+            margin-right: 4px;
+        }
+
+        .docstring {
+            color: #059669;
+        }
+
+        pre code {
+            font-family: monospace;
+        }
+
+
+        .section {
+            margin: 40px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .tree-view {
+            font-family: monospace;
+            white-space: pre;
+        }
+
+        .tree-view {
+            color: #059669;
+            font-size: inherit;
+            font-weight: normal;
+        }
+
+        .mermaid {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .warning { color: #dc2626; }
+
+        ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        .viz-link {
+            display: inline-block;
+            margin: 20px 0;
+            padding: 10px 20px;
+            background: #2563eb;
+            color: white !important;
+            border-radius: 6px;
+            text-decoration: none !important;
+        }
+
+        .viz-link:hover {
+            background: #1d4ed8;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                curve: 'basis',
+                padding: 20
+            },
+        });
+    </script>
+    REPORT_CONTENT
+</body>
+</html>

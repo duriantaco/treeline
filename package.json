@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "babel-jest": "^29.7.0"
+  }
+}

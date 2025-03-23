@@ -54,3 +54,8 @@ docs/build/
 output/
 # *.html
 !docs/**/*.html
+
+chunks
+static
+treeline_venv
+.treeline_cache
