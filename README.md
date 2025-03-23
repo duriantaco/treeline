@@ -19,7 +19,7 @@ treeline serve
 ```
 
 <p align="center" style="margin: 0; padding: 0;">
-    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/screenshot2.png" alt="Screenshot" width="800" />
+    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/screenshot2-new.png" alt="Screenshot" width="800" />
 </p>
 
 This is the full front end. 

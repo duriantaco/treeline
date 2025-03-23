@@ -2,7 +2,7 @@
 
 Treeline’s web interface provides an interactive way to visualize your Python codebase. It is served by the FastAPI backend and requires no separate installation.
 
-![Screenshot of the report interface](assets/screenshot2.png)
+![Screenshot of the report interface](assets/screenshot2-new.png)
 
 ## Starting the Web Interface
 
