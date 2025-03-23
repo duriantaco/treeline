@@ -25,7 +25,7 @@ treeline serve
 This is the full front end. 
 
 <p align="center" style="margin: 0; padding: 0;">
-    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/recording1.gif" alt="Demo" width="800" />
+    <img src="https://raw.githubusercontent.com/duriantaco/treeline/main/assets/recording1-compress.gif" alt="Demo" width="800" />
 </p>
 
 To look at your reports, run the following command: 

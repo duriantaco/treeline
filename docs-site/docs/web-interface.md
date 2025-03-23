@@ -19,7 +19,7 @@ treeline serve
 * Zoom and Pan: Navigate large graphs with ease.
 * Legend: Color-coded guide for node types and edge relationships.
 
-![Demo of Treeline](assets/recording1.gif)
+![Demo of Treeline](assets/recording1-compress.gif)
 
 ## Notes
 
