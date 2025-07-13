@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treeline"
-version = "0.1.4"
-description = "A simple tool for analyzing your codebase architecture"
+version = "0.1.0"
+description = "Enhanced tree command with code structure analysis"
 readme = "README.md"
 authors = [
     { name = "oha", email = "aaronoh2015@gmail.com" }
@@ -14,28 +14,12 @@ license = { text = "MIT" }
 requires-python = ">=3.7"
 urls = { Homepage = "https://github.com/duriantaco/treeline" }
 dependencies = [
-    "fastapi>=0.110.0",
-    "uvicorn>=0.27.1",
-    "pydantic>=2.6.1",
-    "typer>=0.9.0",
-    "httpx>=0.19.0",
-    "xxhash>=3.4.1",        # for ultra-mega-super-fast hashing
-    "numpy>=1.24.0",        # for graph operations
-    "scipy>=1.11.0",        # For sparse matrix operations
-    "numba>=0.58.0",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pre-commit>=2.21.0",
-    "black>=24.2.0",
-    "isort>=5.13.2",
-    "pytest>=7.0.0",
-    "markdown"
+    "click>=8.0.0",
+    "rich>=10.0.0"
 ]
 
 [tool.setuptools]
-packages = {find = {where = ["."], include = ["treeline*"], exclude = ["assets*", "results*", "docs*", "tests*", "example*"]}}
+packages = {find = {where = ["."], include = ["treeline*"]}}
 
 [project.scripts]
-treeline = "treeline.cli:cli"
+treeline = "treeline.main:main"
