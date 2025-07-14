@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "treeline"
-version = "0.1.0"
+version = "1.0.1"
 description = "Enhanced tree command with code structure analysis"
 readme = "README.md"
 authors = [
