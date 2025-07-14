@@ -1,3 +1,9 @@
+## [1.0.1] 2025-07-15
+
+## Nuke
+
+- Fixed a small bug in `core.py`
+
 ## [1.0.0] 2025-07-06
 
 ## Nuke

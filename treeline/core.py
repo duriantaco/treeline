@@ -1,7 +1,7 @@
-from treeline.cli import analyze
+from treeline.cli import cli
 
 def main():
-    analyze()
+    cli()
 
 if __name__ == "__main__":
     main()
